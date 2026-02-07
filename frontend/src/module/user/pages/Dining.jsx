@@ -1,18 +1,18 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { MapPin, Search, Mic, SlidersHorizontal, Star, X, ArrowDownUp, Timer, IndianRupee, UtensilsCrossed, BadgePercent, ShieldCheck, Clock, Bookmark, Check } from "lucide-react"
+import { MapPin, SlidersHorizontal, Star, X, ArrowDownUp, Timer, IndianRupee, UtensilsCrossed, BadgePercent, ShieldCheck, Clock, Bookmark, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
+import OptimizedImage from "@/components/OptimizedImage"
 import AnimatedPage from "../components/AnimatedPage"
 import { useSearchOverlay, useLocationSelector } from "../components/UserLayout"
 import { useLocation as useLocationHook } from "../hooks/useLocation"
 import { useProfile } from "../context/ProfileContext"
 import { diningAPI } from "@/lib/api"
 import api from "@/lib/api"
-import PageNavbar from "../components/PageNavbar"
-import OptimizedImage from "@/components/OptimizedImage"
+import UserTopHeader from "../components/UserTopHeader"
+import UserBannerCarousel from "../components/UserBannerCarousel"
 import appzetoFoodLogo from "@/assets/appzetologo.png"
 // Using placeholders for dining card images
 const diningCard1 = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop"
@@ -55,7 +55,6 @@ const MOCK_RESTAURANTS = popularRestaurants
 
 export default function Dining() {
   const navigate = useNavigate()
-  const [heroSearch, setHeroSearch] = useState("")
   const [currentRestaurantIndex, setCurrentRestaurantIndex] = useState(0)
   const [activeFilters, setActiveFilters] = useState(new Set())
   const [isFilterOpen, setIsFilterOpen] = useState(false)
@@ -187,12 +186,6 @@ export default function Dining() {
   }, [activeFilters, selectedCuisine, sortBy])
 
 
-  const handleSearchFocus = useCallback(() => {
-    if (heroSearch) {
-      setSearchValue(heroSearch)
-    }
-    openSearch()
-  }, [heroSearch, openSearch, setSearchValue])
 
   // Auto-play carousel
   useEffect(() => {
@@ -208,77 +201,18 @@ export default function Dining() {
 
   return (
     <AnimatedPage className="bg-white dark:bg-[#0a0a0a]" style={{ minHeight: '100vh', paddingBottom: '80px', overflow: 'visible' }}>
-      {/* Unified Navbar & Hero Section */}
-      <div
-        className="relative w-full overflow-hidden min-h-[39vh] lg:min-h-[50vh] md:pt-16 cursor-pointer"
-        onClick={() => navigate('/user/dining/restaurants')}
-      >
-        {/* Background with dining banner */}
-        <div className="absolute top-0 left-0 right-0 bottom-0 z-0">
-          {diningHeroBanner && (
-            <OptimizedImage
-              src={diningHeroBanner}
-              alt="Dining Banner"
-              className="w-full h-full"
-              objectFit="fill"
-              priority={true}
-              sizes="100vw"
-            />
-          )}
-        </div>
+      {/* Unified Top Header - Shared with Home Page */}
+      <UserTopHeader
+        showSearchAlways={true}
+        placeholders={['Search "biryani"', 'Search "burger"', 'Search "thali"']}
+      />
 
-        {/* Navbar */}
-        <div className="relative z-20 pt-2 sm:pt-3 lg:pt-4">
-          <PageNavbar
-            textColor="white"
-            zIndex={20}
-            onNavClick={(e) => e.stopPropagation()}
-          />
-        </div>
-
-        {/* Hero Section with Search */}
-        <section
-          className="relative z-20 w-full py-2 sm:py-3 md:py-4"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="relative z-20 w-full px-3 sm:px-6 lg:px-8">
-            {/* Search Bar Container */}
-            <div className="z-20">
-              {/* Enhanced Search Bar */}
-              <div className="w-full relative">
-                <div className="relative bg-white dark:bg-[#1a1a1a] rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 p-1 sm:p-1.5 transition-all duration-300 hover:shadow-xl">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <Search className="h-4 w-4 sm:h-4 sm:w-4 text-green-500 flex-shrink-0 ml-2 sm:ml-3" strokeWidth={2.5} />
-                    <div className="flex-1 relative">
-                      <Input
-                        value={heroSearch}
-                        onChange={(e) => setHeroSearch(e.target.value)}
-                        onFocus={handleSearchFocus}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && heroSearch.trim()) {
-                            navigate(`/user/search?q=${encodeURIComponent(heroSearch.trim())}`)
-                            closeSearch()
-                            setHeroSearch("")
-                          }
-                        }}
-                        className="pl-0 pr-2 h-8 sm:h-9 w-full bg-transparent border-0 text-sm sm:text-base font-semibold text-gray-700 dark:text-white focus-visible:ring-0 focus-visible:ring-offset-0 rounded-full placeholder:font-semibold placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                        placeholder='Search "burger"'
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleSearchFocus}
-                      className="flex-shrink-0 mr-2 sm:mr-3 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
-                    >
-                      <Mic className="h-4 w-4 sm:h-4 sm:w-4 text-gray-500 dark:text-gray-400" strokeWidth={2.5} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
+      {/* Hero Banner Section - Shared Carousel */}
+      <UserBannerCarousel
+        banners={diningHeroBanner ? [diningHeroBanner] : []}
+        loading={loading && !diningHeroBanner}
+        className="mb-4"
+      />
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 pt-6 sm:pt-8 md:pt-10 lg:pt-12 pb-6 md:pb-8 lg:pb-10">

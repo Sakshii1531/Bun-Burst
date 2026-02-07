@@ -29,6 +29,7 @@ export const sidebarMenuData = [
         subItems: [
           { label: "Restaurant Foods List", path: "/admin/foods" },
           { label: "Restaurant Addons List", path: "/admin/addons" },
+          { label: "Menu Setup", path: "/admin/food/menu-add" },
         ],
       },
       {
@@ -166,18 +167,7 @@ export const sidebarMenuData = [
         path: "/admin/delivery-withdrawal",
         icon: "Wallet",
       },
-      {
-        type: "link",
-        label: "Delivery boy Wallet",
-        path: "/admin/delivery-boy-wallet",
-        icon: "PiggyBank",
-      },
-      {
-        type: "link",
-        label: "Delivery Boy Commission",
-        path: "/admin/delivery-boy-commission",
-        icon: "DollarSign",
-      },
+
       {
         type: "link",
         label: "Delivery Emergency Help",

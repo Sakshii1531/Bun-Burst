@@ -19,8 +19,8 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useSearchOverlay, useLocationSelector } from "../components/UserLayout"
-import PageNavbar from "../components/PageNavbar"
-import MobileHeader from "../components/MobileHeader"
+import UserTopHeader from "../components/UserTopHeader"
+import UserBannerCarousel from "../components/UserBannerCarousel"
 
 // Import shared food images - prevents duplication
 import { foodImages } from "@/constants/images"
@@ -44,6 +44,7 @@ import exploreOffers from "@/assets/explore more icons/offers.png"
 import exploreGourmet from "@/assets/explore more icons/gourmet.png"
 import exploreTop10 from "@/assets/explore more icons/top 10.png"
 import exploreCollection from "@/assets/explore more icons/collection.png"
+import mealDealLogo from "@/assets/meal-deal-logo.jpeg"
 
 // Banner images for hero carousel - will be fetched from API
 
@@ -191,7 +192,6 @@ export default function Home() {
   const [isSwitchingOffVegMode, setIsSwitchingOffVegMode] = useState(false)
   const [popupPosition, setPopupPosition] = useState({ top: 0, right: 0 })
   const vegModeToggleRef = useRef(null)
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0)
   const [heroBannerImages, setHeroBannerImages] = useState([])
   const [heroBannersData, setHeroBannersData] = useState([]) // Store full banner data with linked restaurants
   const [loadingBanners, setLoadingBanners] = useState(true)
@@ -1048,7 +1048,8 @@ export default function Home() {
   return (
     <div className="relative min-h-screen bg-white dark:bg-[#0a0a0a] pb-28 md:pb-24">
       {/* NEW: Mobile Header Above Everything */}
-      <MobileHeader
+      {/* Unified Top Header - Reusable Section */}
+      <UserTopHeader
         vegMode={vegMode}
         onVegModeChange={handleVegModeChange}
         showVegToggle={true}
@@ -1164,75 +1165,11 @@ export default function Home() {
         `}</style>
       </div>
 
-      {/* Hero Banner Section - Enhanced Design */}
-      <div className="relative w-full overflow-hidden min-h-[28vh] lg:min-h-[35vh] px-3 sm:px-4 lg:px-6 pt-4">
-        {/* Hero Banner Carousel Background */}
-        {loadingBanners ? (
-          <div className="absolute top-4 left-3 right-3 sm:left-4 sm:right-4 lg:left-6 lg:right-6 bottom-0 z-0 bg-gradient-to-br from-green-400 via-green-500 to-green-600 flex items-center justify-center rounded-3xl shadow-2xl border-2 border-white/20">
-            <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 animate-spin text-white" />
-          </div>
-        ) : heroBannersData.length > 0 ? (
-          <>
-            {/* Banner Image with Enhanced Styling */}
-            <div className="absolute top-4 left-3 right-3 sm:left-4 sm:right-4 lg:left-6 lg:right-6 bottom-0 z-10 rounded-3xl overflow-hidden shadow-2xl ring-2 ring-white/30 hover:ring-white/50 transition-all duration-300">
-              <OptimizedImage
-                src={heroBannersData[currentBannerIndex]?.imageUrl}
-                alt={heroBannersData[currentBannerIndex]?.title || "Banner"}
-                className="w-full h-full object-cover"
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 80vw"
-                objectFit="cover"
-                priority={true}
-                placeholder="blur"
-              />
-
-              {/* Decorative Overlay for Better Contrast */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent pointer-events-none" />
-            </div>
-
-            {/* Navigation Dots - Enhanced */}
-            {heroBannersData.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-2">
-                {heroBannersData.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentBannerIndex(index)}
-                    className={`transition-all duration-300 rounded-full ${index === currentBannerIndex
-                      ? "w-8 h-2 bg-white shadow-lg"
-                      : "w-2 h-2 bg-white/60 hover:bg-white/80"
-                      }`}
-                    aria-label={`Go to banner ${index + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Banner Navigation Arrows - Enhanced */}
-            {heroBannersData.length > 1 && (
-              <>
-                <button
-                  onClick={handlePrevBanner}
-                  className="absolute left-4 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-white text-gray-800 p-2 sm:p-3 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 backdrop-blur-sm"
-                  aria-label="Previous banner"
-                >
-                  <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-                </button>
-                <button
-                  onClick={handleNextBanner}
-                  className="absolute right-4 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-white text-gray-800 p-2 sm:p-3 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 backdrop-blur-sm"
-                  aria-label="Next banner"
-                >
-                  <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-                </button>
-              </>
-            )}
-          </>
-        ) : (
-          <div className="absolute top-4 left-3 right-3 sm:left-4 sm:right-4 lg:left-6 lg:right-6 bottom-0 z-0 bg-gradient-to-br from-green-400 via-green-500 to-green-600 rounded-3xl shadow-2xl border-2 border-white/20" />
-        )}
-
-        {/* REMOVED: Old PageNavbar - now using MobileHeader above /}
-        {/* REMOVED: Old Search Bar and VEG Toggle - now in MobileHeader */}
-      </div>
+      {/* Hero Banner Section - Reusable Carousel */}
+      <UserBannerCarousel
+        banners={heroBannersData}
+        loading={loadingBanners}
+      />
 
       {/* Rest of Content - Container Width with Unified Background */}
       <motion.div
@@ -1259,70 +1196,30 @@ export default function Home() {
               overflowY: "hidden",
             }}
           >
-            {/* Special Offer Badge - Paper Coupon Style */}
+            {/* Special Offer Badge - New Asset Logo */}
             <motion.div
               className="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group"
               initial={{ opacity: 0, scale: 0.8 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4 }}
+              whileHover={{ scale: 1.05, y: -5 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => navigate("/user/under-250")}
             >
-              <div className="relative w-16 h-24 sm:w-20 sm:h-28 flex flex-col items-center">
-                {/* Paper/Coupon Top Part */}
-                <div className="relative w-full h-12 sm:h-14 bg-gradient-to-br from-amber-50 to-orange-50 rounded-t-lg shadow-md overflow-hidden">
-                  {/* Wavy torn edge effect at top */}
-                  <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-b from-orange-100/50 to-transparent"></div>
-                  <svg className="absolute top-0 left-0 right-0 w-full h-2.5" preserveAspectRatio="none" viewBox="0 0 100 10">
-                    <path d="M0,5 Q5,0 10,5 T20,5 T30,5 T40,5 T50,5 T60,5 T70,5 T80,5 T90,5 T100,5 L100,10 L0,10 Z" fill="#f8fafc" opacity="0.3" />
-                  </svg>
-
-                  {/* Text Content */}
-                  <div className="relative z-10 h-full flex flex-col items-center justify-center pt-1.5">
-                    <span className="text-[9px] sm:text-[10px] font-extrabold text-[#1e40af] leading-tight tracking-wide">
-                      MEALS
-                    </span>
-                    <span className="text-[9px] sm:text-[10px] font-extrabold text-[#1e40af] leading-tight tracking-wide">
-                      UNDER
-                    </span>
-                    <span className="text-base sm:text-lg font-black text-[#1e40af] leading-tight">
-                      ₹200
-                    </span>
-                  </div>
-                </div>
-
-                {/* Blue Shield/Pocket Bottom Part */}
-                <div className="relative w-full h-12 sm:h-14 -mt-0.5 flex items-center justify-center">
-                  {/* Shield shape using clip-path */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-[#1e40af] to-[#1e3a8a] shadow-lg"
-                    style={{
-                      clipPath: 'polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%)'
-                    }}
-                  >
-                    {/* Dashed border effect */}
-                    <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-                      <path d="M2,2 L98,2 L98,70 L50,98 L2,70 Z"
-                        fill="none"
-                        stroke="white"
-                        strokeWidth="1"
-                        strokeDasharray="3,2"
-                        opacity="0.6"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                    </svg>
-                  </div>
-
-                  {/* Explore Button - Centered inside shield */}
-                  <div className="relative z-10 flex items-center justify-center pt-0.5">
-                    <div className="bg-white px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full shadow-md flex items-center gap-0.5 group-hover:scale-105 transition-transform">
-                      <span className="text-[8px] sm:text-[9px] font-bold text-[#1e40af]">
-                        Explore
-                      </span>
-                      <ChevronRight className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-[#1e40af]" />
-                    </div>
-                  </div>
-                </div>
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 relative">
+                <OptimizedImage
+                  src={mealDealLogo}
+                  alt="Meals Under ₹200"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  sizes="(max-width: 640px) 64px, (max-width: 768px) 80px, 96px"
+                  objectFit="cover"
+                  placeholder="blur"
+                />
               </div>
+              <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 text-center w-16 sm:w-20 truncate">
+                Meals @ ₹200
+              </span>
             </motion.div>
             {loadingRealCategories ? (
               <div className="flex items-center justify-center py-4">

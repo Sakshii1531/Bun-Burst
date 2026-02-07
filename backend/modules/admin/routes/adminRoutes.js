@@ -31,6 +31,10 @@ import {
   getCustomerWalletReport,
 } from "../controllers/adminController.js";
 import {
+  getMenuByAdmin,
+  updateMenuByAdmin,
+} from "../../restaurant/controllers/menuController.js";
+import {
   getBusinessSettings,
   updateBusinessSettings,
 } from "../controllers/businessSettingsController.js";
@@ -293,6 +297,9 @@ router.post("/restaurants/:id/reject", rejectRestaurant);
 router.post("/restaurants/:id/reverify", reverifyRestaurant);
 router.put("/restaurants/:id/status", updateRestaurantStatus);
 router.put("/restaurants/:id/dining-settings", updateRestaurantDiningSettings);
+
+router.get("/restaurants/:id/menu", getMenuByAdmin);
+router.put("/restaurants/:id/menu", updateMenuByAdmin);
 router.delete("/restaurants/:id", deleteRestaurant);
 
 // Category Management

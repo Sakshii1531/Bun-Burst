@@ -1,18 +1,24 @@
 import { useState, useMemo, useEffect } from "react"
-import { Search, Download, ChevronDown, Eye, Trash2, User, Star, ArrowUpDown, Settings, FileText, FileSpreadsheet, Loader2, Check, Columns, ExternalLink, Calendar, MapPin, CreditCard, Mail, Phone, Bike, FileCheck } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { Search, Download, ChevronDown, Eye, Trash2, User, Star, ArrowUpDown, Settings, FileText, FileSpreadsheet, Loader2, Check, Columns, ExternalLink, Calendar, MapPin, CreditCard, Mail, Phone, Bike, FileCheck, Plus, Pencil } from "lucide-react"
 import { adminAPI } from "@/lib/api"
+import { toast } from "sonner"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportDeliverymenToExcel, exportDeliverymenToPDF } from "../../components/deliveryman/deliverymanExportUtils"
 
 export default function DeliverymanList() {
   const [searchQuery, setSearchQuery] = useState("")
+  const navigate = useNavigate()
   const [deliverymen, setDeliverymen] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+
   const [isViewOpen, setIsViewOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editFormData, setEditFormData] = useState(null)
   const [selectedDeliveryman, setSelectedDeliveryman] = useState(null)
   const [viewDetails, setViewDetails] = useState(null)
   const [processing, setProcessing] = useState(false)
@@ -21,6 +27,7 @@ export default function DeliverymanList() {
     name: true,
     contact: true,
     zone: true,
+    salary: true,
     totalOrders: true,
     availabilityStatus: true,
     actions: true,
@@ -31,7 +38,7 @@ export default function DeliverymanList() {
     try {
       setLoading(true)
       setError(null)
-      
+
       const params = {
         page: 1,
         limit: 1000, // Get all for now
@@ -43,7 +50,7 @@ export default function DeliverymanList() {
       }
 
       const response = await adminAPI.getDeliveryPartners(params)
-      
+
       if (response.data && response.data.success) {
         setDeliverymen(response.data.data.deliveryPartners || [])
       } else {
@@ -52,10 +59,10 @@ export default function DeliverymanList() {
       }
     } catch (err) {
       console.error("Error fetching delivery partners:", err)
-      
+
       // Better error handling
       let errorMessage = "Failed to fetch delivery partners. Please try again."
-      
+
       if (err.code === 'ERR_NETWORK') {
         errorMessage = "Network error. Please check if backend server is running."
       } else if (err.response?.status === 401) {
@@ -67,7 +74,7 @@ export default function DeliverymanList() {
       } else if (err.message) {
         errorMessage = err.message
       }
-      
+
       setError(errorMessage)
       setDeliverymen([])
     } finally {
@@ -99,7 +106,7 @@ export default function DeliverymanList() {
     try {
       setLoading(true)
       const response = await adminAPI.getDeliveryPartnerById(deliveryman._id)
-      
+
       if (response.data && response.data.success) {
         setViewDetails(response.data.data.delivery)
         setIsViewOpen(true)
@@ -125,18 +132,70 @@ export default function DeliverymanList() {
     try {
       setProcessing(true)
       await adminAPI.deleteDeliveryPartner(selectedDeliveryman._id)
-      
+
       // Refresh the list
       await fetchDeliverymen()
-      
+
       setIsDeleteOpen(false)
       setSelectedDeliveryman(null)
-      
+
       // Show success message
       alert(`Successfully deleted ${selectedDeliveryman.name}`)
     } catch (err) {
       console.error("Error deleting delivery partner:", err)
       alert(err.response?.data?.message || "Failed to delete delivery partner. Please try again.")
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+
+
+  const handleEdit = (deliveryman) => {
+    // Populate form data
+    setEditFormData({
+      id: deliveryman._id,
+      name: deliveryman.name,
+      email: deliveryman.email,
+      phone: deliveryman.phone,
+      salary: deliveryman.fullData?.salary?.amount || 0,
+      joiningDate: deliveryman.fullData?.joiningDate ? new Date(deliveryman.fullData.joiningDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      status: deliveryman.fullData?.status || 'approved'
+    })
+    setIsEditOpen(true)
+  }
+
+  const handleUpdate = async (e) => {
+    e.preventDefault()
+    setProcessing(true)
+    try {
+      // 1. Update basic details and salary
+      const payload = {
+        name: editFormData.name,
+        email: editFormData.email,
+        phone: editFormData.phone,
+        salary: {
+          type: 'fixed',
+          amount: parseFloat(editFormData.salary)
+        },
+        joiningDate: editFormData.joiningDate
+      }
+
+      await adminAPI.updateDeliveryPartner(editFormData.id, payload)
+
+      // 2. Update status and isActive
+      const currentStatus = deliverymen.find(d => d._id === editFormData.id)?.fullData?.status
+      if (currentStatus !== editFormData.status) {
+        const isActive = ['active', 'approved'].includes(editFormData.status)
+        await adminAPI.updateDeliveryPartnerStatus(editFormData.id, editFormData.status, isActive)
+      }
+
+      toast.success("Delivery partner updated successfully")
+      setIsEditOpen(false)
+      fetchDeliverymen()
+    } catch (err) {
+      console.error(err)
+      toast.error(err.response?.data?.message || "Failed to update")
     } finally {
       setProcessing(false)
     }
@@ -179,6 +238,7 @@ export default function DeliverymanList() {
     name: "Name",
     contact: "Contact",
     zone: "Zone",
+    salary: "Salary",
     totalOrders: "Total Orders",
     availabilityStatus: "Availability Status",
     actions: "Actions",
@@ -207,6 +267,13 @@ export default function DeliverymanList() {
               </div>
 
               <button
+                onClick={() => navigate('/admin/delivery-partners/add')}
+                className="px-4 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 transition-all shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Add New</span>
+              </button>
+              <button
                 onClick={handleExportPDF}
                 className="px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all"
                 title="Export as PDF"
@@ -222,7 +289,7 @@ export default function DeliverymanList() {
                 <FileSpreadsheet className="w-4 h-4" />
                 <span className="text-black font-bold">Excel</span>
               </button>
-              <button 
+              <button
                 onClick={() => setIsSettingsOpen(true)}
                 className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all"
               >
@@ -296,6 +363,14 @@ export default function DeliverymanList() {
                         </div>
                       </th>
                     )}
+                    {visibleColumns.salary && (
+                      <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                        <div className="flex items-center gap-2">
+                          <span>Month Salary</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                        </div>
+                      </th>
+                    )}
                     {visibleColumns.totalOrders && (
                       <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                         <div className="flex items-center gap-2">
@@ -336,8 +411,8 @@ export default function DeliverymanList() {
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
                               {dm.profileImage ? (
-                                <img 
-                                  src={dm.profileImage} 
+                                <img
+                                  src={dm.profileImage}
                                   alt={dm.name}
                                   className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                                 />
@@ -371,6 +446,13 @@ export default function DeliverymanList() {
                             <span className="text-sm text-slate-700">{dm.zone}</span>
                           </td>
                         )}
+                        {visibleColumns.salary && (
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-medium text-slate-900">
+                              ₹{(dm.fullData?.salary?.amount || 0).toLocaleString()}
+                            </span>
+                          </td>
+                        )}
                         {visibleColumns.totalOrders && (
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm text-slate-700">{dm.totalOrders || 0}</span>
@@ -380,7 +462,10 @@ export default function DeliverymanList() {
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
                               <span className="text-xs">
-                                Active Status: <span className={`${dm.status === 'Online' ? 'text-blue-600' : 'text-slate-600'} underline`}>{dm.status}</span>
+                                Online Status: <span className={`${dm.status === 'Online' ? 'text-green-600' : 'text-slate-500'} font-semibold`}>{dm.status}</span>
+                              </span>
+                              <span className="text-xs mt-1">
+                                Account: <span className={`capitalize ${dm.fullData?.status === 'active' ? 'text-green-600' : dm.fullData?.status === 'blocked' || dm.fullData?.status === 'suspended' ? 'text-red-500' : 'text-blue-600'}`}>{dm.fullData?.status}</span>
                               </span>
                             </div>
                           </td>
@@ -388,9 +473,16 @@ export default function DeliverymanList() {
                         {visibleColumns.actions && (
                           <td className="px-6 py-4 whitespace-nowrap text-center">
                             <div className="flex items-center justify-center gap-2">
-                              <button 
+                              <button
+                                onClick={() => handleEdit(dm)}
+                                className="p-1.5 rounded bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors"
+                                title="Edit"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
                                 onClick={() => handleView(dm)}
-                                className="p-1.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" 
+                                className="p-1.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                                 title="View Details"
                               >
                                 <Eye className="w-4 h-4" />
@@ -460,8 +552,8 @@ export default function DeliverymanList() {
                 <div className="flex items-start gap-6 pb-6 border-b border-slate-200">
                   <div className="flex-shrink-0">
                     {viewDetails.profileImage?.url ? (
-                      <img 
-                        src={viewDetails.profileImage.url} 
+                      <img
+                        src={viewDetails.profileImage.url}
                         alt={viewDetails.name}
                         className="w-24 h-24 rounded-full object-cover border-2 border-slate-200"
                       />
@@ -496,12 +588,11 @@ export default function DeliverymanList() {
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-slate-500 uppercase">Status</label>
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                        viewDetails.status === 'pending' ? 'bg-blue-100 text-blue-700' :
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${viewDetails.status === 'pending' ? 'bg-blue-100 text-blue-700' :
                         viewDetails.status === 'approved' || viewDetails.status === 'active' ? 'bg-green-100 text-green-700' :
-                        viewDetails.status === 'blocked' ? 'bg-red-100 text-red-700' :
-                        'bg-slate-100 text-slate-700'
-                      }`}>
+                          viewDetails.status === 'blocked' ? 'bg-red-100 text-red-700' :
+                            'bg-slate-100 text-slate-700'
+                        }`}>
                         {viewDetails.status === 'blocked' ? 'Rejected' : (viewDetails.status?.charAt(0).toUpperCase() + viewDetails.status?.slice(1) || "N/A")}
                       </span>
                     </div>
@@ -630,9 +721,9 @@ export default function DeliverymanList() {
                               <p className="text-sm text-slate-700 mb-1">Number: {viewDetails.documents.aadhar.number}</p>
                             )}
                             {viewDetails.documents.aadhar.document && (
-                              <a 
-                                href={viewDetails.documents.aadhar.document} 
-                                target="_blank" 
+                              <a
+                                href={viewDetails.documents.aadhar.document}
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
                               >
@@ -652,9 +743,9 @@ export default function DeliverymanList() {
                               <p className="text-sm text-slate-700 mb-1">Number: {viewDetails.documents.pan.number}</p>
                             )}
                             {viewDetails.documents.pan.document && (
-                              <a 
-                                href={viewDetails.documents.pan.document} 
-                                target="_blank" 
+                              <a
+                                href={viewDetails.documents.pan.document}
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
                               >
@@ -679,9 +770,9 @@ export default function DeliverymanList() {
                               </p>
                             )}
                             {viewDetails.documents.drivingLicense.document && (
-                              <a 
-                                href={viewDetails.documents.drivingLicense.document} 
-                                target="_blank" 
+                              <a
+                                href={viewDetails.documents.drivingLicense.document}
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
                               >
@@ -701,9 +792,9 @@ export default function DeliverymanList() {
                               <p className="text-sm text-slate-700 mb-1">Number: {viewDetails.documents.vehicleRC.number}</p>
                             )}
                             {viewDetails.documents.vehicleRC.document && (
-                              <a 
-                                href={viewDetails.documents.vehicleRC.document} 
-                                target="_blank" 
+                              <a
+                                href={viewDetails.documents.vehicleRC.document}
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
                               >
@@ -763,9 +854,8 @@ export default function DeliverymanList() {
                   {viewDetails.phoneVerified !== undefined && (
                     <div>
                       <label className="text-xs font-semibold text-slate-500 uppercase">Phone Verified</label>
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                        viewDetails.phoneVerified ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${viewDetails.phoneVerified ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
                         {viewDetails.phoneVerified ? 'Verified' : 'Not Verified'}
                       </span>
                     </div>
@@ -847,6 +937,116 @@ export default function DeliverymanList() {
               </button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Delivery Partner Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-md bg-white p-6 opacity-0 data-[state=open]:opacity-100 data-[state=closed]:opacity-0 transition-opacity duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:scale-100 data-[state=closed]:scale-100">
+          <DialogHeader>
+            <DialogTitle>Edit Delivery Partner</DialogTitle>
+          </DialogHeader>
+          {editFormData && (
+            <form onSubmit={handleUpdate} className="space-y-4 mt-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                  <input
+                    type="text"
+                    value={editFormData.phone}
+                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                  <select
+                    value={editFormData.status}
+                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="blocked">Blocked/Rejected</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Salary Section */}
+              <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                <h3 className="font-semibold text-sm text-yellow-800 mb-3 flex items-center gap-2">
+                  💰 Salary Configuration
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Monthly Fixed Salary (₹)</label>
+                    <input
+                      type="number"
+                      value={editFormData.salary}
+                      onChange={(e) => setEditFormData({ ...editFormData, salary: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      min="0"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Joining Date</label>
+                    <input
+                      type="date"
+                      value={editFormData.joiningDate}
+                      onChange={(e) => setEditFormData({ ...editFormData, joiningDate: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="mt-6 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditOpen(false)}
+                  className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50"
+                  disabled={processing}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                  disabled={processing}
+                >
+                  {processing && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Save Changes
+                </button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>

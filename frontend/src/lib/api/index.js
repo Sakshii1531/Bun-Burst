@@ -404,10 +404,10 @@ export const restaurantAPI = {
     const config =
       data instanceof FormData
         ? {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
         : {};
     return apiClient.post(API_ENDPOINTS.RESTAURANT.STAFF, data, config);
   },
@@ -1281,6 +1281,16 @@ export const adminAPI = {
     return apiClient.get(API_ENDPOINTS.ADMIN.DELIVERY_PARTNERS, { params });
   },
 
+  // Add delivery partner
+  addDeliveryPartner: (data) => {
+    return apiClient.post(API_ENDPOINTS.ADMIN.DELIVERY_PARTNERS, data);
+  },
+
+  // Update delivery partner details (including salary)
+  updateDeliveryPartner: (id, data) => {
+    return apiClient.put(`${API_ENDPOINTS.ADMIN.DELIVERY_PARTNERS}/${id}`, data);
+  },
+
   // Update delivery partner status
   updateDeliveryPartnerStatus: (id, status, isActive = null) => {
     const payload = {};
@@ -1347,6 +1357,11 @@ export const adminAPI = {
     });
   },
 
+  // Assign delivery partner manually
+  assignOrder: (orderId, deliveryBoyId) => {
+    return apiClient.post(`/admin/orders/${orderId}/assign`, { deliveryBoyId });
+  },
+
   // Get refund requests
   getRefundRequests: (params = {}) => {
     return apiClient.get("/api/admin/refund-requests", { params });
@@ -1380,6 +1395,20 @@ export const adminAPI = {
     return apiClient.post(
       API_ENDPOINTS.ADMIN.WITHDRAWAL_REJECT.replace(":id", id),
       { rejectionReason },
+    );
+  },
+
+  // Menu Management
+  getRestaurantMenu: (restaurantId) => {
+    return apiClient.get(
+      API_ENDPOINTS.ADMIN.RESTAURANT_MENU.replace(":id", restaurantId),
+    );
+  },
+
+  updateRestaurantMenu: (restaurantId, menuData) => {
+    return apiClient.put(
+      API_ENDPOINTS.ADMIN.RESTAURANT_MENU.replace(":id", restaurantId),
+      menuData,
     );
   },
 

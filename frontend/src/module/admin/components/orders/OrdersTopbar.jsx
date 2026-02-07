@@ -1,4 +1,5 @@
-import { Search, Filter, Download, ChevronDown, Settings } from "lucide-react"
+import { Search, Filter, Download, ChevronDown, Settings, Plus } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +20,7 @@ export default function OrdersTopbar({
   onExport,
   onSettingsClick,
 }) {
+  const navigate = useNavigate()
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -43,6 +45,7 @@ export default function OrdersTopbar({
               <Search className="w-4 h-4 text-slate-500" />
             </button>
           </div>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all">
@@ -68,11 +71,10 @@ export default function OrdersTopbar({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <button 
+          <button
             onClick={onFilterClick}
-            className={`px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all relative ${
-              activeFiltersCount > 0 ? "border-emerald-500 bg-emerald-50" : ""
-            }`}
+            className={`px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all relative ${activeFiltersCount > 0 ? "border-emerald-500 bg-emerald-50" : ""
+              }`}
           >
             <Filter className="w-4 h-4" />
             <span className="text-black font-bold">Filters</span>
@@ -82,7 +84,7 @@ export default function OrdersTopbar({
               </span>
             )}
           </button>
-          <button 
+          <button
             onClick={onSettingsClick}
             className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all"
           >

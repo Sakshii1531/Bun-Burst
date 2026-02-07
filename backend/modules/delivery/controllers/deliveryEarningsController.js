@@ -34,7 +34,7 @@ export const getEarnings = asyncHandler(async (req, res) => {
 
     // If date is provided, use it as base date for period calculation
     const baseDate = date ? new Date(date) : new Date();
-    
+
     switch (period) {
       case 'today':
         startDate = new Date(baseDate);
@@ -72,10 +72,10 @@ export const getEarnings = asyncHandler(async (req, res) => {
 
     // Filter transactions based on period and type
     let transactions = wallet.transactions || [];
-    
+
     // Filter by transaction type (only 'payment' type for earnings)
-    transactions = transactions.filter(t => 
-      t.type === 'payment' && 
+    transactions = transactions.filter(t =>
+      t.type === 'payment' &&
       t.status === 'Completed'
     );
 
@@ -135,7 +135,7 @@ export const getEarnings = asyncHandler(async (req, res) => {
     // Calculate summary statistics
     const totalAmount = earnings.reduce((sum, e) => sum + (e.amount || 0), 0);
     const totalOrders = earnings.length;
-    
+
     // Calculate time on orders (difference between order creation and delivery)
     let totalTimeMinutes = 0;
     earnings.forEach(e => {
@@ -174,7 +174,9 @@ export const getEarnings = asyncHandler(async (req, res) => {
         limit: parseInt(limit),
         total: totalEarnings,
         pages: Math.ceil(totalEarnings / parseInt(limit))
-      }
+      },
+      salary: delivery.salary,
+      joiningDate: delivery.joiningDate
     });
   } catch (error) {
     logger.error(`Error fetching delivery earnings: ${error.message}`, { stack: error.stack });
@@ -217,7 +219,7 @@ export const getActiveEarningAddons = asyncHandler(async (req, res) => {
           // Count orders from when offer was created (or start date, whichever is later)
           const countFromDate = offerCreatedAt > offerStartDate ? offerCreatedAt : offerStartDate;
           const endDate = new Date(addon.endDate);
-          
+
           // Calculate delivery partner's order count AFTER offer creation
           // Count orders from offer creation/start date to now (or end date if offer hasn't started)
           const countStartDate = now > countFromDate ? countFromDate : now;
