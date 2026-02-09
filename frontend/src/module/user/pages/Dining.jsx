@@ -205,6 +205,7 @@ export default function Dining() {
       <UserTopHeader
         showSearchAlways={true}
         placeholders={['Search "biryani"', 'Search "burger"', 'Search "thali"']}
+        showVegToggle={false}
       />
 
       {/* Hero Banner Section - Shared Carousel */}
