@@ -1046,7 +1046,7 @@ export default function Home() {
   )
 
   return (
-    <div className="relative min-h-screen bg-white dark:bg-[#0a0a0a] pb-28 md:pb-24">
+    <div className="relative min-h-screen bg-background pb-28 md:pb-24">
       {/* NEW: Mobile Header Above Everything */}
       {/* Unified Top Header - Reusable Section */}
       <UserTopHeader
@@ -1058,7 +1058,7 @@ export default function Home() {
       {/* Unified Background for Entire Page - Vibrant Food Theme */}
       <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none overflow-hidden z-0">
         {/* Main Background */}
-        <div className="absolute inset-0 bg-white dark:bg-[#0a0a0a]">
+        <div className="absolute inset-0 bg-background">
         </div>
         {/* Background Elements - Reduced to 2 blobs with CSS animations for better performance */}
         <div className="absolute inset-0 overflow-hidden opacity-20">
@@ -1165,11 +1165,13 @@ export default function Home() {
         `}</style>
       </div>
 
-      {/* Hero Banner Section - Reusable Carousel */}
-      <UserBannerCarousel
-        banners={heroBannersData}
-        loading={loadingBanners}
-      />
+      {/* Hero Banner Section - Reusable Carousel matching content width */}
+      <div className="max-w-7xl mx-auto">
+        <UserBannerCarousel
+          banners={heroBannersData}
+          loading={loadingBanners}
+        />
+      </div>
 
       {/* Rest of Content - Container Width with Unified Background */}
       <motion.div
@@ -1207,7 +1209,7 @@ export default function Home() {
               whileTap={{ scale: 0.95 }}
               onClick={() => navigate("/user/under-250")}
             >
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 relative">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shadow-sm border border-border relative">
                 <OptimizedImage
                   src={mealDealLogo}
                   alt="Meals Under ₹200"
@@ -1217,13 +1219,13 @@ export default function Home() {
                   placeholder="blur"
                 />
               </div>
-              <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 text-center w-16 sm:w-20 truncate">
+              <span className="text-xs sm:text-sm font-medium text-foreground/80 text-center w-16 sm:w-20 truncate">
                 Meals @ ₹200
               </span>
             </motion.div>
             {loadingRealCategories ? (
               <div className="flex items-center justify-center py-4">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
             ) : realCategories.length > 0 ? (
               <>
@@ -1245,7 +1247,7 @@ export default function Home() {
                     whileTap={{ scale: 0.95 }}
                   >
                     <Link to={`/user/category/${category.slug || category.name.toLowerCase().replace(/\s+/g, '-')}`} className="flex flex-col items-center gap-2 group">
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 relative">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shadow-sm border border-border relative">
                         <OptimizedImage
                           src={category.image}
                           alt={category.name}
@@ -1256,7 +1258,7 @@ export default function Home() {
                           onError={() => { }}
                         />
                       </div>
-                      <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 text-center w-16 sm:w-20 truncate">
+                      <span className="text-xs sm:text-sm font-medium text-foreground/80 text-center w-16 sm:w-20 truncate">
                         {category.name}
                       </span>
                     </Link>
@@ -1282,11 +1284,11 @@ export default function Home() {
                       onClick={() => setShowAllCategoriesModal(true)}
                       className="flex flex-col items-center gap-2 group"
                     >
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shadow-md border-2 border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/50 dark:to-purple-800/50 flex items-center justify-center relative group-hover:shadow-lg transition-all duration-300">
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-400/20 to-transparent" />
-                        <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform duration-300" />
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shadow-md border-2 border-primary/20 bg-secondary flex items-center justify-center relative group-hover:shadow-lg transition-all duration-300">
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent" />
+                        <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform duration-300" />
                       </div>
-                      <span className="text-xs sm:text-sm font-semibold text-purple-600 dark:text-purple-400 text-center whitespace-nowrap">
+                      <span className="text-xs sm:text-sm font-semibold text-primary text-center whitespace-nowrap">
                         See All
                       </span>
                     </button>
@@ -1302,7 +1304,7 @@ export default function Home() {
                     className="flex-shrink-0 transform transition-all duration-300 hover:scale-105 active:scale-95"
                   >
                     <Link to={`/user/category/${category.slug || category.label.toLowerCase().replace(/\s+/g, '-')}`} className="flex flex-col items-center gap-2 group">
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 relative">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shadow-sm border border-border relative">
                         <OptimizedImage
                           src={category.imageUrl}
                           alt={category.label}
@@ -1312,7 +1314,7 @@ export default function Home() {
                           placeholder="blur"
                         />
                       </div>
-                      <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 text-center w-16 sm:w-20 truncate">
+                      <span className="text-xs sm:text-sm font-medium text-foreground/80 text-center w-16 sm:w-20 truncate">
                         {category.label}
                       </span>
                     </Link>
@@ -1338,11 +1340,11 @@ export default function Home() {
                       onClick={() => setShowAllCategoriesModal(true)}
                       className="flex flex-col items-center gap-2 group"
                     >
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shadow-md border-2 border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/50 dark:to-purple-800/50 flex items-center justify-center relative group-hover:shadow-lg transition-all duration-300">
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-400/20 to-transparent" />
-                        <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform duration-300" />
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shadow-md border-2 border-primary/20 bg-secondary flex items-center justify-center relative group-hover:shadow-lg transition-all duration-300">
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent" />
+                        <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform duration-300" />
                       </div>
-                      <span className="text-xs sm:text-sm font-semibold text-purple-600 dark:text-purple-400 text-center whitespace-nowrap">
+                      <span className="text-xs sm:text-sm font-semibold text-primary text-center whitespace-nowrap">
                         See All
                       </span>
                     </button>
@@ -1351,7 +1353,7 @@ export default function Home() {
               </>
             ) : (
               // No categories available from API
-              <div className="flex items-center justify-center py-4 text-gray-500 text-sm">
+              <div className="flex items-center justify-center py-4 text-muted-foreground text-sm">
                 No categories available
               </div>
             )}
@@ -1381,10 +1383,10 @@ export default function Home() {
               <Button
                 variant="outline"
                 onClick={() => setIsFilterOpen(true)}
-                className="h-7 sm:h-8 px-2 sm:px-3 rounded-md flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 font-medium transition-all bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-white"
+                className="h-7 sm:h-8 px-2 sm:px-3 rounded-md flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 font-medium transition-all bg-card border border-border hover:bg-muted text-foreground"
               >
                 <SlidersHorizontal className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm font-bold text-black dark:text-white">Filters</span>
+                <span className="text-xs sm:text-sm font-bold">Filters</span>
               </Button>
             </motion.div>
 
@@ -1419,12 +1421,12 @@ export default function Home() {
                     }
                     }
                     className={`h-7 sm:h-8 px-2 sm:px-3 rounded-md flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 transition-all font-medium ${isActive
-                      ? 'bg-green-600 text-white border border-green-600 hover:bg-green-600/90'
-                      : 'bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300'
+                      ? 'bg-primary text-primary-foreground border border-primary hover:bg-primary/90'
+                      : 'bg-card border border-border hover:bg-muted text-foreground/80'
                       }`}
                   >
-                    {Icon && <Icon className={`h-3 w-3 sm:h-4 sm:w-4 ${isActive ? 'fill-white' : ''}`} />}
-                    <span className="text-xs sm:text-sm font-bold text-black dark:text-white">{filter.label}</span>
+                    {Icon && <Icon className={`h-3 w-3 sm:h-4 sm:w-4 ${isActive ? 'fill-primary-foreground' : ''}`} />}
+                    <span className="text-xs sm:text-sm font-bold">{filter.label}</span>
                   </Button>
                 </motion.div>
               )
@@ -1441,7 +1443,7 @@ export default function Home() {
           transition={{ duration: 0.5 }}
         >
           <motion.h2
-            className="text-xs sm:text-sm lg:text-base font-semibold text-gray-400 dark:text-gray-500 tracking-widest uppercase mb-2 sm:mb-3 lg:mb-4 px-1"
+            className="text-xs sm:text-sm lg:text-base font-semibold text-muted-foreground tracking-widest uppercase mb-2 sm:mb-3 lg:mb-4 px-1"
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
@@ -1458,7 +1460,7 @@ export default function Home() {
           >
             {loadingLandingConfig ? (
               <div className="flex items-center justify-center py-4">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
             ) : landingExploreMore.length === 0 ? (
               // Fallback to hardcoded explore more if API returns empty
@@ -1502,13 +1504,13 @@ export default function Home() {
                   whileHover={{ scale: 1.1, y: -5 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Link to={item.href} className="flex-shrink-0 bg-white  dark:bg-[#1a1a1a]/80 dark:text-white">
+                  <Link to={item.href} className="flex-shrink-0 bg-card">
                     <div className="flex flex-col items-center gap-2.5 w-24 sm:w-28 md:w-32 group">
-                      <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl bg-white dark:bg-[#1a1a1a]/80 dark:text-white flex items-center justify-center shadow-sm group-hover:shadow-lg transition-all duration-300 overflow-hidden p-2.5">
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl bg-card flex items-center justify-center shadow-sm group-hover:shadow-lg transition-all duration-300 overflow-hidden p-2.5">
                         <OptimizedImage
                           src={item.image}
                           alt={item.label}
-                          className="w-full h-full dark:rounded-md"
+                          className="w-full h-full"
                           width={112}
                           height={112}
                           sizes="(max-width: 640px) 80px, (max-width: 768px) 96px, 112px"
@@ -1516,7 +1518,7 @@ export default function Home() {
                           placeholder="blur"
                         />
                       </div>
-                      <span className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 text-center leading-tight">
+                      <span className="text-sm sm:text-base font-semibold text-foreground/80 text-center leading-tight">
                         {item.label}
                       </span>
                     </div>
@@ -1541,9 +1543,9 @@ export default function Home() {
                     whileHover={{ scale: 1.1, y: -5 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <Link to={item.link} className="flex-shrink-0 bg-white dark:bg-[#1a1a1a]/80 dark:text-white">
+                    <Link to={item.link} className="flex-shrink-0 bg-card">
                       <div className="flex flex-col items-center gap-2.5 w-24 sm:w-28 md:w-32 group">
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl bg-white dark:bg-[#1a1a1a]/80 dark:text-white  flex items-center justify-center shadow-sm group-hover:shadow-lg transition-all duration-300 overflow-hidden p-2.5">
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl bg-card  flex items-center justify-center shadow-sm group-hover:shadow-lg transition-all duration-300 overflow-hidden p-2.5">
                           <OptimizedImage
                             src={item.imageUrl}
                             alt={item.label}
@@ -1556,7 +1558,7 @@ export default function Home() {
                             onError={() => { }}
                           />
                         </div>
-                        <span className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 text-center leading-tight">
+                        <span className="text-sm sm:text-base font-semibold text-foreground/80 text-center leading-tight">
                           {item.label}
                         </span>
                       </div>
@@ -1585,10 +1587,10 @@ export default function Home() {
             transition={{ duration: 0.5 }}
           >
             <div className="flex flex-col gap-0.5 lg:gap-1">
-              <h2 className="text-xs sm:text-sm lg:text-base font-semibold text-gray-400 tracking-widest uppercase">
+              <h2 className="text-xs sm:text-sm lg:text-base font-semibold text-muted-foreground/60 tracking-widest uppercase">
                 {filteredRestaurants.length} Restaurants Delivering to You
               </h2>
-              <span className="text-base sm:text-lg lg:text-2xl text-gray-500 font-normal">Featured</span>
+              <span className="text-base sm:text-lg lg:text-2xl text-muted-foreground font-normal">Featured</span>
             </div>
           </motion.div>
           <div className="relative">
@@ -1596,15 +1598,15 @@ export default function Home() {
             <AnimatePresence>
               {(isLoadingFilterResults || loadingRestaurants) && (
                 <motion.div
-                  className="absolute inset-0 bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg min-h-[400px]"
+                  className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg min-h-[400px]"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
                 >
                   <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="h-8 w-8 text-green-600 animate-spin" strokeWidth={2.5} />
-                    <span className="text-sm font-medium text-gray-700 dark:text-white">Loading restaurants...</span>
+                    <Loader2 className="h-8 w-8 text-primary animate-spin" strokeWidth={2.5} />
+                    <span className="text-sm font-medium text-foreground">Loading restaurants...</span>
                   </div>
                 </motion.div>
               )}
@@ -1652,7 +1654,7 @@ export default function Home() {
                   >
                     <div className="h-full group">
                       <Link to={`/user/restaurants/${restaurantSlug}`} className="h-full flex">
-                        <Card className={`overflow-hidden gap-0 cursor-pointer border-0 dark:border-gray-800 group bg-white dark:bg-[#1a1a1a] border-background transition-all duration-500 py-0 rounded-md flex flex-col h-full w-full relative ${isOutOfService ? 'grayscale opacity-75' : ''
+                        <Card className={`overflow-hidden gap-0 cursor-pointer border-0 group bg-card transition-all duration-500 py-0 rounded-md flex flex-col h-full w-full relative ${isOutOfService ? 'grayscale opacity-75' : ''
                           }`}>
                           {/* Image Section with Carousel */}
                           <div className="relative">
@@ -1663,7 +1665,7 @@ export default function Home() {
 
                             {/* Featured Dish Badge - Top Left */}
                             <div className="absolute top-3 left-3 md:top-4 md:left-4 flex items-center z-10 transform transition-transform duration-300 group-hover:scale-105 group-hover:-translate-y-0.5">
-                              <div className="bg-gray-800/90 backdrop-blur-sm text-white px-2 py-1 md:px-4 md:py-1.5 rounded-md text-xs font-medium flex items-center shadow-lg">
+                              <div className="bg-card/90 backdrop-blur-sm text-foreground px-2 py-1 md:px-4 md:py-1.5 rounded-md text-xs font-medium flex items-center shadow-lg">
                                 {restaurant.featuredDish} · ₹{restaurant.featuredPrice}
                               </div>
                             </div>
@@ -1676,12 +1678,12 @@ export default function Home() {
                                 onClick={handleToggleFavorite}
                                 aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
                                 className={`h-9 w-9 md:h-11 md:w-11 rounded-full border flex items-center justify-center transition-all duration-300 ${favorite
-                                  ? "border-red-500 bg-red-50 text-red-500"
-                                  : "border-white bg-white/90 text-gray-600 hover:bg-white"
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : "border-border bg-card/90 text-muted-foreground hover:bg-card"
                                   }`}
                               >
                                 <Bookmark
-                                  className={`h-5 w-5 lg:h-6 lg:w-6 transition-all duration-300 ${favorite ? "fill-red-500" : ""
+                                  className={`h-5 w-5 lg:h-6 lg:w-6 transition-all duration-300 ${favorite ? "fill-primary" : ""
                                     }`} />
                               </Button>
                             </div>
@@ -1689,7 +1691,7 @@ export default function Home() {
                             {/* FREE delivery Badge - Bottom Left (only for first 3 restaurants) */}
                             {index < 3 && (
                               <div className="absolute bottom-2 left-0 sm:bottom-2 sm:left-0 z-10 transform transition-all duration-300 group-hover:translate-x-1">
-                                <div className="bg-gradient-to-r from-blue-600 via-blue-500/80 to-transparent text-white px-2.5 py-1 rounded-r-sm text-[10px] sm:text-xs font-bold shadow-lg backdrop-blur-sm">
+                                <div className="bg-gradient-to-r from-primary via-primary/80 to-transparent text-primary-foreground px-2.5 py-1 rounded-r-sm text-[10px] sm:text-xs font-bold shadow-lg backdrop-blur-sm">
                                   FREE delivery
                                 </div>
                               </div>
@@ -1702,36 +1704,36 @@ export default function Home() {
                               {/* Restaurant Name & Rating */}
                               <div className="flex items-start justify-between gap-2 mb-2 lg:mb-3">
                                 <div className="flex-1 min-w-0">
-                                  <h3 className="text-md sm:text-md lg:text-xl font-bold text-gray-900 dark:text-white line-clamp-1 lg:line-clamp-2 transition-colors duration-300 group-hover:text-green-600">
+                                  <h3 className="text-md sm:text-md lg:text-xl font-bold text-foreground line-clamp-1 lg:line-clamp-2 transition-colors duration-300 group-hover:text-primary">
                                     {restaurant.name}
                                   </h3>
                                 </div>
-                                <div className="flex-shrink-0 bg-green-600 text-white px-2 py-1 lg:px-3 lg:py-1.5 rounded-lg flex items-center gap-1 transform transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+                                <div className="flex-shrink-0 bg-primary text-primary-foreground px-2 py-1 lg:px-3 lg:py-1.5 rounded-lg flex items-center gap-1 transform transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
                                   <span className="text-sm lg:text-base font-bold">{restaurant.rating}</span>
-                                  <Star className="h-3 w-3 lg:h-4 lg:w-4 fill-white text-white" />
+                                  <Star className="h-3 w-3 lg:h-4 lg:w-4 fill-primary-foreground text-primary-foreground" />
                                 </div>
                               </div>
 
                               {/* Delivery Time & Distance */}
-                              <div className="flex items-center gap-1 text-sm lg:text-base text-gray-500 mb-2 lg:mb-3 transition-opacity duration-300 opacity-70 group-hover:opacity-100">
-                                <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-gray-500 dark:text-gray-400" strokeWidth={1.5} />
-                                <span className="font-medium dark:text-gray-300 text-gray-700">{restaurant.deliveryTime}</span>
+                              <div className="flex items-center gap-1 text-sm lg:text-base text-muted-foreground mb-2 lg:mb-3 transition-opacity duration-300 opacity-70 group-hover:opacity-100">
+                                <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" strokeWidth={1.5} />
+                                <span className="font-medium">{restaurant.deliveryTime}</span>
                                 <span className="mx-1">|</span>
-                                <span className="font-medium dark:text-gray-300 text-gray-700">{restaurant.distance}</span>
+                                <span className="font-medium">{restaurant.distance}</span>
                               </div>
 
                               {/* Offer Badge */}
                               {restaurant.offer && (
                                 <div className="flex items-center gap-2 text-sm lg:text-base mt-auto transform transition-transform duration-300 group-hover:translate-x-1">
-                                  <BadgePercent className="h-4 w-4 lg:h-5 lg:w-5 text-black" strokeWidth={2} />
-                                  <span className="text-gray-700 dark:text-gray-300 font-medium">{restaurant.offer}</span>
+                                  <BadgePercent className="h-4 w-4 lg:h-5 lg:w-5 text-primary" strokeWidth={2} />
+                                  <span className="text-foreground/80 font-medium">{restaurant.offer}</span>
                                 </div>
                               )}
                             </CardContent>
                           </div>
 
                           {/* Border Glow Effect */}
-                          <div className="absolute inset-0 rounded-md pointer-events-none z-0 transition-all duration-300 border border-transparent group-hover:border-green-500/30 group-hover:shadow-[inset_0_0_0_1px_rgba(34,197,94,0.2)]" />
+                          <div className="absolute inset-0 rounded-md pointer-events-none z-0 transition-all duration-300 border border-transparent group-hover:border-primary/30 group-hover:shadow-[inset_0_0_0_1px_rgba(var(--primary),0.2)]" />
                         </Card>
                       </Link>
                     </div>
@@ -1756,7 +1758,7 @@ export default function Home() {
           <div className="fixed inset-0 z-[100]">
             {/* Backdrop */}
             <motion.div
-              className="absolute inset-0 bg-black/50"
+              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
               onClick={() => setIsFilterOpen(false)}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1766,7 +1768,7 @@ export default function Home() {
 
             {/* Modal Content */}
             <motion.div
-              className="absolute bottom-0 left-0 right-0 bg-white dark:bg-[#1a1a1a] rounded-t-3xl max-h-[85vh] flex flex-col"
+              className="absolute bottom-0 left-0 right-0 bg-card rounded-t-3xl max-h-[85vh] flex flex-col"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -1778,15 +1780,15 @@ export default function Home() {
               }}
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-4 py-4 border-b dark:border-gray-800">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Filters and sorting</h2>
+              <div className="flex items-center justify-between px-4 py-4 border-b border-border">
+                <h2 className="text-lg font-bold text-foreground">Filters and sorting</h2>
                 <button
                   onClick={() => {
                     setActiveFilters(new Set())
                     setSortBy(null)
                     setSelectedCuisine(null)
                   }}
-                  className="text-green-600 font-medium text-sm"
+                  className="text-primary font-medium text-sm"
                 >
                   Clear all
                 </button>
@@ -1795,7 +1797,7 @@ export default function Home() {
               {/* Body */}
               <div className="flex flex-1 overflow-hidden">
                 {/* Left Sidebar - Tabs */}
-                <div className="w-24 sm:w-28 bg-gray-50 dark:bg-[#0a0a0a] border-r dark:border-gray-800 flex flex-col">
+                <div className="w-24 sm:w-28 bg-muted border-r border-border flex flex-col">
                   {[
                     { id: 'sort', label: 'Sort By', icon: ArrowDownUp },
                     { id: 'time', label: 'Time', icon: Timer },
@@ -1906,32 +1908,32 @@ export default function Home() {
                       <button
                         onClick={() => toggleFilter('rating-35-plus')}
                         className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('rating-35-plus')
-                          ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                          : 'border-gray-200 dark:border-gray-800 hover:border-green-600'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary'
                           }`}
                       >
-                        <Star className={`h-6 w-6 ${activeFilters.has('rating-35-plus') ? 'text-green-600 fill-green-600' : 'text-gray-400 dark:text-gray-500'}`} />
-                        <span className={`text-sm font-medium ${activeFilters.has('rating-35-plus') ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'}`}>Rated 3.5+</span>
+                        <Star className={`h-6 w-6 ${activeFilters.has('rating-35-plus') ? 'text-primary fill-primary' : 'text-muted-foreground'}`} />
+                        <span className={`text-sm font-medium ${activeFilters.has('rating-35-plus') ? 'text-primary' : 'text-foreground'}`}>Rated 3.5+</span>
                       </button>
                       <button
                         onClick={() => toggleFilter('rating-4-plus')}
                         className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('rating-4-plus')
-                          ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                          : 'border-gray-200 dark:border-gray-800 hover:border-green-600'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary'
                           }`}
                       >
-                        <Star className={`h-6 w-6 ${activeFilters.has('rating-4-plus') ? 'text-green-600 fill-green-600' : 'text-gray-400 dark:text-gray-500'}`} />
-                        <span className={`text-sm font-medium ${activeFilters.has('rating-4-plus') ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'}`}>Rated 4.0+</span>
+                        <Star className={`h-6 w-6 ${activeFilters.has('rating-4-plus') ? 'text-primary fill-primary' : 'text-muted-foreground'}`} />
+                        <span className={`text-sm font-medium ${activeFilters.has('rating-4-plus') ? 'text-primary' : 'text-foreground'}`}>Rated 4.0+</span>
                       </button>
                       <button
                         onClick={() => toggleFilter('rating-45-plus')}
                         className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('rating-45-plus')
-                          ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                          : 'border-gray-200 dark:border-gray-800 hover:border-green-600'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary'
                           }`}
                       >
-                        <Star className={`h-6 w-6 ${activeFilters.has('rating-45-plus') ? 'text-green-600 fill-green-600' : 'text-gray-400 dark:text-gray-500'}`} />
-                        <span className={`text-sm font-medium ${activeFilters.has('rating-45-plus') ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'}`}>Rated 4.5+</span>
+                        <Star className={`h-6 w-6 ${activeFilters.has('rating-45-plus') ? 'text-primary fill-primary' : 'text-muted-foreground'}`} />
+                        <span className={`text-sm font-medium ${activeFilters.has('rating-45-plus') ? 'text-primary' : 'text-foreground'}`}>Rated 4.5+</span>
                       </button>
                     </div>
                   </div>
@@ -1947,22 +1949,22 @@ export default function Home() {
                       <button
                         onClick={() => toggleFilter('distance-under-1km')}
                         className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('distance-under-1km')
-                          ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                          : 'border-gray-200 dark:border-gray-800 hover:border-green-600'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary'
                           }`}
                       >
-                        <MapPin className={`h-6 w-6 ${activeFilters.has('distance-under-1km') ? 'text-green-600' : 'text-gray-600 dark:text-gray-400'}`} strokeWidth={1.5} />
-                        <span className={`text-sm font-medium ${activeFilters.has('distance-under-1km') ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'}`}>Under 1 km</span>
+                        <MapPin className={`h-6 w-6 ${activeFilters.has('distance-under-1km') ? 'text-primary' : 'text-muted-foreground'}`} strokeWidth={1.5} />
+                        <span className={`text-sm font-medium ${activeFilters.has('distance-under-1km') ? 'text-primary' : 'text-foreground'}`}>Under 1 km</span>
                       </button>
                       <button
                         onClick={() => toggleFilter('distance-under-2km')}
                         className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('distance-under-2km')
-                          ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                          : 'border-gray-200 dark:border-gray-800 hover:border-green-600'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary'
                           }`}
                       >
-                        <MapPin className={`h-6 w-6 ${activeFilters.has('distance-under-2km') ? 'text-green-600' : 'text-gray-600 dark:text-gray-400'}`} strokeWidth={1.5} />
-                        <span className={`text-sm font-medium ${activeFilters.has('distance-under-2km') ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'}`}>Under 2 km</span>
+                        <MapPin className={`h-6 w-6 ${activeFilters.has('distance-under-2km') ? 'text-primary' : 'text-muted-foreground'}`} strokeWidth={1.5} />
+                        <span className={`text-sm font-medium ${activeFilters.has('distance-under-2km') ? 'text-primary' : 'text-foreground'}`}>Under 2 km</span>
                       </button>
                     </div>
                   </div>
@@ -1978,20 +1980,20 @@ export default function Home() {
                       <button
                         onClick={() => toggleFilter('price-under-200')}
                         className={`px-4 py-3 rounded-xl border text-left transition-colors ${activeFilters.has('price-under-200')
-                          ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                          : 'border-gray-200 dark:border-gray-800 hover:border-green-600'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary'
                           }`}
                       >
-                        <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'}`}>Under ₹200</span>
+                        <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-primary' : 'text-foreground'}`}>Under ₹200</span>
                       </button>
                       <button
                         onClick={() => toggleFilter('price-under-500')}
                         className={`px-4 py-3 rounded-xl border text-left transition-colors ${activeFilters.has('price-under-500')
-                          ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                          : 'border-gray-200 dark:border-gray-800 hover:border-green-600'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary'
                           }`}
                       >
-                        <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'}`}>Under ₹500</span>
+                        <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-primary' : 'text-foreground'}`}>Under ₹500</span>
                       </button>
                     </div>
                   </div>
@@ -2009,11 +2011,11 @@ export default function Home() {
                           key={cuisine}
                           onClick={() => setSelectedCuisine(selectedCuisine === cuisine ? null : cuisine)}
                           className={`px-4 py-3 rounded-xl border text-center transition-colors ${selectedCuisine === cuisine
-                            ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                            : 'border-gray-200 dark:border-gray-800 hover:border-green-600'
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border hover:border-primary'
                             }`}
                         >
-                          <span className={`text-sm font-medium ${selectedCuisine === cuisine ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'}`}>
+                          <span className={`text-sm font-medium ${selectedCuisine === cuisine ? 'text-primary' : 'text-foreground'}`}>
                             {cuisine}
                           </span>
                         </button>
@@ -2033,20 +2035,20 @@ export default function Home() {
                         <button
                           onClick={() => toggleFilter('top-rated')}
                           className={`px-4 py-3 rounded-xl border text-left transition-colors ${activeFilters.has('top-rated')
-                            ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                            : 'border-gray-200 dark:border-gray-800 hover:border-green-600'
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border hover:border-primary'
                             }`}
                         >
-                          <span className={`text-sm font-medium ${activeFilters.has('top-rated') ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'}`}>Top Rated</span>
+                          <span className={`text-sm font-medium ${activeFilters.has('top-rated') ? 'text-primary' : 'text-foreground'}`}>Top Rated</span>
                         </button>
                         <button
                           onClick={() => toggleFilter('trusted')}
                           className={`px-4 py-3 rounded-xl border text-left transition-colors ${activeFilters.has('trusted')
-                            ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                            : 'border-gray-200 dark:border-gray-800 hover:border-green-600'
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border hover:border-primary'
                             }`}
                         >
-                          <span className={`text-sm font-medium ${activeFilters.has('trusted') ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'}`}>Trusted by 1000+ users</span>
+                          <span className={`text-sm font-medium ${activeFilters.has('trusted') ? 'text-primary' : 'text-foreground'}`}>Trusted by 1000+ users</span>
                         </button>
                       </div>
                     </div>
@@ -2064,11 +2066,11 @@ export default function Home() {
                         <button
                           onClick={() => toggleFilter('has-offers')}
                           className={`px-4 py-3 rounded-xl border text-left transition-colors ${activeFilters.has('has-offers')
-                            ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                            : 'border-gray-200 dark:border-gray-800 hover:border-green-600'
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border hover:border-primary'
                             }`}
                         >
-                          <span className={`text-sm font-medium ${activeFilters.has('has-offers') ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'}`}>Restaurants with offers</span>
+                          <span className={`text-sm font-medium ${activeFilters.has('has-offers') ? 'text-primary' : 'text-foreground'}`}>Restaurants with offers</span>
                         </button>
                       </div>
                     </div>
@@ -2077,10 +2079,10 @@ export default function Home() {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center gap-4 px-4 py-4 border-t dark:border-gray-800 bg-white dark:bg-[#1a1a1a]">
+              <div className="flex items-center gap-4 px-4 py-4 border-t border-border bg-card">
                 <button
                   onClick={() => setIsFilterOpen(false)}
-                  className="flex-1 py-3 text-center font-semibold text-gray-700 dark:text-gray-300"
+                  className="flex-1 py-3 text-center font-semibold text-muted-foreground"
                 >
                   Close
                 </button>

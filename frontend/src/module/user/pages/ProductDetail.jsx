@@ -241,10 +241,10 @@ export default function ProductDetail() {
       <Star
         key={i}
         className={`${size} ${i < Math.floor(rating)
-            ? "fill-yellow-400 text-yellow-400"
-            : i < rating
-              ? "fill-yellow-200 text-yellow-200"
-              : "fill-gray-300 text-gray-300"
+          ? "fill-primary text-primary"
+          : i < rating
+            ? "fill-primary/20 text-primary/20"
+            : "fill-muted text-muted"
           }`}
       />
     ))
@@ -252,7 +252,7 @@ export default function ProductDetail() {
 
   if (!product) {
     return (
-      <AnimatedPage className="min-h-screen bg-gradient-to-b from-yellow-50/30 via-white to-orange-50/20 dark:from-[#0a0a0a] dark:via-[#0a0a0a] dark:to-[#0a0a0a]">
+      <AnimatedPage className="min-h-screen bg-background">
         <div className="max-w-4xl mx-auto px-4 py-20 text-center">
           <h1 className="text-2xl font-bold mb-4">Product Not Found</h1>
           <Link to="/user">
@@ -280,39 +280,39 @@ export default function ProductDetail() {
               variant="ghost"
               size="icon"
               onClick={() => navigate(-1)}
-              className="rounded-full bg-white/90 backdrop-blur-sm hover:bg-white shadow-md"
+              className="rounded-full bg-card/90 backdrop-blur-sm hover:bg-card shadow-md"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-5 w-5 text-foreground" />
             </Button>
           </div>
 
           {/* Rating Badge - Top Right */}
           <div className="absolute top-4 right-4 z-10">
-            <Badge className="bg-primary-orange text-white shadow-lg">
-              <Star className="h-3 w-3 fill-white text-white mr-1" />
+            <Badge className="bg-primary text-primary-foreground shadow-lg">
+              <Star className="h-3 w-3 fill-primary-foreground text-primary-foreground mr-1" />
               {averageRating}
             </Badge>
           </div>
 
           {/* Product Info Card Overlay */}
-          <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-[#1a1a1a] rounded-t-3xl p-4 sm:p-5 md:p-6 lg:p-8">
+          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-3xl p-4 sm:p-5 md:p-6 lg:p-8">
             <div className="flex items-start gap-4 md:gap-6 lg:gap-8">
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between mb-2 md:mb-3">
-                  <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white leading-tight break-words">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-foreground leading-tight break-words">
                     {product.name}
                   </h1>
                 </div>
-                <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base md:text-lg mb-2 md:mb-3 line-clamp-2 lg:line-clamp-3">
+                <p className="text-muted-foreground text-sm sm:text-base md:text-lg mb-2 md:mb-3 line-clamp-2 lg:line-clamp-3">
                   {product.description}
                 </p>
                 <div className="flex items-center gap-3 md:gap-4 flex-wrap">
                   <div className="flex items-center gap-1 md:gap-2">
                     {renderStars(averageRating, "h-4 w-4 md:h-5 md:w-5")}
-                    <span className="text-gray-900 dark:text-white font-semibold text-sm sm:text-base md:text-lg">{averageRating}</span>
+                    <span className="text-foreground font-semibold text-sm sm:text-base md:text-lg">{averageRating}</span>
                   </div>
                   <span className="text-gray-400">|</span>
-                  <span className="text-gray-600 dark:text-gray-300 text-sm sm:text-base md:text-lg underline">
+                  <span className="text-muted-foreground text-sm sm:text-base md:text-lg underline">
                     {reviews.length} {reviews.length === 1 ? 'Review' : 'Reviews'}
                   </span>
                   <span className="text-gray-400">|</span>
@@ -322,10 +322,10 @@ export default function ProductDetail() {
                 </div>
               </div>
               <div className="flex-shrink-0 text-right">
-                <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-primary-orange">
+                <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-primary">
                   ₹{(product.price * 83).toFixed(0)}
                 </div>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">per serving</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">per serving</p>
               </div>
             </div>
           </div>
@@ -338,7 +338,7 @@ export default function ProductDetail() {
             <div className="space-y-4">
               {/* Breadcrumb */}
               <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
-                <Link to="/user" className="hover:text-primary-orange transition-colors">Home</Link>
+                <Link to="/user" className="hover:text-primary transition-colors">Home</Link>
                 <span>/</span>
                 <span className="text-foreground font-medium truncate">{restaurant?.name || "Restaurant"}</span>
                 <span>/</span>
@@ -354,22 +354,22 @@ export default function ProductDetail() {
               <h2 className="text-xl font-bold">Order</h2>
               {inCart ? (
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 border border-yellow-500 rounded-lg">
+                  <div className="flex items-center gap-2 border border-primary rounded-lg">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-10 w-10 hover:bg-yellow-50"
+                      className="h-10 w-10 hover:bg-primary/10"
                       onClick={handleDecrease}
                     >
                       <Minus className="h-5 w-5" />
                     </Button>
-                    <span className="px-4 text-lg font-semibold min-w-[2rem] text-center">
+                    <span className="px-4 text-lg font-semibold min-w-[2rem] text-center text-foreground">
                       {cartItem?.quantity || 0}
                     </span>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-10 w-10 hover:bg-yellow-50"
+                      className="h-10 w-10 hover:bg-primary/10"
                       onClick={handleIncrease}
                     >
                       <Plus className="h-5 w-5" />
@@ -377,14 +377,14 @@ export default function ProductDetail() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground">In cart</p>
-                    <p className="text-lg font-bold text-primary-orange">
+                    <p className="text-lg font-bold text-primary">
                       ₹{(product.price * 83 * (cartItem?.quantity || 0)).toFixed(0)}
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 border border-gray-300 rounded-lg">
+                  <div className="flex items-center gap-2 border border-border rounded-lg">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -410,7 +410,7 @@ export default function ProductDetail() {
                   >
                     <Button
                       onClick={handleAddToCart}
-                      className="bg-primary-orange hover:opacity-90 text-white"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <ShoppingBag className="h-5 w-5 mr-2" />
                       Add to Cart - ₹{(product.price * 83 * quantity).toFixed(0)}
@@ -432,12 +432,12 @@ export default function ProductDetail() {
                     </h3>
                     <p className="text-sm md:text-base text-muted-foreground">{restaurant.cuisine}</p>
                   </div>
-                  <Badge className="bg-primary-orange text-white text-sm md:text-base">{restaurant.priceRange}</Badge>
+                  <Badge className="bg-primary text-primary-foreground text-sm md:text-base">{restaurant.priceRange}</Badge>
                 </div>
                 <div className="flex items-center gap-4 md:gap-6 flex-wrap text-sm md:text-base">
                   <div className="flex items-center gap-1.5">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="font-semibold">{restaurant.rating}</span>
+                    <Star className="h-4 w-4 fill-primary text-primary" />
+                    <span className="font-semibold text-foreground">{restaurant.rating}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock className="h-4 w-4 text-muted-foreground" />
@@ -533,7 +533,7 @@ export default function ProductDetail() {
                 )}
               </div> */}
 
-              {/* {showReviewForm && (
+          {/* {showReviewForm && (
                 <div className="space-y-4 pb-4 border-b">
                   <h3 className="text-lg font-semibold">Write Your Review</h3>
                   <form onSubmit={handleSubmitReview} className="space-y-4">
@@ -580,7 +580,7 @@ export default function ProductDetail() {
                       </Button>
                       <Button
                         type="submit"
-                        className="flex-1 bg-gradient-to-r bg-primary-orange hover:from-yellow-600 hover:to-orange-600"
+                        className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
                       >
                         <Send className="h-4 w-4 mr-2" />
                         Submit Review
@@ -590,7 +590,7 @@ export default function ProductDetail() {
                 </div>
               )} */}
 
-              {/* <div className="space-y-4">
+          {/* <div className="space-y-4">
                 {reviews.length > 0 ? (
                   reviews.map((review, index) => (
                     <ScrollReveal key={review.id} delay={index * 0.05}>
@@ -736,7 +736,7 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div> */}
-            {/* </div>
+          {/* </div>
           </ScrollReveal> */}
         </div>
       </div>

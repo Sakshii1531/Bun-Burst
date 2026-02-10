@@ -109,7 +109,7 @@ export default function UserTopHeader({
     return (
         <header
             className={cn(
-                "w-full bg-white dark:bg-[#0a0a0a] border-b border-gray-200 dark:border-gray-800 z-50",
+                "w-full bg-background/95 backdrop-blur-md border-b-2 border-border shadow-md z-50 transition-colors duration-300",
                 sticky && "sticky top-0",
                 className
             )}
@@ -118,7 +118,7 @@ export default function UserTopHeader({
                 {/* Main Header Row */}
                 <div className="flex items-center justify-between gap-3 py-3 sm:py-4">
                     {/* Left: Logo */}
-                    <div className="flex items-center flex-shrink-0 ml-2 lg:ml-1">
+                    <div className="flex items-center flex-shrink-0 ml-4 lg:ml-2">
                         <Link to="/user" className="flex-shrink-0 group">
                             {logoUrl ? (
                                 <img
@@ -127,9 +127,9 @@ export default function UserTopHeader({
                                     className="h-14 w-14 sm:h-16 sm:w-16 lg:h-20 lg:w-20 object-contain rounded-lg hover:scale-105 transition-transform duration-300"
                                 />
                             ) : (
-                                <div className="h-14 w-14 sm:h-16 sm:w-16 lg:h-20 lg:w-20 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">
-                                    <span className="text-white font-bold text-xl sm:text-2xl lg:text-3xl">
-                                        {companyName?.[0] || "F"}
+                                <div className="h-14 w-14 sm:h-16 sm:w-16 lg:h-20 lg:w-20 bg-primary rounded-lg flex items-center justify-center shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">
+                                    <span className="text-primary-foreground font-bold text-xl sm:text-2xl lg:text-3xl">
+                                        {companyName?.[0] || "B"}
                                     </span>
                                 </div>
                             )}
@@ -139,9 +139,9 @@ export default function UserTopHeader({
                     {/* Desktop Search Center (NEW) */}
                     {(showSearchAlways) && (
                         <div className="hidden md:flex flex-1 max-w-xl mx-4">
-                            <div className="w-full relative bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 shadow-sm hover:shadow-md">
+                            <div className="w-full relative bg-muted rounded-2xl border-2 border-border hover:border-primary transition-all duration-200 shadow-sm hover:shadow-md">
                                 <div className="flex items-center gap-2.5 px-4 py-2">
-                                    <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                    <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                     <div className="flex-1 relative">
                                         <Input
                                             value={searchQuery}
@@ -152,7 +152,7 @@ export default function UserTopHeader({
                                                     navigate(`/user/search?q=${encodeURIComponent(searchQuery.trim())}`)
                                                 }
                                             }}
-                                            className="h-6 px-0 border-0 bg-transparent text-sm font-medium text-gray-700 dark:text-white focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-400"
+                                            className="h-6 px-0 border-0 bg-transparent text-sm font-medium text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground"
                                         />
                                         {!searchQuery && (
                                             <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none h-5 overflow-hidden">
@@ -163,7 +163,7 @@ export default function UserTopHeader({
                                                         animate={{ y: 0, opacity: 1 }}
                                                         exit={{ y: -16, opacity: 0 }}
                                                         transition={{ duration: 0.3 }}
-                                                        className="text-sm font-medium text-gray-400 inline-block text-nowrap"
+                                                        className="text-sm font-medium text-muted-foreground inline-block text-nowrap"
                                                     >
                                                         {placeholders[placeholderIndex]}
                                                     </motion.span>
@@ -171,41 +171,40 @@ export default function UserTopHeader({
                                             </div>
                                         )}
                                     </div>
-                                    <button type="button" onClick={handleSearchFocus} className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-all">
-                                        <Mic className="h-4 w-4 text-gray-400" />
+                                    <button type="button" onClick={handleSearchFocus} className="p-1.5 hover:bg-muted rounded-lg transition-all">
+                                        <Mic className="h-4 w-4 text-muted-foreground" />
                                     </button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Center/Right: Location Selector */}
                     <div className={cn("hidden lg:flex items-center", showSearchAlways ? "flex-shrink-0" : "flex-1 justify-center")}>
                         <button
                             onClick={() => openLocationSelector()}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 max-w-[300px]"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted transition-all duration-200 max-w-[300px]"
                         >
-                            <MapPin className="h-5 w-5 text-purple-600 flex-shrink-0" />
+                            <MapPin className="h-5 w-5 text-primary flex-shrink-0" />
                             <div className="flex flex-col items-start min-w-0">
-                                <span className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-full leading-tight">
+                                <span className="text-sm font-bold text-foreground truncate max-w-full leading-tight">
                                     {getLocationText()}
                                 </span>
                                 {location?.state && (
-                                    <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate leading-tight">
+                                    <span className="text-[10px] text-muted-foreground truncate leading-tight">
                                         {location.state}
                                     </span>
                                 )}
                             </div>
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
                         </button>
                     </div>
 
                     {/* Mobile Only Location (Compact) */}
                     <div className="lg:hidden flex-1 flex justify-center min-w-0">
-                        <button onClick={() => openLocationSelector()} className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg max-w-[150px]">
-                            <MapPin className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                        <button onClick={() => openLocationSelector()} className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-muted rounded-lg max-w-[150px]">
+                            <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
                             <span className="text-sm font-bold truncate">{getLocationText()}</span>
-                            <ChevronDown className="h-3 w-3 text-gray-400" />
+                            <ChevronDown className="h-3 w-3 text-muted-foreground" />
                         </button>
                     </div>
 
@@ -214,11 +213,11 @@ export default function UserTopHeader({
                         {/* VEG Toggle */}
                         {showVegToggle && (
                             <div className="hidden sm:flex flex-col items-center gap-0.5">
-                                <span className="text-[9px] font-black text-green-700 dark:text-green-500 leading-none">VEG</span>
+                                <span className="text-[9px] font-black text-primary leading-none">VEG</span>
                                 <Switch
                                     checked={vegMode}
                                     onCheckedChange={onVegModeChange}
-                                    className="scale-90 data-[state=checked]:bg-green-600"
+                                    className="scale-90 data-[state=checked]:bg-primary"
                                 />
                             </div>
                         )}
@@ -226,23 +225,23 @@ export default function UserTopHeader({
                         {/* Actions Icons */}
                         <div className="flex items-center gap-1.5 sm:gap-2">
                             <Link to="/user/wallet" className="hidden sm:block">
-                                <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-orange-50 dark:hover:bg-orange-950/20">
-                                    <Wallet className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                                <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-muted">
+                                    <Wallet className="h-5 w-5 text-foreground" />
                                 </Button>
                             </Link>
                             <Link to="/user/cart" className="relative">
-                                <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-purple-50 dark:hover:bg-purple-950/20">
-                                    <ShoppingCart className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                                <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-muted">
+                                    <ShoppingCart className="h-5 w-5 text-foreground" />
                                     {cartCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-purple-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white dark:border-[#0a0a0a]">
+                                        <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center border-2 border-background">
                                             {cartCount > 9 ? "9+" : cartCount}
                                         </span>
                                     )}
                                 </Button>
                             </Link>
                             <Link to="/user/profile">
-                                <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border border-gray-100 dark:border-gray-800">
-                                    <AvatarFallback className="bg-purple-100 dark:bg-purple-900/50 text-purple-600 text-xs">
+                                <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border border-border">
+                                    <AvatarFallback className="bg-muted text-primary text-xs">
                                         <User className="h-4 w-4" />
                                     </AvatarFallback>
                                 </Avatar>
@@ -253,9 +252,9 @@ export default function UserTopHeader({
 
                 {/* Search Bar Row (Visible on Mobile/Tablet, hidden on Desktop if search is in header) */}
                 <div className="md:hidden pb-3 px-1 flex items-center gap-3">
-                    <div className="flex-1 relative bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 shadow-sm hover:shadow-md">
+                    <div className="flex-1 relative bg-muted rounded-2xl border-2 border-border hover:border-primary transition-all duration-200 shadow-sm hover:shadow-md">
                         <div className="flex items-center gap-2.5 px-4 py-2.5">
-                            <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <div className="flex-1 relative">
                                 <Input
                                     value={searchQuery}
@@ -266,7 +265,7 @@ export default function UserTopHeader({
                                             navigate(`/user/search?q=${encodeURIComponent(searchQuery.trim())}`)
                                         }
                                     }}
-                                    className="h-6 px-0 border-0 bg-transparent text-sm font-medium text-gray-700 dark:text-white focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-400"
+                                    className="h-6 px-0 border-0 bg-transparent text-sm font-medium text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground"
                                 />
                                 {!searchQuery && (
                                     <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none h-5 overflow-hidden">
@@ -277,7 +276,7 @@ export default function UserTopHeader({
                                                 animate={{ y: 0, opacity: 1 }}
                                                 exit={{ y: -16, opacity: 0 }}
                                                 transition={{ duration: 0.3 }}
-                                                className="text-sm font-medium text-gray-400 inline-block"
+                                                className="text-sm font-medium text-muted-foreground inline-block"
                                             >
                                                 {placeholders[placeholderIndex]}
                                             </motion.span>
@@ -285,8 +284,8 @@ export default function UserTopHeader({
                                     </div>
                                 )}
                             </div>
-                            <button type="button" onClick={handleSearchFocus} className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-all">
-                                <Mic className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                            <button type="button" onClick={handleSearchFocus} className="p-1.5 hover:bg-muted rounded-lg transition-all">
+                                <Mic className="h-4 w-4 text-muted-foreground" />
                             </button>
                         </div>
                     </div>
@@ -294,11 +293,11 @@ export default function UserTopHeader({
                     {/* Mobile Veg Toggle */}
                     {showVegToggle && (
                         <div className="flex flex-col items-center gap-0.5 shrink-0">
-                            <span className="text-[9px] font-black text-green-700 dark:text-green-500 leading-none">VEG</span>
+                            <span className="text-[9px] font-black text-primary leading-none">VEG</span>
                             <Switch
                                 checked={vegMode}
                                 onCheckedChange={onVegModeChange}
-                                className="scale-90 data-[state=checked]:bg-green-600 shadow-sm border border-green-200 dark:border-green-900"
+                                className="scale-90 data-[state=checked]:bg-primary shadow-sm border border-border"
                             />
                         </div>
                     )}

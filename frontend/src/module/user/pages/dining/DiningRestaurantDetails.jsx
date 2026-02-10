@@ -81,16 +81,16 @@ export default function DiningRestaurantDetails() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-slate-50">
-                <Loader2 className="w-8 h-8 animate-spin text-red-500" />
+            <div className="flex items-center justify-center min-h-screen bg-background">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
         )
     }
 
     if (error || !restaurant) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-4">
-                <h2 className="text-xl font-bold text-slate-800">Restaurant not found</h2>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
+                <h2 className="text-xl font-bold text-foreground">Restaurant not found</h2>
                 <Button onClick={() => navigate(-1)} className="mt-4" variant="outline">Go Back</Button>
             </div>
         )
@@ -104,19 +104,19 @@ export default function DiningRestaurantDetails() {
 
     if (restaurant.diningSettings && restaurant.diningSettings.isEnabled === false) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-4 text-center">
-                <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                    <UtensilsCrossed className="w-8 h-8 text-gray-400" />
+            <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 text-center">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                    <UtensilsCrossed className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h2 className="text-xl font-bold text-slate-800 mb-2">Dining Unavailable</h2>
-                <p className="text-slate-600 mb-6">Dining is currently unavailable for this restaurant.</p>
+                <h2 className="text-xl font-bold text-foreground mb-2">Dining Unavailable</h2>
+                <p className="text-muted-foreground mb-6">Dining is currently unavailable for this restaurant.</p>
                 <Button onClick={() => navigate(-1)} variant="outline">Go Back</Button>
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-white pb-20 relative">
+        <div className="min-h-screen bg-background pb-20 relative">
             {/* Sticky Header / Back Button */}
             <div className="fixed top-0 left-0 w-full z-50 p-4 flex justify-between items-center bg-gradient-to-b from-black/50 to-transparent pointer-events-none">
                 <button
@@ -153,9 +153,9 @@ export default function DiningRestaurantDetails() {
                         {restaurant.location?.addressLine1 || restaurant.address || "Location not available"}
                     </p>
 
-                    <div className="flex items-center gap-3 text-sm font-medium mb-3">
+                    <div className="flex items-center gap-3 text-sm font-medium mb-3 text-white/90">
                         <span>{formattedDistance}</span>
-                        <span className="w-1 h-1 rounded-full bg-gray-400"></span>
+                        <span className="w-1 h-1 rounded-full bg-white/40"></span>
                         {/* Cost For Two */}
                         <span>{restaurant.costForTwo ? `₹${restaurant.costForTwo} for two` : "₹1400 for two"}</span>
                     </div>
@@ -163,40 +163,40 @@ export default function DiningRestaurantDetails() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             {isOpen ? (
-                                <div className="flex items-center gap-1.5 text-green-400 text-xs font-semibold uppercase tracking-wide">
+                                <div className="flex items-center gap-1.5 text-primary text-xs font-semibold uppercase tracking-wide bg-white/10 px-2 py-1 rounded-md backdrop-blur-sm">
                                     <CheckCircle2 className="w-4 h-4" />
                                     <span>Open now | 12:00 PM to 11:59 PM</span>
                                 </div>
                             ) : (
-                                <div className="text-red-400 text-xs font-semibold">Closed</div>
+                                <div className="text-destructive text-xs font-semibold bg-white/10 px-2 py-1 rounded-md backdrop-blur-sm">Closed</div>
                             )}
                         </div>
 
-                        <div className="flex flex-col items-center bg-green-700/90 backdrop-blur-sm rounded-lg px-2 py-1">
-                            <div className="flex items-center gap-1 text-white font-bold text-lg leading-none">
+                        <div className="flex flex-col items-center bg-primary rounded-lg px-2 py-1">
+                            <div className="flex items-center gap-1 text-primary-foreground font-bold text-lg leading-none">
                                 {rating} <Star className="w-3 h-3 fill-current" />
                             </div>
-                            <span className="text-[10px] text-white/90">780 Reviews</span>
+                            <span className="text-[10px] text-primary-foreground/80">780 Reviews</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Action Buttons Bar */}
-            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 gap-3">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-border gap-3">
                 <Button
                     variant="outline"
-                    className="flex-1 border-gray-200 h-10 text-red-500 hover:text-red-600 hover:bg-red-50 font-medium rounded-full"
+                    className="flex-1 border-border h-10 text-primary hover:text-primary hover:bg-primary/10 font-medium rounded-full"
                 >
                     <UtensilsCrossed className="w-4 h-4 mr-2" />
                     Book a table
                 </Button>
 
                 <div className="flex gap-3">
-                    <button className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-red-500 hover:bg-red-50">
+                    <button className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-primary hover:bg-primary/10">
                         <Navigation className="w-5 h-5" />
                     </button>
-                    <button className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-red-500 hover:bg-red-50">
+                    <button className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-primary hover:bg-primary/10">
                         <Phone className="w-5 h-5" />
                     </button>
                 </div>
@@ -204,70 +204,69 @@ export default function DiningRestaurantDetails() {
 
             {/* Offer Banner */}
             <div className="px-4 py-4">
-                <div className="bg-[#FFF8E8] border border-[#F5D8A0] rounded-xl p-4 relative overflow-hidden">
+                <div className="bg-card border border-border rounded-xl p-4 relative overflow-hidden">
                     <div className="flex flex-col items-center justify-center text-center z-10 relative">
-                        <span className="text-2xl font-black text-[#2D2D2D] tracking-tight">10% CASHBACK</span>
-                        <span className="text-xs font-medium text-gray-600 uppercase tracking-widest bg-white/50 px-2 py-0.5 rounded mt-1">on every dining bill</span>
+                        <span className="text-2xl font-black text-foreground tracking-tight">10% CASHBACK</span>
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest bg-background/50 px-2 py-0.5 rounded mt-1">on every dining bill</span>
                     </div>
 
                     {/* Decorative Elements mimicking the screenshot */}
-                    <div className="absolute top-0 left-0 w-8 h-8 bg-purple-500/20 -rotate-45 transform -translate-x-4 -translate-y-4"></div>
-                    <div className="absolute bottom-0 right-0 w-8 h-8 bg-green-500/20 rotate-45 transform translate-x-4 translate-y-4"></div>
+                    <div className="absolute top-0 left-0 w-8 h-8 bg-primary/20 -rotate-45 transform -translate-x-4 -translate-y-4"></div>
+                    <div className="absolute bottom-0 right-0 w-8 h-8 bg-primary/20 rotate-45 transform translate-x-4 translate-y-4"></div>
                 </div>
             </div>
 
             {/* Tabs */}
-            <div className="sticky top-0 bg-white z-40 border-b border-gray-100 shadow-sm">
+            <div className="sticky top-0 bg-background z-40 border-b border-border shadow-sm">
                 <div className="flex overflow-x-auto no-scrollbar py-1 px-4 gap-6">
                     {["Pre-book offers", "Walk-in offers", "Menu", "Photos", "Reviews", "About"].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`whitespace-nowrap py-3 text-sm font-medium transition-colors relative ${activeTab === tab ? "text-red-500" : "text-gray-500 hover:text-gray-800"
+                            className={`whitespace-nowrap py-3 text-sm font-medium transition-colors relative ${activeTab === tab ? "text-primary" : "text-muted-foreground hover:text-foreground"
                                 }`}
                         >
                             {tab}
                             {activeTab === tab && (
-                                <div className="absolute bottom-0 left-0 w-full h-[2px] bg-red-500 rounded-t-full" />
+                                <div className="absolute bottom-0 left-0 w-full h-[2px] bg-primary rounded-t-full" />
                             )}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* Tab Content Placeholder */}
             <div className="p-4 min-h-[300px]">
                 <h3 className="font-bold text-lg mb-2">{activeTab}</h3>
-                <p className="text-gray-500 text-sm">Content for {activeTab} will be displayed here.</p>
+                <p className="text-muted-foreground text-sm">Content for {activeTab} will be displayed here.</p>
 
                 {activeTab === "Menu" && (
                     <div className="mt-4 grid grid-cols-2 gap-4">
-                        <div className="h-32 bg-gray-100 rounded-lg"></div>
-                        <div className="h-32 bg-gray-100 rounded-lg"></div>
+                        <div className="h-32 bg-muted rounded-lg"></div>
+                        <div className="h-32 bg-muted rounded-lg"></div>
                     </div>
                 )}
             </div>
 
             {/* Sticky Booking Footer */}
             {(!restaurant.diningSettings || restaurant.diningSettings.isEnabled) ? (
-                <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 p-3 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-50 flex gap-3">
+                <div className="fixed bottom-0 left-0 w-full bg-background border-t border-border p-3 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-50 flex gap-3">
                     <Button
                         variant="outline"
                         onClick={() => setIsBookingOpen(true)}
-                        className="flex-1 h-12 rounded-xl text-red-500 border-red-500 hover:bg-red-50 font-bold"
+                        className="flex-1 h-12 rounded-xl text-primary border-primary hover:bg-primary/10 font-bold"
                     >
                         Book a table
                     </Button>
                     <Button
-                        className="flex-1 h-12 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold flex flex-col items-center justify-center leading-tight py-1"
+                        className="flex-1 h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold flex flex-col items-center justify-center leading-tight py-1"
                     >
                         <span className="text-sm">Pay bill</span>
                         <span className="text-[10px] font-normal opacity-90">Tap to view offers</span>
                     </Button>
                 </div>
             ) : (
-                <div className="fixed bottom-0 left-0 w-full bg-slate-100 border-t border-gray-200 p-4 z-50 text-center">
-                    <p className="text-gray-500 font-medium">Dining is currently unavailable for this restaurant.</p>
+                <div className="fixed bottom-0 left-0 w-full bg-muted border-t border-border p-4 z-50 text-center">
+                    <p className="text-muted-foreground font-medium">Dining is currently unavailable for this restaurant.</p>
                 </div>
             )}
 
@@ -278,12 +277,12 @@ export default function DiningRestaurantDetails() {
                     <div className="absolute inset-0 bg-black/50 pointer-events-auto" onClick={() => setIsBookingOpen(false)} />
 
                     {/* Modal Panel */}
-                    <div className="relative w-full sm:w-[400px] bg-white rounded-t-2xl sm:rounded-2xl p-6 pointer-events-auto animate-in slide-in-from-bottom-5">
-                        <h3 className="text-xl font-bold mb-4">Book a Table</h3>
+                    <div className="relative w-full sm:w-[400px] bg-card rounded-t-2xl sm:rounded-2xl p-6 pointer-events-auto animate-in slide-in-from-bottom-5">
+                        <h3 className="text-xl font-bold mb-4 text-foreground">Book a Table</h3>
 
                         <div className="space-y-4">
                             <div className="space-y-3">
-                                <label className="text-sm font-medium text-gray-700 block">Number of Guests</label>
+                                <label className="text-sm font-medium text-muted-foreground block">Number of Guests</label>
 
                                 {/* Manual Input */}
                                 <div className="relative">
@@ -306,9 +305,9 @@ export default function DiningRestaurantDetails() {
                                         onBlur={(e) => {
                                             if (!selectedGuests || selectedGuests < 1) setSelectedGuests(1)
                                         }}
-                                        className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all text-lg font-semibold text-center"
+                                        className="w-full p-3 border border-border rounded-xl bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 focus:ring-primary transition-all text-lg font-semibold text-center text-foreground"
                                     />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium pointer-events-none">
                                         Guests
                                     </span>
                                 </div>
@@ -320,8 +319,8 @@ export default function DiningRestaurantDetails() {
                                             key={num}
                                             onClick={() => setSelectedGuests(num)}
                                             className={`min-w-[40px] h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all flex-shrink-0 ${selectedGuests === num
-                                                ? "bg-red-500 text-white shadow-md transform scale-105"
-                                                : "bg-white border border-gray-200 text-gray-600 hover:border-red-200 hover:bg-red-50"
+                                                ? "bg-primary text-primary-foreground shadow-md transform scale-105"
+                                                : "bg-background border border-border text-muted-foreground hover:border-primary/50 hover:bg-primary/5"
                                                 }`}
                                         >
                                             {num}
@@ -335,7 +334,7 @@ export default function DiningRestaurantDetails() {
                                     setIsBookingOpen(false)
                                     navigate(`/dining/book/${slug}`, { state: { guestCount: selectedGuests } })
                                 }}
-                                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold h-12 rounded-xl"
+                                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 rounded-xl"
                             >
                                 Confirm Booking
                             </Button>
@@ -343,7 +342,7 @@ export default function DiningRestaurantDetails() {
 
                         <button
                             onClick={() => setIsBookingOpen(false)}
-                            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600"
+                            className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-foreground"
                         >
                             <span className="sr-only">Close</span>
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>

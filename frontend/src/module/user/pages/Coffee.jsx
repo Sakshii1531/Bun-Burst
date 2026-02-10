@@ -115,7 +115,7 @@ export default function Coffee() {
       <div className="mb-8">
         {/* Section Header */}
         <div className="mb-4">
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide text-center">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide text-center">
             {sectionTitle}
           </h3>
         </div>
@@ -125,17 +125,17 @@ export default function Coffee() {
           {stores.map((store, index) => {
             const storeSlug = store.name.toLowerCase().replace(/\s+/g, "-")
             const isHighRating = store.rating >= 4.0
-            
+
             return (
-              <Link 
-                key={store.id} 
+              <Link
+                key={store.id}
                 to={`/user/restaurants/${storeSlug}`}
                 className="block"
               >
-                <div className={`flex items-start gap-4 py-4 ${index !== stores.length - 1 ? 'border-b border-gray-200' : ''}`}>
+                <div className={`flex items-start gap-4 py-4 ${index !== stores.length - 1 ? 'border-b border-border' : ''}`}>
                   {/* Logo - Circular */}
                   <div className="flex-shrink-0">
-                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
                       {store.logo ? (
                         <img
                           src={store.logo}
@@ -146,8 +146,8 @@ export default function Coffee() {
                           }}
                         />
                       ) : (
-                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                          <span className="text-gray-400 text-xs font-semibold">
+                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                          <span className="text-muted-foreground text-xs font-semibold">
                             {store.name.charAt(0)}
                           </span>
                         </div>
@@ -158,34 +158,33 @@ export default function Coffee() {
                   {/* Store Info */}
                   <div className="flex-1 min-w-0">
                     {/* Location Name */}
-                    <h4 className="text-base font-bold text-gray-900 mb-2">
+                    <h4 className="text-base font-bold text-foreground mb-2">
                       {store.location}
                     </h4>
 
                     {/* Rating Badge */}
                     <div className="mb-2">
-                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded ${
-                        isHighRating 
-                          ? 'bg-green-600 text-white' 
-                          : 'bg-yellow-400 text-gray-900'
-                      }`}>
+                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded ${isHighRating
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary text-secondary-foreground'
+                        }`}>
                         <span className="text-sm font-semibold">{store.rating}</span>
-                        <Star className={`h-3 w-3 ${isHighRating ? 'fill-white text-white' : 'fill-gray-900 text-gray-900'}`} />
+                        <Star className={`h-3 w-3 ${isHighRating ? 'fill-primary-foreground text-primary-foreground' : 'fill-secondary-foreground text-secondary-foreground'}`} />
                       </div>
                     </div>
 
                     {/* Distance */}
-                    <p className="text-sm text-gray-500 mb-1">
+                    <p className="text-sm text-muted-foreground mb-1">
                       {store.distance}
                     </p>
 
                     {/* Price and Offer */}
                     <div className="flex items-center gap-3 flex-wrap">
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-muted-foreground">
                         {store.price}
                       </p>
                       {store.offer && (
-                        <span className="text-sm font-medium text-blue-600">
+                        <span className="text-sm font-medium text-accent">
                           {store.offer}
                         </span>
                       )}
@@ -201,7 +200,7 @@ export default function Coffee() {
   }
 
   return (
-    <AnimatedPage className="bg-white" style={{ minHeight: '100vh', paddingBottom: '80px', overflow: 'visible' }}>
+    <AnimatedPage className="bg-background" style={{ minHeight: '100vh', paddingBottom: '80px', overflow: 'visible' }}>
       {/* Banner Section with Back Button and Location */}
       <div className="relative w-full overflow-hidden">
         {/* Background with coffee banner */}
@@ -222,20 +221,20 @@ export default function Coffee() {
               variant="ghost"
               size="icon"
               onClick={() => navigate(-1)}
-              className="h-9 w-9 sm:h-10 sm:w-10 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-colors flex-shrink-0"
+              className="h-9 w-9 sm:h-10 sm:w-10 bg-background/90 backdrop-blur-sm rounded-full hover:bg-background transition-colors flex-shrink-0"
             >
-              <ArrowLeft className="h-5 w-5 text-gray-800" strokeWidth={2.5} />
+              <ArrowLeft className="h-5 w-5 text-foreground" strokeWidth={2.5} />
             </Button>
 
             {/* Location with Dotted Underline */}
             <Button
               variant="ghost"
               onClick={handleLocationClick}
-              className="text-left text-white text-sm sm:text-base font-semibold backdrop-blur-sm rounded-full px-3 sm:px-4 py-2 hover:bg-white transition-colors"
+              className="text-left text-primary-foreground text-sm sm:text-base font-semibold backdrop-blur-sm rounded-full px-3 sm:px-4 py-2 hover:bg-primary/10 transition-colors"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <FaLocationDot className="h-4 w-4 sm:h-5 sm:w-5 text-white flex-shrink-0" />
-                <span className="text-sm sm:text-base font-semibold text-white truncate border-b-2 border-dotted border-white">
+                <FaLocationDot className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground flex-shrink-0" />
+                <span className="text-sm sm:text-base font-semibold text-primary-foreground truncate border-b-2 border-dotted border-primary-foreground">
                   {cityName}
                 </span>
               </div>
@@ -249,14 +248,14 @@ export default function Coffee() {
         <div className="max-w-4xl mx-auto">
           {/* Header Section */}
           <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Starbucks Coffee
-          </h1>
-          <p className="text-sm sm:text-base text-gray-500">
-            Cafe, Coffee, Beverages
-          </p>
-          <div className="h-px bg-gray-200 mt-4"></div>
-        </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+              Starbucks Coffee
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Cafe, Coffee, Beverages
+            </p>
+            <div className="h-px bg-border mt-4"></div>
+          </div>
 
           {/* Multiple Store Lists */}
           {renderStoreList(starbucksStores, "DINING OUTLETS NEAR YOU")}

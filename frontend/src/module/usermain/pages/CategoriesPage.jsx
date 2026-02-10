@@ -126,14 +126,14 @@ export default function CategoriesPage() {
       {/* Bottom Navigation Bar - Mobile Only */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
         <div className="flex items-center justify-around py-2 px-4">
-          <button 
+          <button
             onClick={() => navigate('/usermain')}
             className="flex flex-col items-center gap-1 p-2 text-gray-600 hover:text-[#ff8100] transition-colors"
           >
             <Home className="w-6 h-6" />
             <span className="text-xs text-gray-600 font-medium">Home</span>
           </button>
-          <button 
+          <button
             onClick={() => navigate('/usermain/wishlist')}
             className="flex flex-col items-center gap-1 p-2 text-gray-600 hover:text-[#ff8100] transition-colors"
           >

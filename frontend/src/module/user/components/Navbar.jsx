@@ -64,7 +64,7 @@ export default function Navbar() {
       }
     }
     window.addEventListener('businessSettingsUpdated', handleSettingsUpdate)
-    
+
     return () => {
       window.removeEventListener('businessSettingsUpdated', handleSettingsUpdate)
     }
@@ -84,7 +84,7 @@ export default function Navbar() {
   const userPoints = 99
 
   return (
-    <nav className="z-50 w-full backdrop-blur-md bg-gradient-to-b from-page-bg/80 via-page-bg/50 to-page-bg/20 border-b border-gray-200/50">
+    <nav className="z-50 w-full backdrop-blur-md bg-background/95 border-b-2 border-border shadow-md">
       <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8">
         <div className="flex h-16 sm:h-18 md:h-20 items-center justify-between gap-2 sm:gap-3 md:gap-4">
           {/* Location Section */}
@@ -95,18 +95,18 @@ export default function Navbar() {
               onClick={handleLocationClick}
               disabled={loading}
             >
-              {loading ? ( 
+              {loading ? (
                 <span className="text-xs sm:text-sm font-semibold text-left text-black">
                   Loading...
                 </span>
               ) : (
                 <div className="flex flex-col items-start w-full min-w-0">
                   <span className="text-xs sm:text-sm flex flex-row items-center gap-1 font-semibold text-left text-foreground truncate w-full">
-                    <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-black flex-shrink-0" />
+                    <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary flex-shrink-0" />
                     {cityName}
                   </span>
                   {location?.state && (
-                    <span className="text-[10px] sm:text-xs text-black pt-1 text-left truncate w-full">
+                    <span className="text-[10px] sm:text-xs text-muted-foreground pt-1 text-left truncate w-full">
                       {stateName}
                     </span>
                   )}
@@ -128,7 +128,7 @@ export default function Navbar() {
                 }}
               />
             ) : companyName ? (
-              <span className="text-sm sm:text-base md:text-lg font-bold text-gray-900">
+              <span className="text-sm sm:text-base md:text-lg font-bold text-foreground">
                 {companyName}
               </span>
             ) : null}
@@ -140,9 +140,9 @@ export default function Navbar() {
             <Button
               variant="ghost"
 
-              
+
               size="icon"
-              className="relative h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 hover:bg-gray-100"
+              className="relative h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 hover:bg-muted"
               title={`${userPoints} Points`}
             >
               <Trophy className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-primary-orange" />
@@ -153,7 +153,7 @@ export default function Navbar() {
 
             {/* Cart */}
             <Link to="/user/cart">
-              <Button variant="ghost" size="icon" className="relative h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 hover:bg-gray-100">
+              <Button variant="ghost" size="icon" className="relative h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 hover:bg-muted">
                 <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                 {cartCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-primary-orange text-white text-[10px] sm:text-xs flex items-center justify-center font-semibold">
@@ -166,7 +166,7 @@ export default function Navbar() {
             {/* Profile */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 hover:bg-gray-100">
+                <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 hover:bg-muted">
                   <Avatar className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9">
                     <AvatarFallback className="bg-primary-orange text-white text-xs sm:text-sm md:text-base">
                       A

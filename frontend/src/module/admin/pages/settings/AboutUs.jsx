@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
-import api, { adminAPI } from "@/lib/api"
+import api, { adminAPI, uploadAPI } from "@/lib/api"
 import { API_ENDPOINTS } from "@/lib/api/config"
 import { Heart, Users, Shield, Clock, Star, Award, Plus, X, GripVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -40,6 +40,7 @@ const colorOptions = [
 ]
 
 export default function AboutUs() {
+  const companyName = useCompanyName()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [aboutData, setAboutData] = useState({
@@ -85,6 +86,30 @@ export default function AboutUs() {
     }
   }
 
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      setSaving(true)
+      const response = await uploadAPI.uploadMedia(file, { folder: 'appzeto/about' })
+      if (response.data?.success && response.data?.data?.url) {
+        const url = response.data.data.url
+        setAboutData(prev => ({ ...prev, logo: url }))
+        toast.success('Logo uploaded successfully')
+      } else {
+        toast.error('Upload failed')
+      }
+    } catch (error) {
+      console.error('Error uploading logo:', error)
+      toast.error('Failed to upload logo')
+    } finally {
+      setSaving(false)
+      // Reset input value to allow uploading same file again
+      if (e.target) e.target.value = ''
+    }
+  }
+
   const addFeature = () => {
     setAboutData(prev => ({
       ...prev,
@@ -109,9 +134,9 @@ export default function AboutUs() {
         ...aboutData,
         features: aboutData.features.filter((_, i) => i !== index)
       }
-      
+
       setAboutData(updatedData)
-      
+
       // Save to backend immediately
       setSaving(true)
       const response = await api.put(API_ENDPOINTS.ADMIN.ABOUT, updatedData)
@@ -133,7 +158,7 @@ export default function AboutUs() {
     setAboutData(prev => {
       const newFeatures = [...prev.features]
       newFeatures[index] = { ...newFeatures[index], [field]: value }
-      
+
       // Update bgColor when color changes
       if (field === 'color') {
         const colorOption = colorOptions.find(opt => opt.value === value)
@@ -141,7 +166,7 @@ export default function AboutUs() {
           newFeatures[index].bgColor = colorOption.bg
         }
       }
-      
+
       return { ...prev, features: newFeatures }
     })
   }
@@ -211,6 +236,23 @@ export default function AboutUs() {
                 placeholder="https://example.com/logo.png"
                 className="mt-1"
               />
+              <div className="mt-2">
+                <input
+                  type="file"
+                  id="logo-upload"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('logo-upload').click()}
+                >
+                  Upload Logo
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

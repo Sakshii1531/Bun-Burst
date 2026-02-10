@@ -42,13 +42,13 @@ export default function TableBookingSuccess() {
     const formattedDate = new Date(booking.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
     return (
-        <AnimatedPage className="bg-white min-h-screen flex flex-col items-center justify-center p-6 pb-24">
+        <AnimatedPage className="bg-background min-h-screen flex flex-col items-center justify-center p-6 pb-24">
             <motion.div
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6"
+                className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mb-6"
             >
-                <CheckCircle2 className="w-12 h-12 text-green-500" />
+                <CheckCircle2 className="w-12 h-12 text-primary" />
             </motion.div>
 
             <motion.div
@@ -57,10 +57,10 @@ export default function TableBookingSuccess() {
                 transition={{ delay: 0.2 }}
                 className="text-center space-y-2 mb-10"
             >
-                <h1 className="text-3xl font-black text-gray-900">Seat Confirmed!</h1>
-                <p className="text-gray-500 font-medium tracking-wide italic">Your table is ready for you</p>
+                <h1 className="text-3xl font-black text-foreground">Seat Confirmed!</h1>
+                <p className="text-muted-foreground font-medium tracking-wide italic">Your table is ready for you</p>
                 <div className="pt-2">
-                    <span className="bg-blue-50 text-blue-600 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest border border-blue-100">
+                    <span className="bg-highlight text-highlight-foreground px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest border border-highlight/20">
                         BOOKING ID: {booking.bookingId}
                     </span>
                 </div>
@@ -71,15 +71,15 @@ export default function TableBookingSuccess() {
                 initial={{ y: 30, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="w-full max-w-sm bg-slate-50 rounded-3xl border border-slate-100 overflow-hidden shadow-xl shadow-slate-200"
+                className="w-full max-w-sm bg-card rounded-3xl border border-border overflow-hidden shadow-xl shadow-muted/20"
             >
                 <div className="p-6 space-y-6 relative">
                     {/* Circle cutouts for ticket look */}
-                    <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full border border-slate-100"></div>
-                    <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full border border-slate-100"></div>
+                    <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-background rounded-full border border-border"></div>
+                    <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-background rounded-full border border-border"></div>
 
                     <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-2xl bg-white border border-slate-100 flex-shrink-0 p-1">
+                        <div className="w-16 h-16 rounded-2xl bg-card border border-border flex-shrink-0 p-1">
                             <img
                                 src={booking.restaurant?.image || booking.restaurant?.profileImage?.url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=150&q=80"}
                                 className="w-full h-full object-cover rounded-xl"
@@ -87,8 +87,8 @@ export default function TableBookingSuccess() {
                             />
                         </div>
                         <div className="min-w-0">
-                            <h2 className="font-black text-lg text-gray-900 truncate">{booking.restaurant?.name || "The Great Indian Restaurant"}</h2>
-                            <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                            <h2 className="font-black text-lg text-foreground truncate">{booking.restaurant?.name || "The Great Indian Restaurant"}</h2>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                                 <MapPin className="w-3 h-3" />
                                 <span className="truncate">
                                     {typeof booking.restaurant?.location === 'string'
@@ -99,39 +99,39 @@ export default function TableBookingSuccess() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 py-6 border-y border-dashed border-slate-200">
+                    <div className="grid grid-cols-2 gap-4 py-6 border-y border-dashed border-border">
                         <div className="space-y-1">
-                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Date</p>
-                            <div className="flex items-center gap-2 font-bold text-gray-800">
-                                <Calendar className="w-4 h-4 text-red-500" />
+                            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Date</p>
+                            <div className="flex items-center gap-2 font-bold text-foreground">
+                                <Calendar className="w-4 h-4 text-primary" />
                                 <span>{formattedDate}</span>
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Time</p>
-                            <div className="flex items-center gap-2 font-bold text-gray-800">
-                                <Clock className="w-4 h-4 text-red-500" />
+                            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Time</p>
+                            <div className="flex items-center gap-2 font-bold text-foreground">
+                                <Clock className="w-4 h-4 text-primary" />
                                 <span>{booking.timeSlot}</span>
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Guests</p>
-                            <div className="flex items-center gap-2 font-bold text-gray-800">
-                                <Users className="w-4 h-4 text-red-500" />
+                            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Guests</p>
+                            <div className="flex items-center gap-2 font-bold text-foreground">
+                                <Users className="w-4 h-4 text-primary" />
                                 <span>{booking.guests} People</span>
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Status</p>
-                            <div className="bg-green-500 text-white px-2 py-0.5 rounded-lg text-xs font-bold w-fit">
+                            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Status</p>
+                            <div className="bg-primary text-primary-foreground px-2 py-0.5 rounded-lg text-xs font-bold w-fit">
                                 CONFIRMED
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-indigo-600">
+                    <div className="flex items-center justify-between text-primary">
                         <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></div>
+                            <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
                             <span className="font-bold text-sm">10% Cashback with Tastizo Pay</span>
                         </div>
                         <Share2 className="w-5 h-5 cursor-pointer hover:scale-110 transition-transform" />
@@ -146,8 +146,8 @@ export default function TableBookingSuccess() {
                 className="mt-12 w-full max-w-sm space-y-3"
             >
                 <Button
-                    onClick={() => navigate("/bookings")}
-                    className="w-full h-14 bg-red-500 hover:bg-red-600 text-white font-bold text-lg rounded-2xl shadow-xl shadow-red-100 flex items-center justify-center gap-2"
+                    onClick={() => navigate("/dining/my-bookings")}
+                    className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-2"
                 >
                     <List className="w-5 h-5" />
                     View My Bookings
@@ -155,14 +155,14 @@ export default function TableBookingSuccess() {
                 <Button
                     onClick={() => navigate("/")}
                     variant="outline"
-                    className="w-full h-14 bg-white border-2 border-slate-100 text-slate-600 font-bold text-lg rounded-2xl hover:bg-slate-50 flex items-center justify-center gap-2"
+                    className="w-full h-14 bg-card border-2 border-border text-muted-foreground font-bold text-lg rounded-2xl hover:bg-muted flex items-center justify-center gap-2"
                 >
                     <Home className="w-5 h-5" />
                     Go to Home
                 </Button>
             </motion.div>
 
-            <p className="fixed bottom-10 text-[10px] font-bold text-slate-300 uppercase tracking-widest px-10 text-center">
+            <p className="fixed bottom-10 text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-10 text-center opacity-50">
                 Show this ticket at the restaurant for a smooth entry
             </p>
         </AnimatedPage>

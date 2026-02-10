@@ -107,61 +107,61 @@ export default function TableBooking() {
     }
 
     return (
-        <AnimatedPage className="bg-slate-50 min-h-screen pb-24">
+        <AnimatedPage className="bg-background min-h-screen pb-24">
             {/* Header */}
-            <div className="bg-white px-4 pt-4 pb-12 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-50 rounded-full blur-3xl opacity-50 -mr-20 -mt-20"></div>
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-red-50 rounded-full blur-3xl opacity-30 -ml-16 -mb-16"></div>
+            <div className="bg-card px-4 pt-4 pb-12 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl opacity-50 -mr-20 -mt-20"></div>
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl opacity-30 -ml-16 -mb-16"></div>
 
                 <div className="relative z-10">
-                    <button onClick={() => navigate(-1)} className="p-2 -ml-2 mb-4 bg-white shadow-sm rounded-full">
-                        <ArrowLeft className="w-6 h-6" />
+                    <button onClick={() => navigate(-1)} className="p-2 -ml-2 mb-4 bg-card shadow-sm rounded-full hover:bg-muted/50">
+                        <ArrowLeft className="w-6 h-6 text-foreground" />
                     </button>
                     <div className="text-center">
-                        <h1 className="text-2xl font-bold text-gray-900">Book a table</h1>
-                        <p className="text-gray-500 font-medium">{restaurant.name}</p>
+                        <h1 className="text-2xl font-bold text-foreground">Book a table</h1>
+                        <p className="text-muted-foreground font-medium">{restaurant.name}</p>
                     </div>
                 </div>
             </div>
 
             <div className="px-4 -mt-6 relative z-20 space-y-4">
                 {/* Guest Selector */}
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
-                    <span className="font-semibold text-gray-700">Select number of guests</span>
+                <div className="bg-card rounded-2xl p-4 shadow-sm border border-border flex items-center justify-between">
+                    <span className="font-semibold text-foreground">Select number of guests</span>
                     <div className="relative">
                         <select
                             value={selectedGuests}
                             onChange={(e) => setSelectedGuests(parseInt(e.target.value))}
-                            className="appearance-none bg-slate-50 border border-slate-200 rounded-lg py-2 pl-4 pr-10 font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500"
+                            className="appearance-none bg-muted/30 border border-border rounded-lg py-2 pl-4 pr-10 font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                             {Array.from({ length: restaurant.diningSettings?.maxGuests || 10 }, (_, i) => i + 1).map(num => (
                                 <option key={num} value={num}>{num}</option>
                             ))}
                         </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                     </div>
                 </div>
 
                 {/* Cashback Banner */}
-                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4 flex items-center gap-4 border border-indigo-100 shadow-sm overflow-hidden relative">
+                <div className="bg-gradient-to-r from-muted/50 to-card rounded-2xl p-4 flex items-center gap-4 border border-border shadow-sm overflow-hidden relative">
                     <div className="absolute right-0 top-0 opacity-10">
-                        <Ticket className="w-16 h-16 rotate-45" />
+                        <Ticket className="w-16 h-16 rotate-45 text-foreground" />
                     </div>
-                    <div className="bg-indigo-500 p-2 rounded-xl text-white shadow-lg shadow-indigo-200">
+                    <div className="bg-primary p-2 rounded-xl text-primary-foreground shadow-lg shadow-primary/20">
                         <Ticket className="w-6 h-6" />
                     </div>
                     <div>
-                        <p className="font-bold text-gray-800 flex items-center gap-1">
-                            Get an extra 10% cashback <span className="text-indigo-600">on your final bill</span>
+                        <p className="font-bold text-foreground flex items-center gap-1">
+                            Get an extra 10% cashback <span className="text-primary">on your final bill</span>
                         </p>
-                        <p className="text-xs text-indigo-500 font-medium">payment at the restaurant</p>
+                        <p className="text-xs text-muted-foreground font-medium">payment at the restaurant</p>
                     </div>
                 </div>
 
                 {/* Date Selector */}
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-red-500" />
+                <div className="bg-card rounded-2xl p-4 shadow-sm border border-border">
+                    <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-primary" />
                         Select date
                     </h3>
                     <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
@@ -170,15 +170,15 @@ export default function TableBooking() {
                                 key={idx}
                                 onClick={() => setSelectedDate(date)}
                                 className={`min-w-[110px] p-3 rounded-2xl border transition-all flex flex-col items-center gap-1 ${selectedDate.toDateString() === date.toDateString()
-                                    ? "bg-red-50 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.1)]"
-                                    : "bg-white border-slate-100 hover:border-slate-200"
+                                    ? "bg-primary/10 border-primary shadow-[0_0_15px_rgba(var(--primary),0.1)]"
+                                    : "bg-card border-border hover:border-muted-foreground/30"
                                     }`}
                             >
-                                <span className={`text-xs font-bold uppercase tracking-wider ${selectedDate.toDateString() === date.toDateString() ? "text-red-500" : "text-gray-400"
+                                <span className={`text-xs font-bold uppercase tracking-wider ${selectedDate.toDateString() === date.toDateString() ? "text-primary" : "text-muted-foreground"
                                     }`}>
                                     {formatDate(date)}
                                 </span>
-                                <span className={`font-bold ${selectedDate.toDateString() === date.toDateString() ? "text-gray-900" : "text-gray-500"
+                                <span className={`font-bold ${selectedDate.toDateString() === date.toDateString() ? "text-foreground" : "text-muted-foreground"
                                     }`}>
                                     {formatDayNum(date)}
                                 </span>
@@ -188,21 +188,21 @@ export default function TableBooking() {
                 </div>
 
                 {/* Time Selector */}
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 min-h-[400px]">
-                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-red-500" />
+                <div className="bg-card rounded-2xl p-4 shadow-sm border border-border min-h-[400px]">
+                    <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-primary" />
                         Select time of day
                     </h3>
 
                     {/* Tabs */}
-                    <div className="flex p-1 bg-slate-100 rounded-xl mb-6">
+                    <div className="flex p-1 bg-muted/30 rounded-xl mb-6">
                         {["Lunch", "Dinner"].map(type => (
                             <button
                                 key={type}
                                 onClick={() => setActiveTimeOfDay(type)}
                                 className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTimeOfDay === type
-                                    ? "bg-white text-gray-900 shadow-sm"
-                                    : "text-gray-500 hover:text-gray-700"
+                                    ? "bg-card text-foreground shadow-sm"
+                                    : "text-muted-foreground hover:text-foreground"
                                     }`}
                             >
                                 {type}
@@ -217,16 +217,16 @@ export default function TableBooking() {
                                 key={idx}
                                 onClick={() => setSelectedSlot(slot)}
                                 className={`p-3 rounded-xl border transition-all text-center flex flex-col gap-0.5 ${selectedSlot?.time === slot.time
-                                    ? "bg-red-500 border-red-500 text-white shadow-lg shadow-red-200"
-                                    : "bg-white border-slate-100 hover:border-slate-200"
+                                    ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/20"
+                                    : "bg-card border-border hover:border-muted-foreground/30"
                                     }`}
                             >
-                                <span className={`text-sm font-bold ${selectedSlot?.time === slot.time ? "text-white" : "text-gray-800"
+                                <span className={`text-sm font-bold ${selectedSlot?.time === slot.time ? "text-primary-foreground" : "text-foreground"
                                     }`}>
                                     {slot.time}
                                 </span>
                                 {slot.discount !== "No OFF" && (
-                                    <span className={`text-[10px] font-bold ${selectedSlot?.time === slot.time ? "text-white/90" : "text-blue-500"
+                                    <span className={`text-[10px] font-bold ${selectedSlot?.time === slot.time ? "text-primary-foreground/90" : "text-primary"
                                         }`}>
                                         {slot.discount}
                                     </span>
@@ -235,20 +235,20 @@ export default function TableBooking() {
                         ))}
                     </div>
 
-                    <div className="mt-8 text-center text-red-500 font-bold text-sm flex items-center justify-center gap-1 cursor-pointer">
+                    <div className="mt-8 text-center text-primary font-bold text-sm flex items-center justify-center gap-1 cursor-pointer">
                         View all slots <ChevronDown className="w-4 h-4" />
                     </div>
                 </div>
             </div>
 
             {/* Sticky Proceed Button */}
-            <div className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-100 p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-50">
+            <div className="fixed bottom-0 left-0 w-full bg-card border-t border-border p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-50">
                 <Button
                     disabled={!selectedSlot}
                     onClick={handleProceed}
                     className={`w-full h-14 rounded-2xl font-bold text-lg transition-all ${selectedSlot
-                        ? "bg-red-500 hover:bg-red-600 text-white shadow-xl shadow-red-200"
-                        : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                        ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/20"
+                        : "bg-muted text-muted-foreground cursor-not-allowed"
                         }`}
                 >
                     Proceed

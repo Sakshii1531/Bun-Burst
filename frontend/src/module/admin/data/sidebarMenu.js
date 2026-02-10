@@ -191,6 +191,10 @@ export const sidebarMenuData = [
           },
           { label: "Deliveryman List", path: "/admin/delivery-partners" },
           {
+            label: "Salary Setup",
+            path: "/admin/delivery-partners/salary-setup",
+          },
+          {
             label: "Deliveryman Reviews",
             path: "/admin/delivery-partners/reviews",
           },

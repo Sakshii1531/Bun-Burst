@@ -65,16 +65,16 @@ export default function About() {
   }
 
   return (
-    <AnimatedPage className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-[#0a0a0a] dark:to-[#1a1a1a]">
+    <AnimatedPage className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8">
         {/* Header */}
         <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8">
           <Link to="/user/profile">
-            <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10 p-0 hover:bg-gray-100 dark:hover:bg-gray-800">
-              <ArrowLeft className="h-5 w-5 md:h-6 md:w-6 text-gray-900 dark:text-white" />
+            <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10 p-0 hover:bg-muted">
+              <ArrowLeft className="h-5 w-5 md:h-6 md:w-6 text-foreground" />
             </Button>
           </Link>
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">About</h1>
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">About</h1>
         </div>
 
         {/* App Info Card */}
@@ -83,8 +83,8 @@ export default function About() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Card className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-lg border-0 dark:border-gray-800 mb-6 overflow-hidden">
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-8 md:p-10 text-center">
+          <Card className="bg-card rounded-2xl shadow-lg border-border mb-6 overflow-hidden">
+            <div className="bg-gradient-to-br from-primary/5 to-accent/5 p-8 md:p-10 text-center">
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -92,12 +92,12 @@ export default function About() {
                 className="flex justify-center mb-6"
               >
                 <div className="relative">
-                  <div className="absolute inset-0 bg-green-400 rounded-full blur-2xl opacity-30 animate-pulse" />
-                  <div className="relative bg-white dark:bg-gray-800 rounded-full p-4 md:p-6 shadow-xl">
+                  <div className="absolute inset-0 bg-primary/30 rounded-full blur-2xl animate-pulse" />
+                  <div className="relative bg-card rounded-full p-4 md:p-6 shadow-xl border border-border">
                     <img
                       src={aboutData.logo && aboutData.logo.trim() ? aboutData.logo : appzetoFoodLogo}
                       alt={`${aboutData.appName} Logo`}
-                      className="h-16 w-16 md:h-20 md:w-20 object-contain rounded-full"
+                      className="h-16 w-16 md:h-20 md:w-20 object-contain"
                     />
                   </div>
                 </div>
@@ -107,7 +107,7 @@ export default function About() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: 0.5 }}
-                className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-2"
+                className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-2"
               >
                 {aboutData.appName}
               </motion.h2>
@@ -116,7 +116,7 @@ export default function About() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4, duration: 0.5 }}
-                className="text-gray-600 dark:text-gray-400 text-sm md:text-base mb-4"
+                className="text-muted-foreground text-sm md:text-base mb-4"
               >
                 Version {aboutData.version}
               </motion.p>
@@ -125,7 +125,7 @@ export default function About() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5, duration: 0.5 }}
-                className="text-gray-700 dark:text-gray-300 leading-relaxed text-base md:text-lg max-w-2xl mx-auto"
+                className="text-muted-foreground leading-relaxed text-base md:text-lg max-w-2xl mx-auto"
               >
                 {aboutData.description}
               </motion.p>
@@ -152,17 +152,17 @@ export default function About() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <Card className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-md border-0 dark:border-gray-800 hover:shadow-xl transition-shadow duration-300 h-full">
+                  <Card className="bg-card rounded-xl shadow-md border-border hover:shadow-xl transition-shadow duration-300 h-full">
                     <CardContent className="p-5 md:p-6">
                       <div className="flex items-start gap-4">
                         <div className={`${feature.bgColor} rounded-xl p-3 flex-shrink-0`}>
                           <IconComponent className={`h-6 w-6 md:h-7 md:w-7 ${feature.color}`} />
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                          <h3 className="text-lg md:text-xl font-semibold text-foreground mb-2">
                             {feature.title}
                           </h3>
-                          <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
+                          <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
                             {feature.description}
                           </p>
                         </div>
@@ -181,101 +181,101 @@ export default function About() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.2, duration: 0.5 }}
         >
-          <Card className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-md border-0 dark:border-gray-800">
+          <Card className="bg-card rounded-xl shadow-md border-border">
             <CardContent className="p-5 md:p-6">
-              <h3 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <FileText className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              <h3 className="text-lg md:text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+                <FileText className="h-5 w-5 text-muted-foreground" />
                 Legal Information
               </h3>
               <div className="space-y-3">
                 <Link
                   to="/profile/terms"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors group"
                 >
-                  <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2 group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors">
-                    <FileText className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  <div className="bg-muted rounded-lg p-2 group-hover:bg-muted/80 transition-colors">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
-                    <div className="text-base font-medium text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+                    <div className="text-base font-medium text-foreground group-hover:text-primary transition-colors">
                       Terms and Conditions
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                       Read our terms and conditions
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
+                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </Link>
 
                 <Link
                   to="/profile/privacy"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors group"
                 >
-                  <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2 group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors">
-                    <Lock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  <div className="bg-muted rounded-lg p-2 group-hover:bg-muted/80 transition-colors">
+                    <Lock className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
-                    <div className="text-base font-medium text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+                    <div className="text-base font-medium text-foreground group-hover:text-primary transition-colors">
                       Privacy Policy
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                       Learn how we protect your data
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
+                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </Link>
 
                 <Link
                   to="/profile/refund"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors group"
                 >
-                  <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2 group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors">
-                    <Receipt className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  <div className="bg-muted rounded-lg p-2 group-hover:bg-muted/80 transition-colors">
+                    <Receipt className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
-                    <div className="text-base font-medium text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+                    <div className="text-base font-medium text-foreground group-hover:text-primary transition-colors">
                       Refund Policy
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                       Read our refund terms and conditions
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
+                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </Link>
 
                 <Link
                   to="/profile/shipping"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors group"
                 >
-                  <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2 group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors">
-                    <Truck className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  <div className="bg-muted rounded-lg p-2 group-hover:bg-muted/80 transition-colors">
+                    <Truck className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
-                    <div className="text-base font-medium text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+                    <div className="text-base font-medium text-foreground group-hover:text-primary transition-colors">
                       Shipping Policy
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                       Learn about our shipping terms
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
+                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </Link>
 
                 <Link
                   to="/profile/cancellation"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors group"
                 >
-                  <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2 group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors">
-                    <XCircle className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  <div className="bg-muted rounded-lg p-2 group-hover:bg-muted/80 transition-colors">
+                    <XCircle className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
-                    <div className="text-base font-medium text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+                    <div className="text-base font-medium text-foreground group-hover:text-primary transition-colors">
                       Cancellation Policy
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                       Read our cancellation terms and conditions
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
+                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </Link>
               </div>
             </CardContent>
@@ -289,7 +289,7 @@ export default function About() {
           transition={{ delay: 1.4, duration: 0.5 }}
           className="text-center mt-8 mb-4"
         >
-          <p className="text-sm text-gray-500 dark:text-gray-500">
+          <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} {companyName}. All rights reserved.
           </p>
         </motion.div>

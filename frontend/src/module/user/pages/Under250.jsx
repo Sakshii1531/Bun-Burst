@@ -19,6 +19,7 @@ import OptimizedImage from "@/components/OptimizedImage"
 import api from "@/lib/api"
 import { restaurantAPI } from "@/lib/api"
 import { isModuleAuthenticated } from "@/lib/utils/auth"
+import UserBannerCarousel from "../components/UserBannerCarousel"
 
 export default function Under250() {
   const { location } = useLocation()
@@ -133,26 +134,27 @@ export default function Under250() {
     return filtered
   }, [under250Restaurants, selectedSort, under30MinsFilter])
 
+  // State to handle multiple banners if array returned
+  const [bannersData, setBannersData] = useState([])
+
   // Fetch under 250 banners from API
   useEffect(() => {
     const fetchBanners = async () => {
       try {
         setLoadingBanner(true)
         const response = await api.get('/hero-banners/under-250/public')
-        if (response.data.success && response.data.data.banners && response.data.data.banners.length > 0) {
-          // Use the first banner
-          setBannerImage(response.data.data.banners[0])
-        } else {
-          setBannerImage(null)
+        if (response.data.success && response.data.data.banners) {
+          setBannersData(response.data.data.banners)
+          if (response.data.data.banners.length > 0) {
+            setBannerImage(response.data.data.banners[0])
+          }
         }
       } catch (error) {
         console.error('Error fetching under 250 banners:', error)
-        setBannerImage(null)
       } finally {
         setLoadingBanner(false)
       }
     }
-
     fetchBanners()
   }, [])
 
@@ -381,29 +383,17 @@ export default function Under250() {
   return (
 
     <div className={`relative min-h-screen bg-white dark:bg-[#0a0a0a] ${shouldShowGrayscale ? 'grayscale opacity-75' : ''}`}>
-      {/* Banner Section with Navbar */}
-      <div className="relative w-full overflow-hidden min-h-[39vh] lg:min-h-[50vh] md:pt-16">
-        {/* Banner Image */}
-        {bannerImage && (
-          <div className="absolute top-0 left-0 right-0 bottom-0 z-0">
-            <OptimizedImage
-              src={bannerImage}
-              alt="Under 250 Banner"
-              className="w-full h-full"
-              objectFit="cover"
-              priority={true}
-              sizes="100vw"
-            />
-          </div>
-        )}
-        {!bannerImage && !loadingBanner && (
-          <div className="absolute top-0 left-0 right-0 bottom-0 z-0 bg-gradient-to-br from-green-100 to-blue-100 dark:from-green-900 dark:to-blue-900" />
-        )}
+      {/* Sticky Top Header matching Home Page behavior */}
+      <div className="sticky top-0 z-50 bg-white dark:bg-[#0a0a0a] border-b border-border shadow-sm">
+        <PageNavbar textColor="black" zIndex={20} showProfile={true} />
+      </div>
 
-        {/* Navbar */}
-        <div className="relative z-20 pt-2 sm:pt-3 lg:pt-4">
-          <PageNavbar textColor="black" zIndex={20} showProfile={true} />
-        </div>
+      {/* Hero Banner Section - Reusable Carousel matching Home Page layout */}
+      <div className="max-w-7xl mx-auto px-0">
+        <UserBannerCarousel
+          banners={bannersData.length > 0 ? bannersData : (bannerImage ? [bannerImage] : [])}
+          loading={loadingBanner}
+        />
       </div>
 
       {/* Content Section */}
@@ -437,7 +427,7 @@ export default function Under250() {
                     placeholder="blur"
                   />
                 </div>
-                <span className="text-xs sm:text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200 text-center pb-1">
+                <span className="text-xs sm:text-sm md:text-base font-semibold text-foreground/80 text-center pb-1">
                   All
                 </span>
               </motion.div>
@@ -465,7 +455,7 @@ export default function Under250() {
                           placeholder="blur"
                         />
                       </div>
-                      <span className={`text-xs sm:text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200 text-center pb-1 ${isActive ? 'border-b-2 border-green-600' : ''}`}>
+                      <span className={`text-xs sm:text-sm md:text-base font-semibold text-foreground/80 text-center pb-1 ${isActive ? 'border-b-2 border-primary' : ''}`}>
                         {category.name.length > 7 ? `${category.name.slice(0, 7)}...` : category.name}
                       </span>
                     </motion.div>
@@ -481,7 +471,7 @@ export default function Under250() {
             <Button
               variant="outline"
               onClick={() => setShowSortPopup(true)}
-              className="h-8 sm:h-9 md:h-10 px-3 sm:px-4 md:px-5 rounded-md flex items-center gap-2 whitespace-nowrap flex-shrink-0 font-medium transition-all bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm md:text-base"
+              className="h-8 sm:h-9 md:h-10 px-3 sm:px-4 md:px-5 rounded-md flex items-center gap-2 whitespace-nowrap flex-shrink-0 font-medium transition-all bg-card border border-border hover:bg-muted text-foreground text-sm md:text-base"
             >
               <ArrowDownUp className="h-4 w-4 md:h-5 md:w-5 rotate-90" />
               <span className="text-sm md:text-base font-medium">
@@ -493,8 +483,8 @@ export default function Under250() {
               variant="outline"
               onClick={() => setUnder30MinsFilter(!under30MinsFilter)}
               className={`h-8 sm:h-9 md:h-10 px-3 sm:px-4 md:px-5 rounded-md flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 font-medium transition-all text-sm md:text-base ${under30MinsFilter
-                ? 'bg-green-600 text-white border border-green-600 hover:bg-green-600/90'
-                : 'bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300'
+                ? 'bg-primary text-primary-foreground border border-primary hover:bg-primary/90'
+                : 'bg-card border border-border hover:bg-muted text-foreground/80'
                 }`}
             >
               <Timer className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5" />
@@ -528,15 +518,15 @@ export default function Under250() {
                     <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 dark:text-white mb-1 md:mb-2">
                       {restaurant.name}
                     </h3>
-                    <div className="flex items-center gap-2 text-sm md:text-base lg:text-lg text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-2 text-sm md:text-base lg:text-lg text-muted-foreground">
                       <Clock className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6" strokeWidth={1.5} />
                       <span className="font-medium">{restaurant.deliveryTime}</span>
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
-                    <div className="flex items-center gap-1 bg-green-800 text-white px-1 py-1 md:px-2 md:py-1.5 lg:px-3 lg:py-2 rounded-full">
-                      <div className="bg-white text-green-700 px-1 py-1 md:px-1.5 md:py-1.5 lg:px-2 lg:py-2 rounded-full">
-                        <Star className="h-3.5 w-3.5 md:h-4 md:w-4 lg:h-5 lg:w-5 fill-green-800 text-green-800" />
+                    <div className="flex items-center gap-1 bg-primary text-primary-foreground px-1 py-1 md:px-2 md:py-1.5 lg:px-3 lg:py-2 rounded-full">
+                      <div className="bg-primary-foreground text-primary px-1 py-1 md:px-1.5 md:py-1.5 lg:px-2 lg:py-2 rounded-full">
+                        <Star className="h-3.5 w-3.5 md:h-4 md:w-4 lg:h-5 lg:w-5 fill-primary text-primary" />
                       </div>
                       <span className="text-xs md:text-sm lg:text-base font-bold">{restaurant.rating}</span>
                     </div>
@@ -563,7 +553,7 @@ export default function Under250() {
                         return (
                           <motion.div
                             key={item.id}
-                            className="flex-shrink-0 w-[200px] sm:w-[220px] md:w-full bg-white dark:bg-[#1a1a1a] rounded-lg md:rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden cursor-pointer"
+                            className="flex-shrink-0 w-[200px] sm:w-[220px] md:w-full bg-card rounded-lg md:rounded-xl border border-border overflow-hidden cursor-pointer"
                             onClick={() => handleItemClick(item, restaurant)}
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
@@ -612,17 +602,17 @@ export default function Under250() {
                             <div className="p-3 md:p-4 lg:p-5">
                               <div className="flex items-center gap-1 md:gap-2 mb-1 md:mb-2 lg:mb-3">
                                 {item.isVeg && (
-                                  <div className="h-3 w-3 md:h-4 md:w-4 lg:h-5 lg:w-5 rounded border border-green-600 bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
-                                    <div className="h-1.5 w-1.5 md:h-2 md:w-2 lg:h-2.5 lg:w-2.5 rounded-full bg-green-600" />
+                                  <div className="h-3 w-3 md:h-4 md:w-4 lg:h-5 lg:w-5 rounded border border-primary bg-primary/10 flex items-center justify-center">
+                                    <div className="h-1.5 w-1.5 md:h-2 md:w-2 lg:h-2.5 lg:w-2.5 rounded-full bg-primary" />
                                   </div>
                                 )}
-                                <span className="text-sm md:text-base lg:text-lg font-semibold text-gray-900 dark:text-white">
+                                <span className="text-sm md:text-base lg:text-lg font-semibold text-foreground">
                                   1 x {item.name}
                                 </span>
                               </div>
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <p className="text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-900 dark:text-white">
+                                  <p className="text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-foreground">
                                     ₹{Math.round(item.price)}
                                   </p>
                                   {item.bestPrice && (
@@ -634,7 +624,7 @@ export default function Under250() {
                                     <Button
                                       variant={"outline"}
                                       size="sm"
-                                      className="bg-green-600/10 text-green-500 border-green-500 hover:bg-green-700 hover:text-white h-7 md:h-8 lg:h-9 px-3 md:px-4 lg:px-5 text-xs md:text-sm lg:text-base"
+                                      className="bg-primary/10 text-primary border-primary hover:bg-primary hover:text-primary-foreground h-7 md:h-8 lg:h-9 px-3 md:px-4 lg:px-5 text-xs md:text-sm lg:text-base"
                                     >
                                       View cart
                                     </Button>
@@ -645,8 +635,8 @@ export default function Under250() {
                                     size="sm"
                                     disabled={shouldShowGrayscale}
                                     className={`h-7 md:h-8 lg:h-9 px-3 md:px-4 lg:px-5 text-xs md:text-sm lg:text-base ${shouldShowGrayscale
-                                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-300 dark:border-gray-700 cursor-not-allowed opacity-50'
-                                      : 'bg-green-600/10 text-green-500 border-green-500 hover:bg-green-700 hover:text-white'
+                                      ? 'bg-muted text-muted-foreground border-border cursor-not-allowed opacity-50'
+                                      : 'bg-primary/10 text-primary border-primary hover:bg-primary hover:text-primary-foreground'
                                       }`}
                                     onClick={(e) => {
                                       e.stopPropagation()
@@ -669,9 +659,9 @@ export default function Under250() {
                     <Link className="flex justify-center mt-2 md:mt-3 lg:mt-4" to={`/user/restaurants/${restaurantSlug}?under250=true`}>
                       <Button
                         variant="outline"
-                        className="w-min align-center text-center rounded-lg md:rounded-xl mx-auto bg-gray-50 dark:bg-[#1a1a1a] hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-white text-gray-700 border-gray-200 dark:border-gray-800 h-9 md:h-10 lg:h-11 px-4 md:px-6 lg:px-8 text-sm md:text-base lg:text-lg"
+                        className="w-min align-center text-center rounded-lg md:rounded-xl mx-auto bg-card hover:bg-muted text-foreground border-border h-9 md:h-10 lg:h-11 px-4 md:px-6 lg:px-8 text-sm md:text-base lg:text-lg"
                       >
-                        View full menu <ArrowRight className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6 ml-2 text-gray-700 dark:text-gray-300" />
+                        View full menu <ArrowRight className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6 ml-2 text-foreground/70" />
                       </Button>
                     </Link>
                   </div>
@@ -692,7 +682,7 @@ export default function Under250() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               onClick={() => setShowSortPopup(false)}
-              className="fixed inset-0 bg-black/50 z-100"
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-100"
             />
 
             {/* Bottom Sheet */}
@@ -705,19 +695,19 @@ export default function Under250() {
                 stiffness: 300,
                 damping: 30
               }}
-              className="fixed bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:max-w-lg lg:max-w-2xl bg-white dark:bg-[#1a1a1a] rounded-t-3xl shadow-2xl z-[110] max-h-[60vh] md:max-h-[80vh] overflow-hidden flex flex-col"
+              className="fixed bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:max-w-lg lg:max-w-2xl bg-card rounded-t-3xl shadow-2xl z-[110] max-h-[60vh] md:max-h-[80vh] overflow-hidden flex flex-col"
             >
               {/* Drag Handle */}
               <div className="flex justify-center pt-3 pb-2">
-                <div className="w-12 h-1 bg-gray-300 rounded-full" />
+                <div className="w-12 h-1 bg-muted rounded-full" />
               </div>
 
               {/* Header */}
-              <div className="flex items-center justify-between px-4 md:px-6 py-4 md:py-5 border-b dark:border-gray-800">
-                <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">Sort By</h2>
+              <div className="flex items-center justify-between px-4 md:px-6 py-4 md:py-5 border-b border-border">
+                <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-foreground">Sort By</h2>
                 <button
                   onClick={handleClearAll}
-                  className="text-green-600 dark:text-green-400 font-medium text-sm md:text-base"
+                  className="text-primary font-medium text-sm md:text-base"
                 >
                   Clear all
                 </button>
@@ -731,11 +721,11 @@ export default function Under250() {
                       key={option.id || 'relevance'}
                       onClick={() => setSelectedSort(option.id)}
                       className={`px-4 md:px-5 lg:px-6 py-3 md:py-4 rounded-xl border text-left transition-colors ${selectedSort === option.id
-                        ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                        : 'border-gray-200 dark:border-gray-800 hover:border-green-600'
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary'
                         }`}
                     >
-                      <span className={`text-sm md:text-base lg:text-lg font-medium ${selectedSort === option.id ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                      <span className={`text-sm md:text-base lg:text-lg font-medium ${selectedSort === option.id ? 'text-primary' : 'text-foreground/80'}`}>
                         {option.label}
                       </span>
                     </button>
@@ -744,18 +734,18 @@ export default function Under250() {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center gap-4 md:gap-6 px-4 md:px-6 py-4 md:py-5 border-t dark:border-gray-800 bg-white dark:bg-[#1a1a1a]">
+              <div className="flex items-center gap-4 md:gap-6 px-4 md:px-6 py-4 md:py-5 border-t border-border bg-card">
                 <button
                   onClick={() => setShowSortPopup(false)}
-                  className="flex-1 py-3 md:py-4 text-center font-semibold text-gray-700 dark:text-gray-300 text-sm md:text-base"
+                  className="flex-1 py-3 md:py-4 text-center font-semibold text-muted-foreground hover:text-foreground text-sm md:text-base"
                 >
                   Close
                 </button>
                 <button
                   onClick={handleApply}
                   className={`flex-1 py-3 md:py-4 font-semibold rounded-xl transition-colors text-sm md:text-base ${selectedSort
-                    ? 'bg-green-600 text-white hover:bg-green-700'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : 'bg-muted text-muted-foreground'
                     }`}
                 >
                   Apply
@@ -772,7 +762,7 @@ export default function Under250() {
           <>
             {/* Backdrop */}
             <motion.div
-              className="fixed inset-0 bg-black/40 z-[9999]"
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[9999]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -782,7 +772,7 @@ export default function Under250() {
 
             {/* Item Detail Bottom Sheet */}
             <motion.div
-              className="fixed left-0 right-0 bottom-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:max-w-2xl lg:max-w-4xl xl:max-w-5xl z-[10000] bg-white dark:bg-[#1a1a1a] rounded-t-3xl shadow-2xl max-h-[90vh] md:max-h-[85vh] flex flex-col"
+              className="fixed left-0 right-0 bottom-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:max-w-2xl lg:max-w-4xl xl:max-w-5xl z-[10000] bg-card rounded-t-3xl shadow-2xl max-h-[90vh] md:max-h-[85vh] flex flex-col"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -793,13 +783,13 @@ export default function Under250() {
               <div className="absolute -top-[44px] left-1/2 -translate-x-1/2 z-[10001]">
                 <motion.button
                   onClick={() => setShowItemDetail(false)}
-                  className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-gray-800 dark:bg-gray-700 flex items-center justify-center hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors shadow-lg"
+                  className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-foreground flex items-center justify-center hover:bg-foreground/80 transition-colors shadow-lg"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <X className="h-5 w-5 md:h-6 md:w-6 text-white" />
+                  <X className="h-5 w-5 md:h-6 md:w-6 text-primary-foreground" />
                 </motion.button>
               </div>
 
@@ -822,16 +812,16 @@ export default function Under250() {
                       handleBookmarkClick(selectedItem.id)
                     }}
                     className={`h-10 w-10 rounded-full border flex items-center justify-center transition-all duration-300 ${bookmarkedItems.has(selectedItem.id)
-                      ? "border-red-500 bg-red-50 text-red-500"
-                      : "border-white bg-white/90 text-gray-600 hover:bg-white"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-card/90 text-muted-foreground hover:bg-card"
                       }`}
                   >
                     <Bookmark
-                      className={`h-5 w-5 transition-all duration-300 ${bookmarkedItems.has(selectedItem.id) ? "fill-red-500" : ""
+                      className={`h-5 w-5 transition-all duration-300 ${bookmarkedItems.has(selectedItem.id) ? "fill-primary" : ""
                         }`}
                     />
                   </button>
-                  <button className="h-10 w-10 rounded-full border border-white bg-white/90 text-gray-600 hover:bg-white flex items-center justify-center transition-colors">
+                  <button className="h-10 w-10 rounded-full border border-border bg-card/90 text-muted-foreground hover:bg-card flex items-center justify-center transition-colors">
                     <Share2 className="h-5 w-5" />
                   </button>
                 </div>
@@ -843,11 +833,11 @@ export default function Under250() {
                 <div className="flex items-start justify-between mb-3 md:mb-4 lg:mb-6">
                   <div className="flex items-center gap-2 md:gap-3 flex-1">
                     {selectedItem.isVeg && (
-                      <div className="h-5 w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 rounded border-2 border-amber-700 dark:border-amber-500 bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
-                        <div className="h-2.5 w-2.5 md:h-3 md:w-3 lg:h-3.5 lg:w-3.5 rounded-full bg-amber-700 dark:bg-amber-500" />
+                      <div className="h-5 w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 rounded border-2 border-primary bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <div className="h-2.5 w-2.5 md:h-3 md:w-3 lg:h-3.5 lg:w-3.5 rounded-full bg-primary" />
                       </div>
                     )}
-                    <h2 className="text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 dark:text-white">
+                    <h2 className="text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground">
                       {selectedItem.name}
                     </h2>
                   </div>
@@ -859,33 +849,33 @@ export default function Under250() {
                         handleBookmarkClick(selectedItem.id)
                       }}
                       className={`h-8 w-8 lg:h-10 lg:w-10 rounded-full border flex items-center justify-center transition-all duration-300 ${bookmarkedItems.has(selectedItem.id)
-                        ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400"
-                        : "border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:text-foreground"
                         }`}
                     >
                       <Bookmark
-                        className={`h-4 w-4 lg:h-5 lg:w-5 transition-all duration-300 ${bookmarkedItems.has(selectedItem.id) ? "fill-red-500 dark:fill-red-400" : ""
+                        className={`h-4 w-4 lg:h-5 lg:w-5 transition-all duration-300 ${bookmarkedItems.has(selectedItem.id) ? "fill-primary" : ""
                           }`}
                       />
                     </button>
-                    <button className="h-8 w-8 lg:h-10 lg:w-10 rounded-full border border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 flex items-center justify-center transition-colors">
+                    <button className="h-8 w-8 lg:h-10 lg:w-10 rounded-full border border-border text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors">
                       <Share2 className="h-4 w-4 lg:h-5 lg:w-5" />
                     </button>
                   </div>
                 </div>
 
                 {/* Description */}
-                <p className="text-sm md:text-base lg:text-lg text-gray-600 dark:text-gray-400 mb-4 md:mb-6 lg:mb-8 leading-relaxed">
+                <p className="text-sm md:text-base lg:text-lg text-muted-foreground mb-4 md:mb-6 lg:mb-8 leading-relaxed">
                   {selectedItem.description || `${selectedItem.name} from ${selectedItem.restaurant || 'Under 250'}`}
                 </p>
 
                 {/* Highly Reordered Progress Bar */}
                 {selectedItem.customisable && (
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="flex-1 h-0.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-green-500 rounded-full" style={{ width: '50%' }} />
+                    <div className="flex-1 h-0.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full" style={{ width: '50%' }} />
                     </div>
-                    <span className="text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">
+                    <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
                       highly reordered
                     </span>
                   </div>
@@ -893,19 +883,19 @@ export default function Under250() {
 
                 {/* Not Eligible for Coupons */}
                 {selectedItem.notEligibleForCoupons && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-4">
+                  <p className="text-xs text-muted-foreground/60 font-medium mb-4">
                     NOT ELIGIBLE FOR COUPONS
                   </p>
                 )}
               </div>
 
               {/* Bottom Action Bar */}
-              <div className="border-t dark:border-gray-800 border-gray-200 px-4 md:px-6 lg:px-8 xl:px-10 py-4 md:py-5 lg:py-6 bg-white dark:bg-[#1a1a1a]">
+              <div className="border-t border-border px-4 md:px-6 lg:px-8 xl:px-10 py-4 md:py-5 lg:py-6 bg-card">
                 <div className="flex items-center gap-4 md:gap-5 lg:gap-6">
                   {/* Quantity Selector */}
                   <div className={`flex items-center gap-3 md:gap-4 lg:gap-5 border-2 rounded-lg md:rounded-xl px-3 md:px-4 lg:px-5 h-[44px] md:h-[50px] lg:h-[56px] ${shouldShowGrayscale
-                    ? 'border-gray-300 dark:border-gray-700 opacity-50'
-                    : 'border-gray-300 dark:border-gray-700'
+                    ? 'border-border opacity-50'
+                    : 'border-border'
                     }`}>
                     <button
                       onClick={(e) => {
@@ -915,15 +905,15 @@ export default function Under250() {
                       }}
                       disabled={(quantities[selectedItem.id] || 0) === 0 || shouldShowGrayscale}
                       className={`${shouldShowGrayscale
-                        ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed'
+                        ? 'text-muted-foreground/30 cursor-not-allowed'
+                        : 'text-muted-foreground hover:text-foreground disabled:text-muted-foreground/30 disabled:cursor-not-allowed'
                         }`}
                     >
                       <Minus className="h-5 w-5 md:h-6 md:w-6 lg:h-7 lg:w-7" />
                     </button>
                     <span className={`text-lg md:text-xl lg:text-2xl font-semibold min-w-[2rem] md:min-w-[2.5rem] lg:min-w-[3rem] text-center ${shouldShowGrayscale
-                      ? 'text-gray-400 dark:text-gray-600'
-                      : 'text-gray-900 dark:text-white'
+                      ? 'text-muted-foreground/40'
+                      : 'text-foreground'
                       }`}>
                       {quantities[selectedItem.id] || 0}
                     </span>
@@ -935,8 +925,8 @@ export default function Under250() {
                       }}
                       disabled={shouldShowGrayscale}
                       className={shouldShowGrayscale
-                        ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                        ? 'text-muted-foreground/30 cursor-not-allowed'
+                        : 'text-muted-foreground hover:text-foreground'
                       }
                     >
                       <Plus className="h-5 w-5 md:h-6 md:w-6 lg:h-7 lg:w-7" />
@@ -946,8 +936,8 @@ export default function Under250() {
                   {/* Add Item Button */}
                   <Button
                     className={`flex-1 h-[44px] md:h-[50px] lg:h-[56px] rounded-lg md:rounded-xl font-semibold flex items-center justify-center gap-2 text-sm md:text-base lg:text-lg ${shouldShowGrayscale
-                      ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-600 cursor-not-allowed opacity-50'
-                      : 'bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white'
+                      ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+                      : 'bg-primary hover:bg-primary/90 text-primary-foreground'
                       }`}
                     onClick={(e) => {
                       if (!shouldShowGrayscale) {
@@ -960,7 +950,7 @@ export default function Under250() {
                     <span>Add item</span>
                     <div className="flex items-center gap-1 md:gap-2">
                       {selectedItem.originalPrice && selectedItem.originalPrice > selectedItem.price && (
-                        <span className="text-sm md:text-base lg:text-lg line-through text-red-200">
+                        <span className="text-sm md:text-base lg:text-lg line-through text-primary-foreground/60">
                           ₹{Math.round(selectedItem.originalPrice)}
                         </span>
                       )}

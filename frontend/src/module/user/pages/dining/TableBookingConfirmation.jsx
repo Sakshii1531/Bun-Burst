@@ -69,9 +69,9 @@ export default function TableBookingConfirmation() {
     const formattedDate = new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
 
     return (
-        <AnimatedPage className="bg-slate-50 min-h-screen pb-24">
+        <AnimatedPage className="bg-background min-h-screen pb-24">
             {/* Header */}
-            <div className="bg-[#1e3a8a] text-white px-4 py-4 sticky top-0 z-50 shadow-md">
+            <div className="bg-primary text-primary-foreground px-4 py-4 sticky top-0 z-50 shadow-md">
                 <div className="flex items-center gap-3">
                     <button onClick={() => navigate(-1)} className="p-1 hover:bg-white/10 rounded-full transition-colors">
                         <ArrowLeft className="w-6 h-6" />
@@ -82,28 +82,28 @@ export default function TableBookingConfirmation() {
 
             <div className="p-4 space-y-4">
                 {/* Booking Summary Card */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
                     <div className="p-4 space-y-4">
                         <div className="flex items-start gap-3">
-                            <div className="bg-blue-50 p-2 rounded-xl">
-                                <Calendar className="w-5 h-5 text-blue-600" />
+                            <div className="bg-primary/10 p-2 rounded-xl">
+                                <Calendar className="w-5 h-5 text-primary" />
                             </div>
                             <div>
-                                <p className="font-bold text-gray-900">{formattedDate} at {timeSlot}</p>
-                                <div className="flex items-center gap-2 text-gray-500 text-sm mt-0.5">
+                                <p className="font-bold text-foreground">{formattedDate} at {timeSlot}</p>
+                                <div className="flex items-center gap-2 text-muted-foreground text-sm mt-0.5">
                                     <Users className="w-4 h-4" />
                                     <span>{guests} guests</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex items-start gap-3 pt-4 border-t border-dashed border-slate-100">
-                            <div className="bg-red-50 p-2 rounded-xl">
-                                <MapPin className="w-5 h-5 text-red-500" />
+                        <div className="flex items-start gap-3 pt-4 border-t border-dashed border-border">
+                            <div className="bg-primary/10 p-2 rounded-xl">
+                                <MapPin className="w-5 h-5 text-primary" />
                             </div>
                             <div>
-                                <p className="font-bold text-gray-900">{restaurant.name}</p>
-                                <p className="text-gray-500 text-xs mt-0.5 line-clamp-1">
+                                <p className="font-bold text-foreground">{restaurant.name}</p>
+                                <p className="text-muted-foreground text-xs mt-0.5 line-clamp-1">
                                     {typeof restaurant.location === 'string'
                                         ? restaurant.location
                                         : (restaurant.location?.formattedAddress || restaurant.location?.address || `${restaurant.location?.city || ''}${restaurant.location?.area ? ', ' + restaurant.location.area : ''}`)}
@@ -111,7 +111,7 @@ export default function TableBookingConfirmation() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 pt-4 border-t border-dashed border-slate-100 text-purple-600">
+                        <div className="flex items-center gap-2 pt-4 border-t border-dashed border-border text-primary">
                             <Ticket className="w-5 h-5" />
                             <span className="font-bold text-sm">10% cashback</span>
                         </div>
@@ -119,49 +119,49 @@ export default function TableBookingConfirmation() {
                 </div>
 
                 {/* Special Request */}
-                <button className="w-full bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between group">
+                <button className="w-full bg-card rounded-2xl p-4 shadow-sm border border-border flex items-center justify-between group">
                     <div className="flex items-center gap-3">
-                        <div className="bg-slate-100 p-2 rounded-xl group-hover:bg-slate-200 transition-colors">
-                            <Info className="w-5 h-5 text-slate-600" />
+                        <div className="bg-muted p-2 rounded-xl group-hover:bg-muted/80 transition-colors">
+                            <Info className="w-5 h-5 text-muted-foreground" />
                         </div>
-                        <span className="font-bold text-gray-700">Add special request</span>
+                        <span className="font-bold text-foreground">Add special request</span>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-slate-400" />
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 </button>
 
                 {/* Preferences Section */}
                 <div className="pt-4">
                     <div className="flex items-center gap-4 mb-3">
-                        <div className="h-px bg-slate-200 flex-1"></div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Guest Preferences</span>
-                        <div className="h-px bg-slate-200 flex-1"></div>
+                        <div className="h-px bg-border flex-1"></div>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Guest Preferences</span>
+                        <div className="h-px bg-border flex-1"></div>
                     </div>
 
                     <div className="space-y-2">
-                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
+                        <div className="bg-card rounded-2xl p-4 shadow-sm border border-border flex items-center justify-between">
                             <div className="flex items-start gap-3">
-                                <div className="text-green-500 mt-1">
+                                <div className="text-primary mt-1">
                                     <Edit2 className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <p className="font-bold text-gray-800 text-sm">Modification available</p>
-                                    <p className="text-xs text-slate-400">Valid till {timeSlot}, today</p>
+                                    <p className="font-bold text-foreground text-sm">Modification available</p>
+                                    <p className="text-xs text-muted-foreground">Valid till {timeSlot}, today</p>
                                 </div>
                             </div>
-                            <ChevronRight className="w-4 h-4 text-slate-300" />
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
                         </div>
 
-                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
+                        <div className="bg-card rounded-2xl p-4 shadow-sm border border-border flex items-center justify-between">
                             <div className="flex items-start gap-3">
-                                <div className="text-red-400 mt-1">
+                                <div className="text-destructive mt-1">
                                     <ShieldCheck className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <p className="font-bold text-gray-800 text-sm">Cancellation available</p>
-                                    <p className="text-xs text-slate-400">Valid till {timeSlot}, today</p>
+                                    <p className="font-bold text-foreground text-sm">Cancellation available</p>
+                                    <p className="text-xs text-muted-foreground">Valid till {timeSlot}, today</p>
                                 </div>
                             </div>
-                            <ChevronRight className="w-4 h-4 text-slate-300" />
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
                         </div>
                     </div>
                 </div>
@@ -169,29 +169,29 @@ export default function TableBookingConfirmation() {
                 {/* Your Details */}
                 <div className="pt-4">
                     <div className="flex items-center gap-4 mb-3">
-                        <div className="h-px bg-slate-200 flex-1"></div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Your Details</span>
-                        <div className="h-px bg-slate-200 flex-1"></div>
+                        <div className="h-px bg-border flex-1"></div>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Your Details</span>
+                        <div className="h-px bg-border flex-1"></div>
                     </div>
 
-                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex items-center justify-between">
+                    <div className="bg-card rounded-2xl p-5 shadow-sm border border-border flex items-center justify-between">
                         <div>
-                            <p className="font-bold text-gray-900">{user?.name || "Shailu"}</p>
-                            <p className="text-sm text-slate-400 mt-1">{user?.phone || user?.email || "8090512291"}</p>
+                            <p className="font-bold text-foreground">{user?.name || "Shailu"}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{user?.phone || user?.email || "8090512291"}</p>
                         </div>
-                        <button className="text-red-500 text-sm font-bold hover:underline">Edit</button>
+                        <button className="text-primary text-sm font-bold hover:underline">Edit</button>
                     </div>
                 </div>
 
                 {/* Terms and Conditions */}
                 <div className="pt-4">
                     <div className="flex items-center gap-4 mb-3">
-                        <div className="h-px bg-slate-200 flex-1"></div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Terms and Conditions</span>
-                        <div className="h-px bg-slate-200 flex-1"></div>
+                        <div className="h-px bg-border flex-1"></div>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Terms and Conditions</span>
+                        <div className="h-px bg-border flex-1"></div>
                     </div>
 
-                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                    <div className="bg-card rounded-2xl p-5 shadow-sm border border-border">
                         <ul className="space-y-4">
                             {[
                                 "Please arrive 15 minutes prior to your reservation time.",
@@ -204,8 +204,8 @@ export default function TableBookingConfirmation() {
                                 "Additional service charges on the bill are at the restaurant's discretion"
                             ].map((term, i) => (
                                 <li key={i} className="flex gap-3">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-300 mt-2 flex-shrink-0"></div>
-                                    <p className="text-xs text-slate-600 leading-relaxed font-medium">{term}</p>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground mt-2 flex-shrink-0"></div>
+                                    <p className="text-xs text-muted-foreground leading-relaxed font-medium">{term}</p>
                                 </li>
                             ))}
                         </ul>
@@ -214,11 +214,11 @@ export default function TableBookingConfirmation() {
             </div>
 
             {/* Sticky Action Button */}
-            <div className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-100 p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-50">
+            <div className="fixed bottom-0 left-0 w-full bg-card border-t border-border p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-50">
                 <Button
                     onClick={handleBooking}
                     disabled={bookingInProgress}
-                    className="w-full h-14 bg-[#ef4444] hover:bg-red-600 text-white font-bold text-lg rounded-2xl shadow-xl shadow-red-200 transition-all active:scale-[0.98]"
+                    className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-[0.98]"
                 >
                     {bookingInProgress ? "Confirming..." : "Confirm your seat"}
                 </Button>

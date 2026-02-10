@@ -13,25 +13,25 @@ export default function BottomNavigation() {
 
   return (
     <div
-      className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#1a1a1a] border-t border-gray-100 dark:border-gray-800/50 z-50 shadow-[0_-8px_30px_rgb(0,0,0,0.12)] pb-[max(24px,env(safe-area-inset-bottom,24px))]"
+      className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] pb-[max(24px,env(safe-area-inset-bottom,24px))]"
     >
       <div className="flex items-center justify-around h-[76px] sm:h-[84px] px-2 pt-1">
         {/* Delivery Tab */}
         <Link
           to="/user"
           className={`flex flex-col items-center justify-center gap-1 min-w-[70px] py-1 transition-all duration-300 relative ${isDelivery
-            ? "text-green-600 dark:text-green-500"
-            : "text-gray-500 dark:text-gray-400"
+            ? "text-accent"
+            : "text-muted-foreground"
             }`}
         >
-          <Truck className={`h-6 w-6 transition-transform duration-300 ${isDelivery ? "text-green-600 dark:text-green-500 fill-green-600/10 scale-110" : "text-gray-400 dark:text-gray-500"}`} strokeWidth={isDelivery ? 2.5 : 2} />
-          <span className={`text-[10px] sm:text-xs font-bold transition-all duration-300 ${isDelivery ? "text-green-600 dark:text-green-500" : "text-gray-500 dark:text-gray-400"}`}>
+          <Truck className={`h-6 w-6 transition-transform duration-300 ${isDelivery ? "text-accent fill-accent/10 scale-110" : "text-muted-foreground"}`} strokeWidth={isDelivery ? 2.5 : 2} />
+          <span className={`text-[10px] sm:text-xs font-bold transition-all duration-300 ${isDelivery ? "text-accent" : "text-muted-foreground"}`}>
             Delivery
           </span>
           {isDelivery && (
             <motion.div
               layoutId="navTab"
-              className="absolute -top-[1px] left-4 right-4 h-1 bg-green-600 dark:bg-green-500 rounded-b-xl shadow-[0_2px_10px_rgba(22,163,74,0.4)]"
+              className="absolute -top-[1px] left-4 right-4 h-1 bg-accent rounded-b-xl shadow-md shadow-accent/40"
             />
           )}
         </Link>
@@ -40,18 +40,18 @@ export default function BottomNavigation() {
         <Link
           to="/user/under-250"
           className={`flex flex-col items-center justify-center gap-1 min-w-[70px] py-1 transition-all duration-300 relative ${isUnder250
-            ? "text-green-600 dark:text-green-500"
-            : "text-gray-500 dark:text-gray-400"
+            ? "text-accent"
+            : "text-muted-foreground"
             }`}
         >
-          <Tag className={`h-6 w-6 transition-transform duration-300 ${isUnder250 ? "text-green-600 dark:text-green-500 fill-green-600/10 scale-110" : "text-gray-400 dark:text-gray-500"}`} strokeWidth={isUnder250 ? 2.5 : 2} />
-          <span className={`text-[10px] sm:text-xs font-bold transition-all duration-300 ${isUnder250 ? "text-green-600 dark:text-green-500" : "text-gray-500 dark:text-gray-400"}`}>
+          <Tag className={`h-6 w-6 transition-transform duration-300 ${isUnder250 ? "text-accent fill-accent/10 scale-110" : "text-muted-foreground"}`} strokeWidth={isUnder250 ? 2.5 : 2} />
+          <span className={`text-[10px] sm:text-xs font-bold transition-all duration-300 ${isUnder250 ? "text-accent" : "text-muted-foreground"}`}>
             Under 200
           </span>
           {isUnder250 && (
             <motion.div
               layoutId="navTab"
-              className="absolute -top-[1px] left-4 right-4 h-1 bg-green-600 dark:bg-green-500 rounded-b-xl shadow-[0_2px_10px_rgba(22,163,74,0.4)]"
+              className="absolute -top-[1px] left-4 right-4 h-1 bg-accent rounded-b-xl shadow-md shadow-accent/40"
             />
           )}
         </Link>
@@ -60,18 +60,18 @@ export default function BottomNavigation() {
         <Link
           to="/user/dining"
           className={`flex flex-col items-center justify-center gap-1 min-w-[70px] py-1 transition-all duration-300 relative ${isDining
-            ? "text-green-600 dark:text-green-500"
-            : "text-gray-500 dark:text-gray-400"
+            ? "text-accent"
+            : "text-muted-foreground"
             }`}
         >
-          <UtensilsCrossed className={`h-6 w-6 transition-transform duration-300 ${isDining ? "text-green-600 dark:text-green-500 fill-green-600/10 scale-110" : "text-gray-400 dark:text-gray-500"}`} strokeWidth={isDining ? 2.5 : 2} />
-          <span className={`text-[10px] sm:text-xs font-bold transition-all duration-300 ${isDining ? "text-green-600 dark:text-green-500" : "text-gray-500 dark:text-gray-400"}`}>
+          <UtensilsCrossed className={`h-6 w-6 transition-transform duration-300 ${isDining ? "text-accent fill-accent/10 scale-110" : "text-muted-foreground"}`} strokeWidth={isDining ? 2.5 : 2} />
+          <span className={`text-[10px] sm:text-xs font-bold transition-all duration-300 ${isDining ? "text-accent" : "text-muted-foreground"}`}>
             Dining
           </span>
           {isDining && (
             <motion.div
               layoutId="navTab"
-              className="absolute -top-[1px] left-4 right-4 h-1 bg-green-600 dark:bg-green-500 rounded-b-xl shadow-[0_2px_10px_rgba(22,163,74,0.4)]"
+              className="absolute -top-[1px] left-4 right-4 h-1 bg-accent rounded-b-xl shadow-md shadow-accent/40"
             />
           )}
         </Link>
@@ -80,18 +80,18 @@ export default function BottomNavigation() {
         <Link
           to="/user/profile"
           className={`flex flex-col items-center justify-center gap-1 min-w-[70px] py-1 transition-all duration-300 relative ${isProfile
-            ? "text-green-600 dark:text-green-500"
-            : "text-gray-500 dark:text-gray-400"
+            ? "text-accent"
+            : "text-muted-foreground"
             }`}
         >
-          <User className={`h-6 w-6 transition-transform duration-300 ${isProfile ? "text-green-600 dark:text-green-500 fill-green-600/10 scale-110" : "text-gray-400 dark:text-gray-500"}`} strokeWidth={isProfile ? 2.5 : 2} />
-          <span className={`text-[10px] sm:text-xs font-bold transition-all duration-300 ${isProfile ? "text-green-600 dark:text-green-500" : "text-gray-500 dark:text-gray-400"}`}>
+          <User className={`h-6 w-6 transition-transform duration-300 ${isProfile ? "text-accent fill-accent/10 scale-110" : "text-muted-foreground"}`} strokeWidth={isProfile ? 2.5 : 2} />
+          <span className={`text-[10px] sm:text-xs font-bold transition-all duration-300 ${isProfile ? "text-accent" : "text-muted-foreground"}`}>
             Profile
           </span>
           {isProfile && (
             <motion.div
               layoutId="navTab"
-              className="absolute -top-[1px] left-4 right-4 h-1 bg-green-600 dark:bg-green-500 rounded-b-xl shadow-[0_2px_10px_rgba(22,163,74,0.4)]"
+              className="absolute -top-[1px] left-4 right-4 h-1 bg-accent rounded-b-xl shadow-md shadow-accent/40"
             />
           )}
         </Link>

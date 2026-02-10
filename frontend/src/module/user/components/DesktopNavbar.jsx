@@ -84,7 +84,7 @@ export default function DesktopNavbar() {
         }`}
     >
       {/* Background */}
-      <div className="absolute inset-0 bg-white/98 dark:bg-[#1a1a1a]/98 border-b border-gray-200/50 dark:border-gray-800/50 shadow-sm" />
+      <div className="absolute inset-0 bg-background/95 backdrop-blur-md border-b border-border shadow-sm" />
 
       {/* Content */}
       <div className="relative">
@@ -106,17 +106,16 @@ export default function DesktopNavbar() {
                   <div className="flex flex-col items-start min-w-0">
                     <div className="flex items-center gap-1.5 lg:gap-2">
                       <FaLocationDot
-                        className="h-5 w-5 lg:h-6 lg:w-6 text-black flex-shrink-0"
-                        fill="black"
-                        strokeWidth={2}
+                        className="h-5 w-5 lg:h-6 lg:w-6 text-primary flex-shrink-0"
+                        strokeWidth={2.5}
                       />
-                      <span className="text-sm lg:text-base font-bold text-black whitespace-nowrap">
+                      <span className="text-sm lg:text-base font-bold text-foreground whitespace-nowrap">
                         {mainLocationName}
                       </span>
-                      <ChevronDown className="h-4 w-4 lg:h-5 lg:w-5 text-black flex-shrink-0" strokeWidth={2.5} />
+                      <ChevronDown className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground flex-shrink-0" strokeWidth={2.5} />
                     </div>
                     {secondaryLocation && (
-                      <span className="text-xs lg:text-sm font-bold text-black mt-0.5 whitespace-nowrap">
+                      <span className="text-xs lg:text-sm font-bold text-muted-foreground mt-0.5 whitespace-nowrap">
                         {secondaryLocation}
                       </span>
                     )}
@@ -131,13 +130,13 @@ export default function DesktopNavbar() {
               <Link
                 to="/user"
                 className={`px-6 py-2.5 text-sm font-medium transition-all duration-200 relative ${isDelivery
-                  ? "text-green-600 dark:text-green-500"
-                  : "text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-500"
+                  ? "text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-primary transition-colors"
                   }`}
               >
                 <span className="relative z-10">Delivery</span>
                 {isDelivery && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 dark:bg-green-500 rounded-t-full" />
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
                 )}
               </Link>
 
@@ -148,13 +147,13 @@ export default function DesktopNavbar() {
               <Link
                 to="/user/under-250"
                 className={`px-6 py-2.5 text-sm font-medium transition-all duration-200 relative ${isUnder250
-                  ? "text-green-600 dark:text-green-500"
-                  : "text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-500"
+                  ? "text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-primary transition-colors"
                   }`}
               >
                 <span className="relative z-10">Under 250</span>
                 {isUnder250 && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 dark:bg-green-500 rounded-t-full" />
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
                 )}
               </Link>
 
@@ -165,13 +164,13 @@ export default function DesktopNavbar() {
               <Link
                 to="/user/dining"
                 className={`px-6 py-2.5 text-sm font-medium transition-all duration-200 relative ${isDining
-                  ? "text-green-600 dark:text-green-500"
-                  : "text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-500"
+                  ? "text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-primary transition-colors"
                   }`}
               >
                 <span className="relative z-10">Dining</span>
                 {isDining && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 dark:bg-green-500 rounded-t-full" />
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
                 )}
               </Link>
 
@@ -182,13 +181,13 @@ export default function DesktopNavbar() {
               <Link
                 to="/user/profile"
                 className={`px-6 py-2.5 text-sm font-medium transition-all duration-200 relative ${isProfile
-                  ? "text-green-600 dark:text-green-500"
-                  : "text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-500"
+                  ? "text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-primary transition-colors"
                   }`}
               >
                 <span className="relative z-10">Profile</span>
                 {isProfile && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 dark:bg-green-500 rounded-t-full" />
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
                 )}
               </Link>
             </div>
@@ -217,8 +216,8 @@ export default function DesktopNavbar() {
                 >
                   <ShoppingCart className="h-5 w-5 lg:h-6 lg:w-6 text-gray-700 dark:text-gray-300" strokeWidth={2} />
                   {cartCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center ring-2 ring-white dark:ring-gray-800">
-                      <span className="text-[10px] font-bold text-white">{cartCount > 99 ? "99+" : cartCount}</span>
+                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-primary rounded-full flex items-center justify-center ring-2 ring-card">
+                      <span className="text-[10px] font-bold text-primary-foreground">{cartCount > 99 ? "99+" : cartCount}</span>
                     </span>
                   )}
                 </Button>

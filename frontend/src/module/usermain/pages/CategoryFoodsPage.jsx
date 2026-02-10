@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { motion } from "framer-motion"
-import { 
+import {
   ArrowLeft,
   Search,
   Clock,
@@ -43,7 +43,7 @@ export default function CategoryFoodsPage() {
       originalId: item.id,
       ...restItem
     }
-    
+
     setWishlist((prev) => {
       const isInWishlist = prev.some((w) => w.id === itemId)
       if (isInWishlist) {
@@ -54,9 +54,9 @@ export default function CategoryFoodsPage() {
         return updated
       } else {
         // Show toast notification
-        setToast({ 
-          show: true, 
-          message: `Your food item "${item.name}" is added to wishlist` 
+        setToast({
+          show: true,
+          message: `Your food item "${item.name}" is added to wishlist`
         })
         setTimeout(() => {
           setToast({ show: false, message: '' })
@@ -189,11 +189,10 @@ export default function CategoryFoodsPage() {
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
-                className={`relative px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
-                  activeFilter === filter
+                className={`relative px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 ${activeFilter === filter
                     ? 'text-white'
                     : 'text-gray-700 border border-gray-200 bg-white'
-                }`}
+                  }`}
               >
                 {activeFilter === filter && (
                   <motion.div
@@ -210,7 +209,7 @@ export default function CategoryFoodsPage() {
               </button>
             ))}
           </div>
-          
+
           {/* Filter Button */}
           <button className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium text-gray-700 border border-gray-200 bg-white hover:bg-gray-50 transition-colors flex-shrink-0">
             <Filter className="w-4 h-4" />
@@ -230,25 +229,24 @@ export default function CategoryFoodsPage() {
             <div className="flex gap-3 p-3">
               {/* Food Image */}
               <div className="relative flex-shrink-0">
-                <img 
-                  src={food.image} 
+                <img
+                  src={food.image}
                   alt={food.name}
                   className="w-24 h-24 rounded-lg object-cover"
                 />
                 {/* Heart Icon - Top Right */}
-                <button 
+                <button
                   className="absolute top-1 right-1 p-1 bg-white/80 backdrop-blur-sm rounded-full hover:scale-110 transition-transform z-10"
                   onClick={(e) => {
                     e.stopPropagation()
                     toggleWishlist(food, 'food')
                   }}
                 >
-                  <Heart 
-                    className={`w-4 h-4 transition-all ${
-                      isInWishlist(food, 'food') 
-                        ? 'text-red-500 fill-red-500' 
+                  <Heart
+                    className={`w-4 h-4 transition-all ${isInWishlist(food, 'food')
+                        ? 'text-red-500 fill-red-500'
                         : 'text-gray-400 hover:text-red-500'
-                    }`} 
+                      }`}
                   />
                 </button>
               </div>
@@ -282,7 +280,7 @@ export default function CategoryFoodsPage() {
                     <span className="text-base font-bold text-gray-900">${food.price.toFixed(2)}</span>
                     <span className="text-xs text-gray-400 line-through">${food.originalPrice.toFixed(2)}</span>
                   </div>
-                  
+
                   {/* Add Button */}
                   <Button
                     className="bg-[#ff8100] hover:bg-[#e67300] text-white rounded-lg px-4 py-1.5 h-auto flex items-center gap-1"
