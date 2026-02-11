@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { X, Search, Clock } from "lucide-react"
+import { X, Search, Clock, Mic } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 // Import shared food images - prevents duplication
 import { foodImages } from "@/constants/images"
+import VoiceSearchOverlay from "./VoiceSearchOverlay"
 
 // Recent search suggestions
 const recentSuggestions = [
@@ -30,16 +33,94 @@ const categories = [
 // Use only unique categories (no duplicates)
 const allFoodsWithWhiteBg = categories
 
-export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchChange }) {
+export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchChange, autoStartVoice }) {
   const navigate = useNavigate()
   const inputRef = useRef(null)
   const [filteredFoods, setFilteredFoods] = useState(allFoodsWithWhiteBg)
+  const [isListening, setIsListening] = useState(false)
+  const [showVoiceModal, setShowVoiceModal] = useState(false)
+  const recognitionRef = useRef(null)
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus()
     }
-  }, [isOpen])
+
+    if (isOpen && autoStartVoice) {
+      const timer = setTimeout(() => {
+        startVoiceSearch()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [isOpen, autoStartVoice])
+
+  const startVoiceSearch = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+
+    if (!SpeechRecognition) {
+      toast.error("Voice search is not supported in this browser.")
+      return
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop()
+      return
+    }
+
+    try {
+      const recognition = new SpeechRecognition()
+      recognition.lang = 'en-US'
+      recognition.interimResults = true
+      recognition.continuous = false
+
+      recognition.onstart = () => {
+        setIsListening(true)
+        setShowVoiceModal(true)
+      }
+
+      recognition.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0])
+          .map(result => result.transcript)
+          .join('')
+
+        onSearchChange(transcript)
+      }
+
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error", event.error)
+        setIsListening(false)
+        setShowVoiceModal(false)
+        if (event.error === 'not-allowed') {
+          toast.error("Microphone access denied. Please enable it in browser settings.")
+        } else if (event.error !== 'aborted') {
+          toast.error("Voice search failed. Please try again.")
+        }
+      }
+
+      recognition.onend = () => {
+        setIsListening(false)
+        // Give a small delay for user to see the last words
+        setTimeout(() => {
+          setShowVoiceModal(false)
+        }, 1500)
+      }
+
+      recognitionRef.current = recognition
+      recognition.start()
+    } catch (error) {
+      console.error("Failed to start speech recognition:", error)
+      setIsListening(false)
+      setShowVoiceModal(false)
+    }
+  }
+
+  const closeVoiceModal = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
+    }
+    setShowVoiceModal(false)
+  }
 
   useEffect(() => {
     const handleEscape = (e) => {
@@ -56,6 +137,9 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
     return () => {
       document.removeEventListener("keydown", handleEscape)
       document.body.style.overflow = "unset"
+      if (recognitionRef.current) {
+        recognitionRef.current.stop()
+      }
     }
   }, [isOpen, onClose])
 
@@ -109,9 +193,23 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
                 ref={inputRef}
                 value={searchValue}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Search for food, restaurants..."
-                className="pl-12 pr-4 h-12 w-full bg-white dark:bg-[#1a1a1a] border-gray-100 dark:border-gray-800 focus:border-primary-orange dark:focus:border-primary-orange rounded-full text-lg dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                placeholder={isListening ? "Listening..." : "Search for food, restaurants..."}
+                className={cn(
+                  "pl-12 pr-12 h-12 w-full bg-white dark:bg-[#1a1a1a] border-gray-100 dark:border-gray-800 focus:border-primary-orange dark:focus:border-primary-orange rounded-full text-lg dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 transition-all",
+                  isListening && "border-primary-orange ring-2 ring-primary-orange/20"
+                )}
               />
+              <button
+                type="button"
+                onClick={startVoiceSearch}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary-orange transition-colors z-10"
+              >
+                {isListening ? (
+                  <Mic className="h-5 w-5 text-primary-orange animate-pulse" />
+                ) : (
+                  <Mic className="h-5 w-5" />
+                )}
+              </button>
             </div>
             <Button
               type="button"
@@ -239,6 +337,12 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
             }
           }
         `}</style>
+      <VoiceSearchOverlay
+        isOpen={showVoiceModal}
+        onClose={closeVoiceModal}
+        transcript={searchValue}
+        isListening={isListening}
+      />
     </div>
   )
 }

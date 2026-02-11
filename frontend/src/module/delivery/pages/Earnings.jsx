@@ -36,62 +36,14 @@ export default function Earnings() {
 
   // Generate dummy data based on selected date
   const generateDummyData = (date, period) => {
-    // Check if the date/period is in the future
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    let isFuture = false
-    if (period === 'day') {
-      const checkDate = new Date(date)
-      checkDate.setHours(0, 0, 0, 0)
-      isFuture = checkDate > today
-    } else if (period === 'week') {
-      const weekRange = getWeekRange(date)
-      isFuture = weekRange.end > today
-    } else if (period === 'month') {
-      const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0)
-      monthEnd.setHours(23, 59, 59, 999)
-      isFuture = monthEnd > today
-    }
-
-    // Return zero data for future periods
-    if (isFuture) {
-      return {
-        totalEarnings: 0,
-        orders: 0,
-        hours: 0,
-        minutes: 0,
-        orderEarning: 0,
-        incentive: 0,
-        otherEarnings: 0
-      }
-    }
-
-    // Generate random but consistent data based on date
-    const dateStr = date.toISOString().split('T')[0]
-    const seed = dateStr.split('-').join('')
-    const seedNum = parseInt(seed) % 10000
-
-    // Different multipliers for different periods
-    const multiplier = period === 'day' ? 1 : period === 'week' ? 7 : 30
-
-    const orders = (seedNum % 20) * multiplier
-    const hours = Math.floor((seedNum % 8) * multiplier / 2)
-    const minutes = ((seedNum % 60) * multiplier) % 60
-
-    const orderEarning = (seedNum % 500 + 100) * multiplier
-    const incentive = (seedNum % 200 + 50) * multiplier
-    const otherEarnings = (seedNum % 100 + 20) * multiplier
-    const totalEarnings = orderEarning + incentive + otherEarnings
-
     return {
-      totalEarnings,
-      orders,
-      hours,
-      minutes,
-      orderEarning,
-      incentive,
-      otherEarnings
+      totalEarnings: 0,
+      orders: 0,
+      hours: 0,
+      minutes: 0,
+      orderEarning: 0,
+      incentive: 0,
+      otherEarnings: 0
     }
   }
 
@@ -760,161 +712,11 @@ export default function Earnings() {
       {/* Main Content */}
       <div className="px-4 py-6">
 
-        {/* Weekly Breakdown Chart (show for week tab) */}
-        {activeTab === "week" && (
-          <div className="bg-white rounded-lg shadow-sm mb-4">
-            {/* Date Range Header */}
-            <div className="px-4 pt-4 pb-3">
-              <p className="text-sm font-medium text-gray-900">
-                {weekRange.start.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} - {weekRange.end.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} {weekRange.start.getFullYear()}
-              </p>
-            </div>
 
-            {/* Bar Chart */}
-            <div className="px-4 pb-4">
-              <div className="flex items-end justify-between gap-1 h-40">
-                {dailyEarnings.map((day, index) => {
-                  const barHeight = maxDailyEarnings > 0 ? (day.earnings / maxDailyEarnings) * 100 : 0
-                  const hasEarnings = day.earnings > 0
-                  return (
-                    <div key={index} className="flex-1 flex flex-col items-center gap-1.5">
-                      {/* Earnings Label - Above bar */}
-                      {hasEarnings && (
-                        <span className="text-xs font-semibold text-gray-900">
-                          ₹{Math.round(day.earnings)}
-                        </span>
-                      )}
 
-                      {/* Bar Container */}
-                      <div className="w-full flex flex-col items-center justify-end relative" style={{ height: '120px' }}>
-                        {hasEarnings ? (
-                          <div
-                            className="w-full bg-black rounded-t transition-all"
-                            style={{
-                              height: `${Math.max(barHeight, 5)}%`,
-                              minHeight: '8px'
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full bg-gray-100 rounded-t" style={{ height: '2px' }} />
-                        )}
-                      </div>
 
-                      {/* Day Label */}
-                      <span className="text-xs text-gray-600 mt-1">
-                        {day.day}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
 
-            {/* Stats Below Chart */}
-            <div className="px-4 pb-4 pt-2 flex items-center justify-between border-t border-gray-100">
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{weekTotalOrders}</p>
-                <p className="text-sm text-gray-600">Orders</p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-gray-900">
-                  {String(weekTotalHours).padStart(2, '0')}:{String(weekTotalMinutesRemainder).padStart(2, '0')} hrs
-                </p>
-                <p className="text-sm text-gray-600">Time on order</p>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Monthly Weekly Breakdown Chart (show for month tab) */}
-        {activeTab === "month" && (
-          <div className="bg-white rounded-lg shadow-sm mb-4">
-            {/* Month Header */}
-            <div className="px-4 pt-4 pb-3">
-              <p className="text-sm font-medium text-gray-900">
-                {formatMonth(selectedDate)}
-              </p>
-            </div>
-
-            {/* Bar Chart - Weeks */}
-            <div className="px-4 pb-4">
-              <div className="flex items-end justify-between gap-1 h-40">
-                {weeklyEarnings.map((week, index) => {
-                  const barHeight = maxWeeklyEarnings > 0 ? (week.earnings / maxWeeklyEarnings) * 100 : 0
-                  const hasEarnings = week.earnings > 0
-                  return (
-                    <div key={index} className="flex-1 flex flex-col items-center gap-1.5">
-                      {/* Earnings Label - Above bar */}
-                      {hasEarnings && (
-                        <span className="text-xs font-semibold text-gray-900">
-                          ₹{Math.round(week.earnings)}
-                        </span>
-                      )}
-
-                      {/* Bar Container */}
-                      <div className="w-full flex flex-col items-center justify-end relative" style={{ height: '120px' }}>
-                        {hasEarnings ? (
-                          <div
-                            className="w-full bg-black rounded-t transition-all"
-                            style={{
-                              height: `${Math.max(barHeight, 5)}%`,
-                              minHeight: '8px'
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full bg-gray-100 rounded-t" style={{ height: '2px' }} />
-                        )}
-                      </div>
-
-                      {/* Week Label */}
-                      <span className="text-xs text-gray-600 mt-1">
-                        W{week.weekNumber}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Stats Below Chart */}
-            <div className="px-4 pb-4 pt-2 flex items-center justify-between border-t border-gray-100">
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{monthTotalOrders}</p>
-                <p className="text-sm text-gray-600">Orders</p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-gray-900">
-                  {String(monthTotalHours).padStart(2, '0')}:{String(monthTotalMinutesRemainder).padStart(2, '0')} hrs
-                </p>
-                <p className="text-sm text-gray-600">Time on order</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Earnings Breakdown */}
-        <div className="space-y-3">
-          <div className="bg-white rounded-lg shadow-sm px-4 py-4 flex items-center justify-between">
-            <span className="text-base text-gray-900">Order earning</span>
-            <span className="text-base font-semibold text-gray-900">
-              {earningsData.orderEarning === 0 ? '₹0' : `₹${Math.round(earningsData.orderEarning)}`}
-            </span>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm px-4 py-4 flex items-center justify-between">
-            <span className="text-base text-gray-900">Incentive</span>
-            <span className="text-base font-semibold text-gray-900">
-              {earningsData.incentive === 0 ? '₹0' : `₹${Math.round(earningsData.incentive)}`}
-            </span>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm px-4 py-4 flex items-center justify-between">
-            <span className="text-base text-gray-900">Other earnings</span>
-            <span className="text-base font-semibold text-gray-900">
-              {earningsData.otherEarnings === 0 ? '₹0' : `₹${Math.round(earningsData.otherEarnings)}`}
-            </span>
-          </div>
-        </div>
       </div>
     </div >
   )

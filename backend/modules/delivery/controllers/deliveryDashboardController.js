@@ -31,15 +31,15 @@ export const getDashboard = asyncHandler(async (req, res) => {
     let pendingOrders = 0;
 
     try {
-      totalOrders = await Order.countDocuments({ 
-        deliveryPartnerId: delivery._id 
+      totalOrders = await Order.countDocuments({
+        deliveryPartnerId: delivery._id
       });
     } catch (error) {
       logger.warn(`Error counting total orders for delivery ${delivery._id}:`, error);
     }
 
     try {
-      completedOrders = await Order.countDocuments({ 
+      completedOrders = await Order.countDocuments({
         deliveryPartnerId: delivery._id,
         status: 'delivered'
       });
@@ -48,7 +48,7 @@ export const getDashboard = asyncHandler(async (req, res) => {
     }
 
     try {
-      pendingOrders = await Order.countDocuments({ 
+      pendingOrders = await Order.countDocuments({
         deliveryPartnerId: delivery._id,
         status: { $in: ['out_for_delivery', 'ready'] }
       });
@@ -56,87 +56,7 @@ export const getDashboard = asyncHandler(async (req, res) => {
       logger.warn(`Error counting pending orders for delivery ${delivery._id}:`, error);
     }
 
-    // Calculate joining bonus status
-    // Joining bonus: ₹100, unlocked after completing 1 order
-    const joiningBonusAmount = 100;
-    const joiningBonusUnlockThreshold = 1; // Complete 1 order to unlock
-    const joiningBonusUnlocked = completedOrders >= joiningBonusUnlockThreshold;
-    
-    // Get wallet data (using new DeliveryWallet model)
-    let wallet = null;
-    try {
-      wallet = await DeliveryWallet.findOne({ deliveryId: delivery._id });
-    } catch (error) {
-      logger.warn(`Error fetching wallet for dashboard:`, error);
-    }
-    
-    const joiningBonusClaimed = wallet?.joiningBonusClaimed || false;
-    const joiningBonusValidTill = new Date('2025-12-10'); // Valid till 10 December 2025
-
-    // Calculate wallet balance (using new DeliveryWallet model)
-    const walletBalance = wallet?.totalBalance || 0;
-    const totalEarned = wallet?.totalEarned || delivery.earnings?.totalEarned || 0;
-    const currentBalance = wallet?.totalBalance || delivery.earnings?.currentBalance || 0;
-    const pendingPayout = wallet?.transactions
-      ?.filter(t => t.type === 'withdrawal' && t.status === 'Pending')
-      .reduce((sum, t) => sum + t.amount, 0) || delivery.earnings?.pendingPayout || 0;
-    const tips = wallet?.transactions
-      ?.filter(t => t.type === 'payment' && t.description?.toLowerCase().includes('tip'))
-      .reduce((sum, t) => sum + t.amount, 0) || delivery.earnings?.tips || 0;
-
-    // Calculate weekly earnings (last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    let weeklyOrders = [];
-    try {
-      weeklyOrders = await Order.find({
-        deliveryPartnerId: delivery._id,
-        status: 'delivered',
-        deliveredAt: { $gte: sevenDaysAgo }
-      }).select('pricing.deliveryFee');
-    } catch (error) {
-      logger.warn(`Error fetching weekly orders for delivery ${delivery._id}:`, error);
-    }
-
-    const weeklyEarnings = weeklyOrders.reduce((sum, order) => {
-      return sum + (order.pricing?.deliveryFee || 0);
-    }, 0);
-
-    // Get recent orders (last 5)
-    let recentOrders = [];
-    try {
-      recentOrders = await Order.find({
-        deliveryPartnerId: delivery._id
-      })
-        .sort({ createdAt: -1 })
-        .limit(5)
-        .select('orderId status createdAt deliveredAt pricing.deliveryFee restaurantName')
-        .lean();
-    } catch (error) {
-      logger.warn(`Error fetching recent orders for delivery ${delivery._id}:`, error);
-    }
-
-    // Calculate today's earnings
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    
-    let todayOrders = [];
-    try {
-      todayOrders = await Order.find({
-        deliveryPartnerId: delivery._id,
-        status: 'delivered',
-        deliveredAt: { $gte: todayStart }
-      }).select('pricing.deliveryFee');
-    } catch (error) {
-      logger.warn(`Error fetching today's orders for delivery ${delivery._id}:`, error);
-    }
-
-    const todayEarnings = todayOrders.reduce((sum, order) => {
-      return sum + (order.pricing?.deliveryFee || 0);
-    }, 0);
-
-    // Prepare dashboard data
+    // Prepare dashboard data (Salaried model)
     const dashboardData = {
       profile: {
         id: delivery._id,
@@ -149,15 +69,17 @@ export const getDashboard = asyncHandler(async (req, res) => {
         level: delivery.level,
         rating: delivery.metrics?.rating || 0,
         ratingCount: delivery.metrics?.ratingCount || 0,
+        salary: delivery.salary || { type: 'fixed', amount: 0 },
+        joiningDate: delivery.joiningDate
       },
       wallet: {
-        balance: walletBalance,
-        totalEarned: totalEarned,
-        currentBalance: currentBalance,
-        pendingPayout: pendingPayout,
-        tips: tips,
-        todayEarnings: todayEarnings,
-        weeklyEarnings: weeklyEarnings,
+        balance: 0,
+        totalEarned: 0,
+        currentBalance: 0,
+        pendingPayout: 0,
+        tips: 0,
+        todayEarnings: 0,
+        weeklyEarnings: 0,
       },
       stats: {
         totalOrders: totalOrders,
@@ -168,22 +90,19 @@ export const getDashboard = asyncHandler(async (req, res) => {
         averageDeliveryTime: delivery.metrics?.averageDeliveryTime || 0,
       },
       joiningBonus: {
-        amount: joiningBonusAmount,
-        unlocked: joiningBonusUnlocked,
-        claimed: joiningBonusClaimed,
-        unlockThreshold: joiningBonusUnlockThreshold,
+        amount: 0,
+        unlocked: false,
+        claimed: true, // Mark as claimed to hide UI
+        unlockThreshold: 1,
         ordersCompleted: completedOrders,
-        ordersRequired: joiningBonusUnlockThreshold,
-        validTill: joiningBonusValidTill,
-        message: joiningBonusUnlocked 
-          ? (joiningBonusClaimed ? 'Bonus claimed' : 'Complete 1 order to unlock')
-          : 'Complete 1 order to unlock',
+        ordersRequired: 1,
+        message: 'Salaried model - no joining bonus',
       },
       recentOrders: recentOrders.map(order => ({
         orderId: order.orderId,
         status: order.status,
         restaurantName: order.restaurantName,
-        deliveryFee: order.pricing?.deliveryFee || 0,
+        deliveryFee: 0, // Force to 0 for display
         createdAt: order.createdAt,
         deliveredAt: order.deliveredAt,
       })),
@@ -213,41 +132,15 @@ export const getDashboard = asyncHandler(async (req, res) => {
  */
 export const getWalletBalance = asyncHandler(async (req, res) => {
   try {
-    const delivery = req.delivery;
-
-    // Use new DeliveryWallet model
-    let wallet = await DeliveryWallet.findOne({ deliveryId: delivery._id });
-
-    if (!wallet) {
-      // Create wallet if doesn't exist
-      wallet = await DeliveryWallet.create({
-        deliveryId: delivery._id,
-        totalBalance: 0,
-        cashInHand: 0,
-        totalWithdrawn: 0,
-        totalEarned: 0
-      });
-    }
-
+    // For salaried model, wallet/commission balance is always 0
     const walletData = {
-      balance: wallet.totalBalance || 0,
-      totalEarned: wallet.totalEarned || 0,
-      currentBalance: wallet.totalBalance || 0,
-      pendingPayout: wallet.transactions
-        .filter(t => t.type === 'withdrawal' && t.status === 'Pending')
-        .reduce((sum, t) => sum + t.amount, 0),
-      tips: wallet.transactions
-        .filter(t => t.type === 'payment' && t.description?.toLowerCase().includes('tip'))
-        .reduce((sum, t) => sum + t.amount, 0),
-      transactions: wallet.transactions.slice(0, 10).map(t => ({
-        id: t._id,
-        amount: t.amount,
-        type: t.type,
-        status: t.status,
-        description: t.description,
-        date: t.createdAt
-      })),
-      joiningBonusClaimed: wallet.joiningBonusClaimed || false,
+      balance: 0,
+      totalEarned: 0,
+      currentBalance: 0,
+      pendingPayout: 0,
+      tips: 0,
+      transactions: [],
+      joiningBonusClaimed: true,
     };
 
     return successResponse(res, 200, 'Wallet balance retrieved successfully', walletData);
@@ -263,78 +156,7 @@ export const getWalletBalance = asyncHandler(async (req, res) => {
  * This endpoint is kept for backward compatibility and uses the new DeliveryWallet model
  */
 export const claimJoiningBonus = asyncHandler(async (req, res) => {
-  try {
-    const delivery = req.delivery;
-
-    // Use new DeliveryWallet model
-    let wallet = await DeliveryWallet.findOrCreateByDeliveryId(delivery._id);
-
-    // Check if already claimed
-    if (wallet.joiningBonusClaimed) {
-      return errorResponse(res, 400, 'Joining bonus already claimed');
-    }
-
-    // Check if bonus is unlocked (completed at least 1 order)
-    let completedOrders = 0;
-    try {
-      completedOrders = await Order.countDocuments({ 
-        deliveryPartnerId: delivery._id,
-        status: 'delivered'
-      });
-    } catch (error) {
-      logger.warn(`Error counting completed orders for joining bonus:`, error);
-    }
-
-    if (completedOrders < 1) {
-      return errorResponse(res, 400, 'Complete at least 1 order to unlock joining bonus');
-    }
-
-    // Check if bonus is still valid
-    const joiningBonusValidTill = new Date('2025-12-10');
-    if (new Date() > joiningBonusValidTill) {
-      return errorResponse(res, 400, 'Joining bonus has expired');
-    }
-
-    // Add bonus amount
-    const bonusAmount = 100;
-
-    // Add bonus transaction
-    const transaction = wallet.addTransaction({
-      amount: bonusAmount,
-      type: 'bonus',
-      status: 'Completed',
-      description: 'Joining bonus - Complete first order reward'
-    });
-
-    // Update wallet
-    wallet.joiningBonusClaimed = true;
-    wallet.joiningBonusAmount = bonusAmount;
-    await wallet.save();
-
-    logger.info(`Joining bonus claimed for delivery: ${delivery._id}`, {
-      deliveryId: delivery.deliveryId,
-      bonusAmount,
-      transactionId: transaction._id
-    });
-
-    return successResponse(res, 200, 'Joining bonus claimed successfully', {
-      bonusAmount,
-      wallet: {
-        totalBalance: wallet.totalBalance,
-        totalEarned: wallet.totalEarned,
-        joiningBonusClaimed: wallet.joiningBonusClaimed
-      },
-      transaction: {
-        id: transaction._id,
-        amount: transaction.amount,
-        type: transaction.type,
-        status: transaction.status
-      }
-    });
-  } catch (error) {
-    logger.error('Error claiming joining bonus:', error);
-    return errorResponse(res, 500, 'Failed to claim joining bonus');
-  }
+  return errorResponse(res, 400, 'Joining bonus is not available in the salaried model');
 });
 
 /**
@@ -376,9 +198,9 @@ export const getOrderStats = asyncHandler(async (req, res) => {
     // Get order counts
     const totalOrders = await Order.countDocuments(query);
     const completedOrders = await Order.countDocuments({ ...query, status: 'delivered' });
-    const pendingOrders = await Order.countDocuments({ 
-      ...query, 
-      status: { $in: ['out_for_delivery', 'ready'] } 
+    const pendingOrders = await Order.countDocuments({
+      ...query,
+      status: { $in: ['out_for_delivery', 'ready'] }
     });
     const cancelledOrders = await Order.countDocuments({ ...query, status: 'cancelled' });
 
@@ -403,8 +225,8 @@ export const getOrderStats = asyncHandler(async (req, res) => {
       completedOrders,
       pendingOrders,
       cancelledOrders,
-      totalEarnings,
-      averageEarningsPerOrder: completedOrders > 0 ? totalEarnings / completedOrders : 0,
+      totalEarnings: 0,
+      averageEarningsPerOrder: 0,
       completionRate: totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0,
     };
 

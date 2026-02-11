@@ -194,23 +194,7 @@ export const sidebarMenuData = [
             label: "Salary Setup",
             path: "/admin/delivery-partners/salary-setup",
           },
-          {
-            label: "Deliveryman Reviews",
-            path: "/admin/delivery-partners/reviews",
-          },
-          { label: "Bonus", path: "/admin/delivery-partners/bonus" },
-          {
-            label: "Earning Addon",
-            path: "/admin/delivery-partners/earning-addon",
-          },
-          {
-            label: "Earning Addon History",
-            path: "/admin/delivery-partners/earning-addon-history",
-          },
-          {
-            label: "Delivery Earning",
-            path: "/admin/delivery-partners/earnings",
-          },
+          { label: "Deliveryman Reviews", path: "/admin/delivery-partners/reviews" },
         ],
       },
     ],

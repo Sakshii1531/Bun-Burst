@@ -192,7 +192,6 @@ export default function Home() {
   const [isSwitchingOffVegMode, setIsSwitchingOffVegMode] = useState(false)
   const [popupPosition, setPopupPosition] = useState({ top: 0, right: 0 })
   const vegModeToggleRef = useRef(null)
-  const [heroBannerImages, setHeroBannerImages] = useState([])
   const [heroBannersData, setHeroBannersData] = useState([]) // Store full banner data with linked restaurants
   const [loadingBanners, setLoadingBanners] = useState(true)
   const [landingCategories, setLandingCategories] = useState([])
@@ -202,17 +201,10 @@ export default function Home() {
   const [restaurantsData, setRestaurantsData] = useState([])
   const [loadingRestaurants, setLoadingRestaurants] = useState(true)
   const [realCategories, setRealCategories] = useState([])
+  // Placeholder for search - moved outside component to prevent recreation
   const [loadingRealCategories, setLoadingRealCategories] = useState(true)
   const [showAllCategoriesModal, setShowAllCategoriesModal] = useState(false)
   const isHandlingSwitchOff = useRef(false)
-
-  // Swipe functionality for hero banner carousel
-  const touchStartX = useRef(0)
-  const touchStartY = useRef(0)
-  const touchEndX = useRef(0)
-  const touchEndY = useRef(0)
-  const isSwiping = useRef(false)
-  const autoSlideIntervalRef = useRef(null)
 
   // Sync prevVegMode when vegMode changes from context
   useEffect(() => {
@@ -284,13 +276,10 @@ export default function Home() {
         if (response.data.success && response.data.data.banners) {
           const banners = response.data.data.banners
           setHeroBannersData(banners)
-          // Extract image URLs for display
-          setHeroBannerImages(banners.map(b => b.imageUrl || b))
         }
       } catch (error) {
         console.error('Error fetching hero banners:', error)
         // Fallback to empty array if API fails
-        setHeroBannerImages([])
         setHeroBannersData([])
       } finally {
         setLoadingBanners(false)
@@ -366,141 +355,8 @@ export default function Home() {
     fetchLandingConfig()
   }, [])
 
-  // Auto-cycle hero banner images
-  useEffect(() => {
-    if (heroBannerImages.length === 0) return
-
-    autoSlideIntervalRef.current = setInterval(() => {
-      if (!isSwiping.current) {
-        setCurrentBannerIndex((prev) => (prev + 1) % heroBannerImages.length)
-      }
-    }, 10000) // Change every 10 seconds
-
-    return () => {
-      if (autoSlideIntervalRef.current) {
-        clearInterval(autoSlideIntervalRef.current)
-      }
-    }
-  }, [heroBannerImages.length])
-
-  // Lenis smooth scrolling initialization
-  useEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true,
-      smoothTouch: true,
-    })
-
-    function raf(time) {
-      lenis.raf(time)
-      requestAnimationFrame(raf)
-    }
-
-    requestAnimationFrame(raf)
-
-    return () => {
-      lenis.destroy()
-    }
-  }, [])
-
-  // Helper function to reset auto-slide timer
-  const resetAutoSlide = useCallback(() => {
-    if (autoSlideIntervalRef.current) {
-      clearInterval(autoSlideIntervalRef.current)
-    }
-    if (heroBannerImages.length > 0) {
-      autoSlideIntervalRef.current = setInterval(() => {
-        if (!isSwiping.current) {
-          setCurrentBannerIndex((prev) => (prev + 1) % heroBannerImages.length)
-        }
-      }, 10000)
-    }
-  }, [heroBannerImages.length])
-
-  // Swipe handlers for hero banner carousel
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX
-    touchStartY.current = e.touches[0].clientY
-    isSwiping.current = true
-  }
-
-  const handleTouchMove = (e) => {
-    touchEndX.current = e.touches[0].clientX
-    touchEndY.current = e.touches[0].clientY
-  }
-
-  const handleTouchEnd = () => {
-    if (!isSwiping.current || heroBannerImages.length === 0) return
-
-    const deltaX = touchEndX.current - touchStartX.current
-    const deltaY = Math.abs(touchEndY.current - touchStartY.current)
-    const minSwipeDistance = 50 // Minimum distance for a swipe
-
-    // Check if it's a horizontal swipe (not vertical scroll)
-    if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaX) > deltaY) {
-      if (deltaX > 0) {
-        // Swipe right - go to previous image
-        setCurrentBannerIndex((prev) => (prev - 1 + heroBannerImages.length) % heroBannerImages.length)
-      } else {
-        // Swipe left - go to next image
-        setCurrentBannerIndex((prev) => (prev + 1) % heroBannerImages.length)
-      }
-      // Reset auto-slide timer after manual swipe
-      resetAutoSlide()
-    }
-
-    // Reset swipe state after a short delay
-    setTimeout(() => {
-      isSwiping.current = false
-    }, 300)
-
-    // Reset touch positions
-    touchStartX.current = 0
-    touchStartY.current = 0
-    touchEndX.current = 0
-    touchEndY.current = 0
-  }
-
-  // Mouse handlers for desktop drag support
-  const handleMouseDown = (e) => {
-    touchStartX.current = e.clientX
-    touchStartY.current = e.clientY
-    isSwiping.current = true
-  }
-
-  const handleMouseMove = (e) => {
-    if (!isSwiping.current) return
-    touchEndX.current = e.clientX
-    touchEndY.current = e.clientY
-  }
-
-  const handleMouseUp = () => {
-    if (!isSwiping.current || heroBannerImages.length === 0) return
-
-    const deltaX = touchEndX.current - touchStartX.current
-    const deltaY = Math.abs(touchEndY.current - touchStartY.current)
-    const minSwipeDistance = 50
-
-    if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaX) > deltaY) {
-      if (deltaX > 0) {
-        setCurrentBannerIndex((prev) => (prev - 1 + heroBannerImages.length) % heroBannerImages.length)
-      } else {
-        setCurrentBannerIndex((prev) => (prev + 1) % heroBannerImages.length)
-      }
-      // Reset auto-slide timer after manual swipe
-      resetAutoSlide()
-    }
-
-    setTimeout(() => {
-      isSwiping.current = false
-    }, 300)
-
-    touchStartX.current = 0
-    touchStartY.current = 0
-    touchEndX.current = 0
-    touchEndY.current = 0
-  }
+  // PlaceholderIndex for search
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const [activeFilters, setActiveFilters] = useState(new Set())
   const [sortBy, setSortBy] = useState(null) // null, 'price-low', 'price-high', 'rating-high', 'rating-low'
   const [selectedCuisine, setSelectedCuisine] = useState(null)
@@ -548,8 +404,6 @@ export default function Home() {
 
   // Mock points value - replace with actual points from context/store
   const userPoints = 99
-
-  const [placeholderIndex, setPlaceholderIndex] = useState(0)
 
   // Simple filter toggle function
   const toggleFilter = (filterId) => {

@@ -221,7 +221,7 @@ restaurantNamespace.on('connection', (socket) => {
         room: room,
         socketId: socket.id
       });
-      
+
       // Log all rooms this socket is now in
       const socketRooms = Array.from(socket.rooms).filter(r => r.startsWith('restaurant:'));
       console.log(`📋 Socket ${socket.id} is now in restaurant rooms:`, socketRooms);

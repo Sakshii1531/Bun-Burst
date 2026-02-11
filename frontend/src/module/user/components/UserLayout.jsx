@@ -14,10 +14,11 @@ import DesktopNavbar from "./DesktopNavbar"
 const SearchOverlayContext = createContext({
   isSearchOpen: false,
   searchValue: "",
+  shouldStartVoice: false,
   setSearchValue: () => {
     console.warn("SearchOverlayProvider not available")
   },
-  openSearch: () => {
+  openSearch: (startVoice = false) => {
     console.warn("SearchOverlayProvider not available")
   },
   closeSearch: () => { }
@@ -32,18 +33,21 @@ export function useSearchOverlay() {
 function SearchOverlayProvider({ children }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
+  const [shouldStartVoice, setShouldStartVoice] = useState(false)
 
-  const openSearch = () => {
+  const openSearch = (startVoice = false) => {
     setIsSearchOpen(true)
+    setShouldStartVoice(startVoice)
   }
 
   const closeSearch = () => {
     setIsSearchOpen(false)
     setSearchValue("")
+    setShouldStartVoice(false)
   }
 
   return (
-    <SearchOverlayContext.Provider value={{ isSearchOpen, searchValue, setSearchValue, openSearch, closeSearch }}>
+    <SearchOverlayContext.Provider value={{ isSearchOpen, searchValue, setSearchValue, openSearch, closeSearch, shouldStartVoice }}>
       {children}
       <Suspense fallback={null}>
         {isSearchOpen && (
@@ -52,6 +56,7 @@ function SearchOverlayProvider({ children }) {
             onClose={closeSearch}
             searchValue={searchValue}
             onSearchChange={setSearchValue}
+            autoStartVoice={shouldStartVoice}
           />
         )}
       </Suspense>

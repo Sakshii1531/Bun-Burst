@@ -165,12 +165,12 @@ export default function UserOrderDetails() {
   const paymentMethod = order.payment?.method || "Online"
   const paymentDate = order.createdAt
     ? new Date(order.createdAt).toLocaleString("en-IN", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    })
     : ""
 
   const addressText =
@@ -205,24 +205,24 @@ export default function UserOrderDetails() {
       const companyName = await getCompanyNameAsync()
       // Create new PDF document
       const doc = new jsPDF()
-      
+
       // Title
       doc.setFontSize(16)
       doc.setFont('helvetica', 'bold')
       doc.text(`${companyName} Order: Summary and Receipt`, 105, 20, { align: 'center' })
-      
+
       // Order details section
       let yPos = 35
       doc.setFontSize(10)
       doc.setFont('helvetica', 'normal')
-      
+
       // Order ID
       doc.setFont('helvetica', 'bold')
       doc.text('Order ID:', 20, yPos)
       doc.setFont('helvetica', 'normal')
       doc.text(orderIdDisplay, 60, yPos)
       yPos += 7
-      
+
       // Order Time
       doc.setFont('helvetica', 'bold')
       doc.text('Order Time:', 20, yPos)
@@ -230,14 +230,14 @@ export default function UserOrderDetails() {
       const orderTimeLines = doc.splitTextToSize(paymentDate || 'N/A', 130)
       doc.text(orderTimeLines, 60, yPos)
       yPos += orderTimeLines.length * 7
-      
+
       // Customer Name
       doc.setFont('helvetica', 'bold')
       doc.text('Customer Name:', 20, yPos)
       doc.setFont('helvetica', 'normal')
       doc.text(userName || 'Customer', 60, yPos)
       yPos += 7
-      
+
       // Delivery Address
       doc.setFont('helvetica', 'bold')
       doc.text('Delivery Address:', 20, yPos)
@@ -245,14 +245,14 @@ export default function UserOrderDetails() {
       const addressLines = doc.splitTextToSize(addressText || 'N/A', 130)
       doc.text(addressLines, 60, yPos)
       yPos += addressLines.length * 7
-      
+
       // Restaurant Name
       doc.setFont('helvetica', 'bold')
       doc.text('Restaurant Name:', 20, yPos)
       doc.setFont('helvetica', 'normal')
       doc.text(restaurantName, 60, yPos)
       yPos += 7
-      
+
       // Restaurant Address
       doc.setFont('helvetica', 'bold')
       doc.text('Restaurant Address:', 20, yPos)
@@ -260,7 +260,7 @@ export default function UserOrderDetails() {
       const restaurantAddressLines = doc.splitTextToSize(restaurantLocation || 'N/A', 130)
       doc.text(restaurantAddressLines, 60, yPos)
       yPos += restaurantAddressLines.length * 7 + 5
-      
+
       // Items table
       const tableData = items.map(item => [
         item.name || 'Item',
@@ -268,7 +268,7 @@ export default function UserOrderDetails() {
         `₹${Number(item.price || 0).toFixed(2)}`,
         `₹${Number((item.price || 0) * (item.quantity || item.qty || 1)).toFixed(2)}`
       ])
-      
+
       autoTable(doc, {
         startY: yPos,
         head: [['Item', 'Quantity', 'Unit Price', 'Total Price']],
@@ -283,20 +283,20 @@ export default function UserOrderDetails() {
           3: { cellWidth: 35, halign: 'right', fontStyle: 'bold' }
         }
       })
-      
+
       // Get final Y position after table (autoTable adds lastAutoTable property)
       const finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY : yPos + (tableData.length * 8) + 20
-      
+
       // Total
       doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
       doc.text('Total:', 145, finalY + 10, { align: 'right' })
       doc.text(`₹${Number(pricing.total || 0).toFixed(2)}`, 195, finalY + 10, { align: 'right' })
-      
+
       // Save PDF instantly
       const fileName = `Order_Summary_${orderIdDisplay}_${Date.now()}.pdf`
       doc.save(fileName)
-      
+
       toast.success("Summary downloaded successfully!")
     } catch (error) {
       console.error("Error generating PDF:", error)
@@ -383,14 +383,12 @@ export default function UserOrderDetails() {
             <div key={idx} className="flex justify-between items-start mt-2">
               <div className="flex items-center gap-2">
                 <div
-                  className={`w-3 h-3 border ${
-                    item.isVeg ? "border-green-600" : "border-red-600"
-                  } flex items-center justify-center p-[1px]`}
+                  className={`w-3 h-3 border ${item.isVeg ? "border-green-600" : "border-red-600"
+                    } flex items-center justify-center p-[1px]`}
                 >
                   <div
-                    className={`w-full h-full rounded-full ${
-                      item.isVeg ? "bg-green-600" : "bg-red-600"
-                    }`}
+                    className={`w-full h-full rounded-full ${item.isVeg ? "bg-green-600" : "bg-red-600"
+                      }`}
                   />
                 </div>
                 <span className="text-sm text-gray-700 font-medium">
@@ -591,21 +589,21 @@ export default function UserOrderDetails() {
               // Use MongoDB _id (ObjectId) for the API call - backend complaint controller expects ObjectId
               // Priority: order._id (MongoDB ObjectId) > orderId from route params
               const orderMongoId = order._id || orderId
-              
+
               if (!orderMongoId) {
-                console.error("Order ID not available:", { 
+                console.error("Order ID not available:", {
                   order: order ? { _id: order._id, orderId: order.orderId } : null,
-                  routeOrderId: orderId 
+                  routeOrderId: orderId
                 })
                 toast.error("Order ID not available. Please refresh the page.")
                 return
               }
-              
+
               // Convert to string if it's an ObjectId object
-              const orderIdString = typeof orderMongoId === 'object' && orderMongoId.toString 
-                ? orderMongoId.toString() 
+              const orderIdString = typeof orderMongoId === 'object' && orderMongoId.toString
+                ? orderMongoId.toString()
                 : String(orderMongoId)
-              
+
               console.log("Navigating to complaint page with orderId:", orderIdString)
               navigate(`/user/complaints/submit/${encodeURIComponent(orderIdString)}`)
             }}

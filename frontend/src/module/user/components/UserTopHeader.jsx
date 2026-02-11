@@ -99,11 +99,16 @@ export default function UserTopHeader({
         return "Select location"
     }
 
-    const handleSearchFocus = () => {
+    const handleSearchFocus = (triggerVoice = false) => {
         if (searchQuery) {
             setSearchValue(searchQuery)
         }
-        openSearch()
+        openSearch(triggerVoice)
+    }
+
+    const handleVoiceSearch = (e) => {
+        e.stopPropagation()
+        handleSearchFocus(true)
     }
 
     return (
@@ -171,7 +176,7 @@ export default function UserTopHeader({
                                             </div>
                                         )}
                                     </div>
-                                    <button type="button" onClick={handleSearchFocus} className="p-1.5 hover:bg-muted rounded-lg transition-all">
+                                    <button type="button" onClick={handleVoiceSearch} className="p-1.5 hover:bg-muted rounded-lg transition-all">
                                         <Mic className="h-4 w-4 text-muted-foreground" />
                                     </button>
                                 </div>
@@ -284,7 +289,7 @@ export default function UserTopHeader({
                                     </div>
                                 )}
                             </div>
-                            <button type="button" onClick={handleSearchFocus} className="p-1.5 hover:bg-muted rounded-lg transition-all">
+                            <button type="button" onClick={handleVoiceSearch} className="p-1.5 hover:bg-muted rounded-lg transition-all">
                                 <Mic className="h-4 w-4 text-muted-foreground" />
                             </button>
                         </div>

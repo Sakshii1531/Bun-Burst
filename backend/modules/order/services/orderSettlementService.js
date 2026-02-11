@@ -93,42 +93,19 @@ export const calculateOrderSettlement = async (orderId) => {
       const distance = order.assignmentInfo.distance;
       const surgeMultiplier = order.assignmentInfo?.surgeMultiplier || 1;
 
-      // Check if delivery partner is on fixed salary
-      const deliveryPartner = await Delivery.findById(order.deliveryPartnerId).select('salary').lean();
-      const isFixedSalary = deliveryPartner?.salary?.type === 'fixed';
+      // For salaried employees, NO per-order commission is given
+      console.log(`Order ${order.orderId}: Delivery partner ${order.deliveryPartnerId} is salaried. No commission calculated.`);
 
-      if (isFixedSalary) {
-        // For fixed salary employees, NO per-order commission is given
-        // They only get paid their monthly salary
-        console.log(`Order ${order.orderId}: Delivery partner ${order.deliveryPartnerId} is on fixed salary. No commission calculated.`);
-
-        deliveryPartnerEarning = {
-          basePayout: 0,
-          distance: distance, // Still track distance for records
-          commissionPerKm: 0,
-          distanceCommission: 0,
-          surgeMultiplier: surgeMultiplier,
-          surgeAmount: 0,
-          totalEarning: 0,
-          status: 'pending'
-        };
-      } else {
-        // Commission based calculation
-        const deliveryCommission = await DeliveryBoyCommission.calculateCommission(distance);
-        const baseEarning = deliveryCommission.commission;
-        const surgeAmount = baseEarning * (surgeMultiplier - 1);
-
-        deliveryPartnerEarning = {
-          basePayout: deliveryCommission.breakdown.basePayout,
-          distance: distance,
-          commissionPerKm: deliveryCommission.breakdown.commissionPerKm,
-          distanceCommission: deliveryCommission.breakdown.distanceCommission,
-          surgeMultiplier: surgeMultiplier,
-          surgeAmount: surgeAmount,
-          totalEarning: baseEarning + surgeAmount,
-          status: 'pending'
-        };
-      }
+      deliveryPartnerEarning = {
+        basePayout: 0,
+        distance: distance, // Still track distance for records
+        commissionPerKm: 0,
+        distanceCommission: 0,
+        surgeMultiplier: surgeMultiplier,
+        surgeAmount: 0,
+        totalEarning: 0,
+        status: 'pending'
+      };
     }
 
     // Calculate admin/platform earnings

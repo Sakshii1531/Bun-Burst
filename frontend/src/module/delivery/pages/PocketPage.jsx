@@ -81,7 +81,7 @@ export default function PocketPage() {
         if (response?.data?.success && response?.data?.data?.profile) {
           const profile = response.data.data.profile
           const bankDetails = profile?.documents?.bankDetails
-          
+
           // Check if all required bank details fields are filled
           const isFilled = !!(
             bankDetails?.accountHolderName?.trim() &&
@@ -89,7 +89,7 @@ export default function PocketPage() {
             bankDetails?.ifscCode?.trim() &&
             bankDetails?.bankName?.trim()
           )
-          
+
           setBankDetailsFilled(isFilled)
         }
       } catch (error) {
@@ -110,7 +110,7 @@ export default function PocketPage() {
     }
 
     window.addEventListener('deliveryProfileRefresh', handleProfileRefresh)
-    
+
     return () => {
       window.removeEventListener('deliveryProfileRefresh', handleProfileRefresh)
     }
@@ -126,11 +126,11 @@ export default function PocketPage() {
       buttonText: "Submit",
       bgColor: "bg-yellow-400"
     }]
-  , [bankDetailsFilled])
+    , [bankDetailsFilled])
 
   // Calculate balances
   const balances = calculateDeliveryBalances(walletState)
-  
+
   // Debug: Log wallet state and balances
   useEffect(() => {
     console.log('💰 Wallet State:', walletState)
@@ -196,18 +196,18 @@ export default function PocketPage() {
         console.log('🔄 Fetching active earning addons...')
         const response = await deliveryAPI.getActiveEarningAddons()
         console.log('✅ Active earning addons response:', response?.data)
-        
+
         if (response?.data?.success && response?.data?.data?.activeOffers) {
           const offers = response.data.data.activeOffers
           console.log('📦 Active offers found:', offers.length, offers)
-          
+
           // Get the first valid active offer (prioritize isValid, then isUpcoming, then any active status)
-          const activeOffer = offers.find(offer => offer.isValid) || 
-                             offers.find(offer => offer.isUpcoming) ||
-                             offers.find(offer => offer.status === 'active') || 
-                             offers[0] || 
-                             null
-          
+          const activeOffer = offers.find(offer => offer.isValid) ||
+            offers.find(offer => offer.isUpcoming) ||
+            offers.find(offer => offer.status === 'active') ||
+            offers[0] ||
+            null
+
           console.log('🎯 Selected active offer:', activeOffer)
           setActiveEarningAddon(activeOffer)
         } else {
@@ -262,31 +262,31 @@ export default function PocketPage() {
   // Calculate bonus earnings from earning_addon transactions (only for active offer)
   const calculateBonusEarnings = () => {
     if (!activeEarningAddon || !walletState?.transactions) return 0
-    
+
     const now = new Date()
     const startDate = activeEarningAddon.startDate ? new Date(activeEarningAddon.startDate) : null
     const endDate = activeEarningAddon.endDate ? new Date(activeEarningAddon.endDate) : null
-    
+
     return walletState.transactions
       .filter(t => {
         // Only count earning_addon type transactions
         if (t.type !== 'earning_addon' || t.status !== 'Completed') return false
-        
+
         // Filter by date range if offer has dates
         if (startDate || endDate) {
           const transactionDate = t.date ? new Date(t.date) : (t.createdAt ? new Date(t.createdAt) : null)
           if (!transactionDate) return false
-          
+
           if (startDate && transactionDate < startDate) return false
           if (endDate && transactionDate > endDate) return false
         }
-        
+
         // Check if transaction is related to current offer
         if (t.metadata?.earningAddonId) {
-          return t.metadata.earningAddonId === activeEarningAddon._id?.toString() || 
-                 t.metadata.earningAddonId === activeEarningAddon.id?.toString()
+          return t.metadata.earningAddonId === activeEarningAddon._id?.toString() ||
+            t.metadata.earningAddonId === activeEarningAddon.id?.toString()
         }
-        
+
         // If no metadata, include all earning_addon transactions in date range
         return true
       })
@@ -301,11 +301,11 @@ export default function PocketPage() {
   const earningsGuaranteeCurrentOrders = activeEarningAddon ? (activeEarningAddon.currentOrders ?? weeklyOrders) : 0
   // Show only bonus earnings from the offer, not total weekly earnings
   const earningsGuaranteeCurrentEarnings = activeEarningAddon ? calculateBonusEarnings() : 0
-  const ordersProgress = earningsGuaranteeOrdersTarget > 0 
-    ? Math.min(earningsGuaranteeCurrentOrders / earningsGuaranteeOrdersTarget, 1) 
+  const ordersProgress = earningsGuaranteeOrdersTarget > 0
+    ? Math.min(earningsGuaranteeCurrentOrders / earningsGuaranteeOrdersTarget, 1)
     : 0
-  const earningsProgress = earningsGuaranteeTarget > 0 
-    ? Math.min(earningsGuaranteeCurrentEarnings / earningsGuaranteeTarget, 1) 
+  const earningsProgress = earningsGuaranteeTarget > 0
+    ? Math.min(earningsGuaranteeCurrentEarnings / earningsGuaranteeTarget, 1)
     : 0
 
   // Get week end date for valid till - use offer end date if available
@@ -332,15 +332,15 @@ export default function PocketPage() {
   const totalBonus = walletState?.transactions
     ?.filter(t => t.type === 'bonus' && t.status === 'Completed')
     .reduce((sum, t) => sum + (t.amount || 0), 0) || 0
-  
+
   // Pocket balance - shows total balance (includes bonus)
   // Total balance = all earnings + bonus - withdrawals
   // This is what delivery partner can withdraw
   // IMPORTANT: Use walletState.pocketBalance if available (from API), otherwise use totalBalance
-  let pocketBalance = walletState?.pocketBalance !== undefined 
-    ? walletState.pocketBalance 
+  let pocketBalance = walletState?.pocketBalance !== undefined
+    ? walletState.pocketBalance
     : (walletState?.totalBalance || balances.totalBalance || 0)
-  
+
   // IMPORTANT: Ensure pocket balance includes bonus
   // If backend totalBalance is 0 but we have bonus, calculate it manually
   // This ensures bonus is always reflected in pocket balance
@@ -357,12 +357,12 @@ export default function PocketPage() {
       pocketBalance = expectedBalance
     }
   }
-  
+
   // Debug: Log pocket balance calculation
   useEffect(() => {
     const bonusTransactions = walletState?.transactions?.filter(t => t.type === 'bonus' && t.status === 'Completed') || []
     const calculatedTotalBonus = bonusTransactions.reduce((sum, t) => sum + (t.amount || 0), 0) || 0
-    
+
     console.log('💰 FINAL Pocket Balance Display:', {
       pocketBalance: pocketBalance,
       walletStatePocketBalance: walletState?.pocketBalance,
@@ -380,7 +380,7 @@ export default function PocketPage() {
     : 0
   const availableCashLimit =
     Number.isFinite(Number(walletState?.availableCashLimit)) &&
-    Number(walletState?.availableCashLimit) >= 0
+      Number(walletState?.availableCashLimit) >= 0
       ? Number(walletState.availableCashLimit)
       : Math.max(0, totalCashLimit - (Number(balances.cashInHand) || 0))
   const depositAmount = pocketBalance < 0 ? Math.abs(pocketBalance) : 0
@@ -411,7 +411,7 @@ export default function PocketPage() {
   }
 
   const payoutAmount = calculatePayoutAmount()
-  
+
   // Payout period - previous week
   const getPayoutPeriod = () => {
     const now = new Date()
@@ -553,7 +553,7 @@ export default function PocketPage() {
       }
       return prev
     })
-    
+
     carouselAutoRotateRef.current = setInterval(() => {
       setCurrentCarouselSlide((prev) => (prev + 1) % carouselSlides.length)
     }, 3000)
@@ -697,232 +697,95 @@ export default function PocketPage() {
         className=""
       />
 
-{carouselSlides.length > 0 && (
-      <div
-        ref={carouselRef}
-        className="relative overflow-hidden bg-gray-700 cursor-grab active:cursor-grabbing select-none"
-        onTouchStart={handleCarouselTouchStart}
-        onTouchMove={handleCarouselTouchMove}
-        onTouchEnd={handleCarouselTouchEnd}
-        onMouseDown={handleCarouselMouseDown}
-      >
-        <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${currentCarouselSlide * 100}%)` }}>
-          {carouselSlides.map((slide) => (
-            <div key={slide.id} className="min-w-full">
-              <div className={`${slide.bgColor} px-4 py-3 flex items-center gap-3 min-h-[80px]`}>
-                {/* Icon */}
-                <div className="flex-shrink-0">
-                  {slide.icon === "bag" ? (
-                    <div className="relative">
-                      {/* Delivery Bag Icon - Reduced size */}
-                      <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center shadow-lg relative">
-                        {/* Bag shape */}
-                        <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                          <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                        </svg>
+      {carouselSlides.length > 0 && (
+        <div
+          ref={carouselRef}
+          className="relative overflow-hidden bg-gray-700 cursor-grab active:cursor-grabbing select-none"
+          onTouchStart={handleCarouselTouchStart}
+          onTouchMove={handleCarouselTouchMove}
+          onTouchEnd={handleCarouselTouchEnd}
+          onMouseDown={handleCarouselMouseDown}
+        >
+          <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${currentCarouselSlide * 100}%)` }}>
+            {carouselSlides.map((slide) => (
+              <div key={slide.id} className="min-w-full">
+                <div className={`${slide.bgColor} px-4 py-3 flex items-center gap-3 min-h-[80px]`}>
+                  {/* Icon */}
+                  <div className="flex-shrink-0">
+                    {slide.icon === "bag" ? (
+                      <div className="relative">
+                        {/* Delivery Bag Icon - Reduced size */}
+                        <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center shadow-lg relative">
+                          {/* Bag shape */}
+                          <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                            <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                          </svg>
+                        </div>
+                        {/* Shadow */}
+                        <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-10 h-1.5 bg-black/30 rounded-full blur-sm"></div>
                       </div>
-                      {/* Shadow */}
-                      <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-10 h-1.5 bg-black/30 rounded-full blur-sm"></div>
-                    </div>
-                  ) : (
-                    <div className="relative w-10 h-10">
-                      {/* Bank/Rupee Icon - Reduced size */}
-                      <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center relative">
-                        {/* Rupee symbol */}
-                        <svg className="w-12 h-12 text-white absolute" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" />
-                        </svg>
+                    ) : (
+                      <div className="relative w-10 h-10">
+                        {/* Bank/Rupee Icon - Reduced size */}
+                        <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center relative">
+                          {/* Rupee symbol */}
+                          <svg className="w-12 h-12 text-white absolute" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" />
+                          </svg>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                {/* Text Content */}
-                <div className="flex-1">
-                  <h3 className={`${slide.bgColor === "bg-gray-700" ? "text-white" : "text-black"} text-sm font-semibold mb-0.5`}>
-                    {slide.title}
-                  </h3>
-                  <p className={`${slide.bgColor === "bg-gray-700" ? "text-white/90" : "text-black/80"} text-xs`}>
-                    {slide.subtitle}
-                  </p>
-                </div>
+                  {/* Text Content */}
+                  <div className="flex-1">
+                    <h3 className={`${slide.bgColor === "bg-gray-700" ? "text-white" : "text-black"} text-sm font-semibold mb-0.5`}>
+                      {slide.title}
+                    </h3>
+                    <p className={`${slide.bgColor === "bg-gray-700" ? "text-white/90" : "text-black/80"} text-xs`}>
+                      {slide.subtitle}
+                    </p>
+                  </div>
 
-                {/* Button */}
-                <button 
-                  onClick={() => {
-                    if (slide.id === 2) {
-                      navigate("/delivery/profile/details")
-                    }
-                  }}
-                  className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-colors ${slide.bgColor === "bg-gray-700"
-                    ? "bg-gray-600 text-white hover:bg-gray-500"
-                    : "bg-yellow-300 text-black hover:bg-yellow-200"
-                  }`}>
-                  {slide.buttonText}
-                </button>
+                  {/* Button */}
+                  <button
+                    onClick={() => {
+                      if (slide.id === 2) {
+                        navigate("/delivery/profile/details")
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-colors ${slide.bgColor === "bg-gray-700"
+                      ? "bg-gray-600 text-white hover:bg-gray-500"
+                      : "bg-yellow-300 text-black hover:bg-yellow-200"
+                      }`}>
+                    {slide.buttonText}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {/* Carousel Indicators */}
-        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-          {carouselSlides.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentCarouselSlide(index)}
-              className={`h-1.5 rounded-full transition-all duration-300 ${index === currentCarouselSlide
+          {/* Carousel Indicators */}
+          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+            {carouselSlides.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentCarouselSlide(index)}
+                className={`h-1.5 rounded-full transition-all duration-300 ${index === currentCarouselSlide
                   ? (currentCarouselSlide === 0 ? "w-6 bg-white" : "w-6 bg-black")
                   : (index === 0 ? "w-1.5 bg-white/50" : "w-1.5 bg-black/30")
-                }`}
-            />
-          ))}
+                  }`}
+              />
+            ))}
+          </div>
         </div>
-      </div>
       )}
 
       {/* Main Content */}
       <div className="px-4 py-6 bg-gray-100 pb-24 md:pb-6">
-        {/* Earnings Section */}
-        <Card onClick={() => navigate("/delivery/earnings")} className="py-4 bg-white border-0 shadow-none mb-4">
-          <CardContent className="p-4 text-center">
 
-            {/* Top text */}
-            <div className="flex justify-center mb-2">
-              <span className="text-black text-sm">
-                Earnings: {getCurrentWeekRange()} →
-              </span>
-            </div>
 
-            {/* Earnings number */}
-            <div className="text-black text-3xl font-bold text-center">
-              ₹{weeklyEarnings.toFixed(0)}
-            </div>
 
-          </CardContent>
-        </Card>
-
-        {/* Earnings Guarantee Card */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.25 }}
-          className="w-full rounded-xl overflow-hidden bg-white mb-4"
-        >
-          {/* Header */}
-          <div className="border-b  border-gray-100">
-            <div className="flex p-2 px-3 items-center justify-between bg-black">
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-white mb-1">Earnings Guarantee</h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-white">Valid till {weekEndDate}</span>
-                  {isOfferLive && (
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm text-green-600 font-medium">Live</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              {/* Summary Box */}
-              <div className="bg-black text-white px-4 py-3 rounded-lg text-center min-w-[80px]">
-                <div className="text-2xl font-bold">₹{earningsGuaranteeTarget.toFixed(0)}</div>
-                <div className="text-xs text-white/80 mt-1">{earningsGuaranteeOrdersTarget} orders</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Progress Circles */}
-          <div className="px-6 py-6">
-            <div className="flex items-center justify-around gap-6">
-              {/* Orders Progress Circle */}
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.4, duration: 0.5, type: "spring" }}
-                className="flex flex-col items-center"
-              >
-                <div className="relative w-32 h-32">
-                  <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 120 120">
-                    {/* Background circle */}
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="50"
-                      fill="none"
-                      stroke="#e5e7eb"
-                      strokeWidth="8"
-                    />
-                    {/* Progress circle */}
-                    <motion.circle
-                      cx="60"
-                      cy="60"
-                      r="50"
-                      fill="none"
-                      stroke="#000000"
-                      strokeWidth="8"
-                      strokeLinecap="round"
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: ordersProgress }}
-                      transition={{ delay: 0.6, duration: 1, ease: "easeOut" }}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-xl font-bold text-gray-900">{earningsGuaranteeCurrentOrders} of {earningsGuaranteeOrdersTarget || 0}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 mt-3">
-                  <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <span className="text-sm font-medium text-gray-700">Orders</span>
-                </div>
-              </motion.div>
-
-              {/* Earnings Progress Circle */}
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.5, duration: 0.5, type: "spring" }}
-                className="flex flex-col items-center"
-              >
-                <div className="relative w-32 h-32">
-                  <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 120 120">
-                    {/* Background circle */}
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="50"
-                      fill="none"
-                      stroke="#e5e7eb"
-                      strokeWidth="8"
-                    />
-                    {/* Progress circle */}
-                    <motion.circle
-                      cx="60"
-                      cy="60"
-                      r="50"
-                      fill="none"
-                      stroke="#000000"
-                      strokeWidth="8"
-                      strokeLinecap="round"
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: earningsProgress }}
-                      transition={{ delay: 0.7, duration: 1, ease: "easeOut" }}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-lg font-bold text-gray-900">₹{earningsGuaranteeCurrentEarnings.toFixed(2)}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 mt-3">
-                  <IndianRupee className="w-5 h-5 text-gray-700" />
-                  <span className="text-sm font-medium text-gray-700">Earnings</span>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </motion.div>
 
         {/* Pocket Section */}
         <div className="my-6 ">
@@ -947,7 +810,7 @@ export default function PocketPage() {
               <hr />
 
               {/* Available Cash Limit */}
-              <div onClick={()=> setShowCashLimitPopup(true)} className="flex items-center justify-between">
+              <div onClick={() => setShowCashLimitPopup(true)} className="flex items-center justify-between">
                 <span className="text-black text-sm">Available cash limit</span>
                 <div className="flex items-center gap-2">
                   <span className="text-black text-sm font-medium">₹{availableCashLimit.toFixed(2)}</span>
@@ -987,7 +850,7 @@ export default function PocketPage() {
             </div>
           </div>
 
-     
+
           <div className="grid grid-cols-2 gap-4">
             {/* Payout Card */}
             <Card
@@ -1014,31 +877,7 @@ export default function PocketPage() {
               </CardContent>
             </Card>
 
-            {/* Deduction Statement */}
-            <Card
-              className=" py-0  bg-white border-0 shadow-none cursor-pointer hover:bg-gray-200 transition-colors"
-              onClick={() => navigate("/delivery/deduction-statement")}
-            >
-              <CardContent className="p-4 flex flex-col items-start text-start">
-                <div className="w-12 h-12 flex items-center justify-center mb-3">
-                  <FileTextIcon className="w-8 h-8 text-black" />
-                </div>
-                <div className="text-black text-sm font-medium">Deduction statement</div>
-              </CardContent>
-            </Card>
 
-            {/* Pocket Details */}
-            <Card
-              className=" py-0  bg-white border-0 shadow-none cursor-pointer hover:bg-gray-200 transition-colors"
-              onClick={() => navigate("/delivery/pocket-details")}
-            >
-              <CardContent className="p-4 flex flex-col items-start text-start">
-                <div className="w-12 h-12 flex items-center justify-center mb-3">
-                  <WalletIcon className="w-8 h-8 text-black" />
-                </div>
-                <div className="text-black text-sm font-medium">Pocket details</div>
-              </CardContent>
-            </Card>
 
           </div>
 
@@ -1053,7 +892,7 @@ export default function PocketPage() {
         closeOnBackdropClick={true}
         maxHeight="60vh"
       >
-     <AvailableCashLimit
+        <AvailableCashLimit
           onClose={() => setShowCashLimitPopup(false)}
           walletData={{
             totalCashLimit: totalCashLimit,

@@ -617,58 +617,21 @@ export const acceptOrder = asyncHandler(async (req, res) => {
       deliveryDistance = R * c;
     }
 
-    // Calculate estimated earnings based on delivery distance
-    let estimatedEarnings = null;
-    try {
-      const DeliveryBoyCommission = (await import('../../admin/models/DeliveryBoyCommission.js')).default;
-      const commissionResult = await DeliveryBoyCommission.calculateCommission(deliveryDistance);
-
-      // Validate commission result
-      if (!commissionResult ||
-        !commissionResult.breakdown ||
-        typeof commissionResult.commission !== 'number' ||
-        isNaN(commissionResult.commission)) {
-        throw new Error('Invalid commission result structure');
+    // For salaried employees, NO per-order commission is given
+    const estimatedEarnings = {
+      basePayout: 0,
+      distance: Math.round(deliveryDistance * 100) / 100,
+      commissionPerKm: 0,
+      distanceCommission: 0,
+      totalEarning: 0,
+      breakdown: {
+        basePayout: 0,
+        distance: deliveryDistance,
+        commissionPerKm: 0,
+        distanceCommission: 0,
+        minDistance: 0
       }
-
-      const breakdown = commissionResult.breakdown || {};
-      const rule = commissionResult.rule || { minDistance: 4 };
-
-      estimatedEarnings = {
-        basePayout: Math.round((breakdown.basePayout || 10) * 100) / 100,
-        distance: Math.round(deliveryDistance * 100) / 100,
-        commissionPerKm: Math.round((breakdown.commissionPerKm || 5) * 100) / 100,
-        distanceCommission: Math.round((breakdown.distanceCommission || 0) * 100) / 100,
-        totalEarning: Math.round(commissionResult.commission * 100) / 100,
-        breakdown: {
-          basePayout: breakdown.basePayout || 10,
-          distance: deliveryDistance,
-          commissionPerKm: breakdown.commissionPerKm || 5,
-          distanceCommission: breakdown.distanceCommission || 0,
-          minDistance: rule.minDistance || 4
-        }
-      };
-
-      console.log(`💰 Estimated earnings calculated: ₹${estimatedEarnings.totalEarning} for ${deliveryDistance.toFixed(2)} km`);
-    } catch (earningsError) {
-      console.error('❌ Error calculating estimated earnings:', earningsError);
-      console.error('❌ Earnings error stack:', earningsError.stack);
-      // Fallback to default
-      estimatedEarnings = {
-        basePayout: 10,
-        distance: Math.round(deliveryDistance * 100) / 100,
-        commissionPerKm: 5,
-        distanceCommission: deliveryDistance > 4 ? Math.round(deliveryDistance * 5 * 100) / 100 : 0,
-        totalEarning: 10 + (deliveryDistance > 4 ? Math.round(deliveryDistance * 5 * 100) / 100 : 0),
-        breakdown: {
-          basePayout: 10,
-          distance: deliveryDistance,
-          commissionPerKm: 5,
-          distanceCommission: deliveryDistance > 4 ? deliveryDistance * 5 : 0,
-          minDistance: 4
-        }
-      };
-    }
+    };
 
     // Resolve payment method for delivery boy (COD vs Online) - use Payment collection if order.payment is wrong
     let paymentMethod = updatedOrder.payment?.method || 'razorpay';

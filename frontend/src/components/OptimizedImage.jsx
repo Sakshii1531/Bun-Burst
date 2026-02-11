@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { motion } from 'framer-motion'
 
 /**
@@ -32,32 +32,40 @@ const OptimizedImage = React.memo(({
   const imgRef = useRef(null)
   const observerRef = useRef(null)
 
-  // Check if image URL supports optimization (external URLs)
-  const supportsOptimization = (imageSrc) => {
-    if (!imageSrc || typeof imageSrc !== 'string' || imageSrc === '') return false
-    if (imageSrc.startsWith('data:') || imageSrc.startsWith('/')) return false
-    // Check if it's an external URL (http/https)
-    return /^https?:\/\//.test(imageSrc)
-  }
+  // Check if image URL is from Cloudinary
+  const isCloudinary = useMemo(() => {
+    return src && typeof src === 'string' && src.includes('res.cloudinary.com')
+  }, [src])
+
+  // Helper to transform Cloudinary URLs
+  const getTransformedUrl = useCallback((width) => {
+    if (!src || typeof src !== 'string') return src
+
+    if (isCloudinary) {
+      const uploadIndex = src.indexOf('/upload/')
+      if (uploadIndex !== -1) {
+        const baseUrl = src.substring(0, uploadIndex + 8)
+        const remainingUrl = src.substring(uploadIndex + 8).split('?')[0]
+        // Insert transformations: progressive, quality auto, format auto, and width
+        return `${baseUrl}f_auto,q_auto,w_${width},c_fill,g_auto/${remainingUrl}`
+      }
+    }
+
+    // Generic fallback for other external images
+    const separator = src.includes('?') ? '&' : '?'
+    return `${src}${separator}w=${width}&q=80`
+  }, [src, isCloudinary])
 
   // Generate responsive srcset
   const srcSet = useMemo(() => {
-    if (!supportsOptimization(src)) return undefined
-    const sizesArr = [400, 600, 800, 1200, 1600]
+    if (!src || src.startsWith('data:') || src.startsWith('/')) return undefined
+    const sizesArr = [400, 800, 1200, 1600]
     return sizesArr
-      .map(size => `${src}?w=${size}&q=80 ${size}w`)
+      .map(size => `${getTransformedUrl(size)} ${size}w`)
       .join(', ')
-  }, [src])
+  }, [src, getTransformedUrl])
 
-  // Generate WebP srcset
-  const webPSrcSet = useMemo(() => {
-    if (!supportsOptimization(src)) return undefined
-    const sizesArr = [400, 600, 800, 1200, 1600]
-    return sizesArr
-      .map(size => `${src}?w=${size}&q=80&format=webp ${size}w`)
-      .join(', ')
-  }, [src])
-
+  // Cloudinary handles format automatically via f_auto, so we prioritize the main srcset
   // Intersection Observer for lazy loading
   useEffect(() => {
     if (priority || isInView) return
@@ -76,7 +84,7 @@ const OptimizedImage = React.memo(({
         })
       },
       {
-        rootMargin: '50px', // Start loading 50px before entering viewport
+        rootMargin: '200px', // Load earlier for better UX
         threshold: 0.01
       }
     )
@@ -93,10 +101,11 @@ const OptimizedImage = React.memo(({
   // Preload critical images
   useEffect(() => {
     if (priority && src && !src.startsWith('data:')) {
+      const preloadUrl = isCloudinary ? getTransformedUrl(1200) : src
       const link = document.createElement('link')
       link.rel = 'preload'
       link.as = 'image'
-      link.href = src
+      link.href = preloadUrl
       link.fetchPriority = 'high'
       link.crossOrigin = 'anonymous'
       document.head.appendChild(link)
@@ -105,7 +114,7 @@ const OptimizedImage = React.memo(({
         document.head.removeChild(link)
       }
     }
-  }, [priority, src])
+  }, [priority, src, isCloudinary, getTransformedUrl])
 
   const handleLoad = (e) => {
     setIsLoaded(true)
@@ -117,8 +126,20 @@ const OptimizedImage = React.memo(({
     if (onError) onError(e)
   }
 
-  // Default blur placeholder (tiny gray square)
-  const defaultBlurDataURL = blurDataURL || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2U1ZTdlYiIvPjwvc3ZnPg=='
+  // Generate a very low-res Cloudinary placeholder if possible
+  const lowResPlaceholder = useMemo(() => {
+    if (blurDataURL) return blurDataURL
+    if (isCloudinary) {
+      const uploadIndex = src.indexOf('/upload/')
+      if (uploadIndex !== -1) {
+        const baseUrl = src.substring(0, uploadIndex + 8)
+        const remainingUrl = src.substring(uploadIndex + 8).split('?')[0]
+        return `${baseUrl}w_50,c_fill,q_auto:low,f_auto,e_blur:1000/${remainingUrl}`
+      }
+    }
+    // Default tiny gray square fallback
+    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2U1ZTdlYiIvPjwvc3ZnPg=='
+  }, [src, isCloudinary, blurDataURL])
 
   // Don't render if src is empty or null
   if (!src || src === '') {
@@ -131,7 +152,7 @@ const OptimizedImage = React.memo(({
     )
   }
 
-  const imageSrc = hasError ? 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="14" x="50%25" y="50%25" text-anchor="middle"%3EImage not found%3C/text%3E%3C/svg%3E' : src
+  const imageSrc = hasError ? 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="14" x="50%25" y="50%25" text-anchor="middle"%3EImage not found%3C/text%3E%3C/svg%3E' : (isCloudinary ? getTransformedUrl(800) : src)
 
   return (
     <div className={`relative overflow-hidden ${className}`} ref={imgRef}>
@@ -143,7 +164,7 @@ const OptimizedImage = React.memo(({
           animate={{ opacity: isLoaded ? 0 : 1 }}
           transition={{ duration: 0.3 }}
           style={{
-            backgroundImage: `url(${defaultBlurDataURL})`,
+            backgroundImage: `url(${lowResPlaceholder})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             filter: 'blur(20px)',
@@ -160,20 +181,11 @@ const OptimizedImage = React.memo(({
       {/* Actual Image */}
       {isInView && (
         <picture className="absolute inset-0 w-full h-full">
-          {/* WebP source for modern browsers */}
-          {webPSrcSet && (
-            <source
-              srcSet={webPSrcSet}
-              sizes={sizes}
-              type="image/webp"
-            />
-          )}
-
           {/* Fallback to original format */}
           <motion.img
             src={imageSrc}
             srcSet={srcSet}
-            sizes={supportsOptimization(imageSrc) ? sizes : undefined}
+            sizes={sizes}
             alt={alt}
             className={`w-full h-full ${objectFit === 'cover' ? 'object-cover' : objectFit === 'contain' ? 'object-contain' : ''} ${priority || isLoaded ? 'opacity-100' : 'opacity-0'} ${!priority && 'transition-opacity duration-300'}`}
             loading={priority ? 'eager' : 'lazy'}

@@ -104,11 +104,16 @@ export default function MobileHeader({
         return "Select location"
     }
 
-    const handleSearchFocus = () => {
+    const handleSearchFocus = (triggerVoice = false) => {
         if (searchQuery) {
             setSearchValue(searchQuery)
         }
-        openSearch()
+        openSearch(triggerVoice)
+    }
+
+    const handleVoiceSearch = (e) => {
+        e.stopPropagation()
+        handleSearchFocus(true)
     }
 
     const handleLocationClick = () => {
@@ -241,7 +246,7 @@ export default function MobileHeader({
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={handleSearchFocus}
+                                    onClick={handleVoiceSearch}
                                     className="p-1.5 hover:bg-muted rounded-lg transition-all duration-200"
                                 >
                                     <Mic className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors" />

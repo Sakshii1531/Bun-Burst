@@ -30,11 +30,11 @@ export default function ViewOrderDetectDeliveryDialog({ isOpen, onOpenChange, or
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
       />
-      
+
       {/* Dialog */}
       <div className="relative bg-white rounded-xl shadow-2xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
@@ -130,20 +130,20 @@ export default function ViewOrderDetectDeliveryDialog({ isOpen, onOpenChange, or
             <div className="relative">
               {/* Timeline line */}
               <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200" />
-              
+
               {/* Status items */}
               <div className="space-y-4">
                 {order.statusHistory && order.statusHistory.map((historyItem, index) => {
                   const isLast = index === order.statusHistory.length - 1
                   const HistoryIcon = getStatusIcon(historyItem.status)
-                  
+
                   return (
                     <div key={index} className="relative flex items-start gap-4">
                       {/* Icon */}
                       <div className={`relative z-10 flex items-center justify-center w-8 h-8 rounded-full border-2 ${getStatusColor(historyItem.status)}`}>
                         <HistoryIcon className="w-4 h-4" />
                       </div>
-                      
+
                       {/* Content */}
                       <div className="flex-1 pt-1">
                         <div className="flex items-center justify-between mb-1">
@@ -166,6 +166,40 @@ export default function ViewOrderDetectDeliveryDialog({ isOpen, onOpenChange, or
                 })}
               </div>
             </div>
+          </div>
+
+          {/* Delivery Bill Uploaded */}
+          <div className="mt-6 pt-6 border-t border-slate-200">
+            <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Delivery Bill Uploaded
+            </h3>
+            {order.originalOrder?.billImageUrl ? (
+              <div className="mt-2">
+                <div
+                  className="relative group cursor-pointer overflow-hidden rounded-lg border border-slate-200 w-full max-w-sm"
+                  onClick={() => window.open(order.originalOrder.billImageUrl, '_blank')}
+                >
+                  <img
+                    src={order.originalOrder.billImageUrl}
+                    alt="Delivery Bill"
+                    className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                    <span className="opacity-0 group-hover:opacity-100 bg-white/90 text-slate-700 text-xs font-medium px-3 py-1.5 rounded-full shadow-sm transition-opacity">
+                      Click to view full image
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
+                <p className="text-sm text-slate-500 italic flex items-center gap-2">
+                  <XCircle className="w-4 h-4 text-slate-400" />
+                  No bill uploaded yet.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Order Date & Time */}
