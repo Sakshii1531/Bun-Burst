@@ -1127,11 +1127,10 @@ export const getRestaurants = asyncHandler(async (req, res) => {
     // Inactive restaurants (pending approval) should only appear in "New Joining Request" section
     if (status === "inactive") {
       query.isActive = false;
-    } else {
-      // Default: Show only active (approved) restaurants
-      // This ensures that restaurants only appear in main list after admin approval
+    } else if (status === "active") {
       query.isActive = true;
     }
+    // Default: Show all restaurants (no filter on isActive) if status is not provided or 'all'
 
     console.log("🔍 Admin Restaurants List Query:", {
       status,
@@ -1709,6 +1708,191 @@ export const reverifyRestaurant = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Update Restaurant by Admin
+ * PUT /api/admin/restaurants/:id
+ */
+export const updateRestaurant = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      // Step 1: Basic Info
+      restaurantName,
+      ownerName,
+      ownerEmail,
+      ownerPhone,
+      primaryContactNumber,
+      location,
+      // Step 2: Images & Operational
+      menuImages, // Array of image URLs or base64
+      profileImage, // Image URL or base64
+      cuisines,
+      openingTime,
+      closingTime,
+      openDays,
+      // Step 3: Documents
+      panNumber,
+      nameOnPan,
+      panImage,
+      gstRegistered,
+      gstNumber,
+      gstLegalName,
+      gstAddress,
+      gstImage,
+      fssaiNumber,
+      fssaiExpiry,
+      fssaiImage,
+      accountNumber,
+      ifscCode,
+      accountHolderName,
+      accountType,
+      // Step 4: Display Info
+      estimatedDeliveryTime,
+      featuredDish,
+      featuredPrice,
+      offer,
+      diningSettings,
+      // Authentication
+      email,
+      phone,
+      password,
+    } = req.body;
+
+    const restaurant = await Restaurant.findById(id);
+
+    if (!restaurant) {
+      return errorResponse(res, 404, "Restaurant not found");
+    }
+
+    // Validation (if modifying email/phone)
+    if (email && email.toLowerCase().trim() !== restaurant.email) {
+      const existingEmail = await Restaurant.findOne({
+        email: email.toLowerCase().trim(),
+        _id: { $ne: id },
+      });
+      if (existingEmail) {
+        return errorResponse(res, 400, "Restaurant with this email already exists");
+      }
+    }
+
+    const normalizedPhone = phone ? normalizePhoneNumber(phone) : null;
+    if (normalizedPhone && normalizedPhone !== restaurant.phone) {
+      const existingPhone = await Restaurant.findOne({
+        phone: normalizedPhone,
+        _id: { $ne: id },
+      });
+      if (existingPhone) {
+        return errorResponse(res, 400, "Restaurant with this phone already exists");
+      }
+    }
+
+    // Initialize Cloudinary for uploads
+    await initializeCloudinary();
+
+    // Handle Profile Image Update
+    if (profileImage) {
+      if (typeof profileImage === "string" && profileImage.startsWith("data:")) {
+        const base64Data = profileImage.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(base64Data, "base64");
+        const result = await uploadToCloudinary(buffer, {
+          folder: "appzeto/restaurant/profile",
+          resource_type: "image",
+        });
+        restaurant.profileImage = {
+          url: result.secure_url,
+          publicId: result.public_id,
+        };
+      } else if (profileImage.url) {
+        // Keeping existing or already uploaded
+        // restaurant.profileImage = profileImage; // No change needed usually
+      }
+    }
+
+    // Handle Menu Images Update
+    if (menuImages && Array.isArray(menuImages)) {
+      const newMenuImages = [];
+      for (const img of menuImages) {
+        if (typeof img === "string" && img.startsWith("data:")) {
+          const base64Data = img.replace(/^data:image\/\w+;base64,/, "");
+          const buffer = Buffer.from(base64Data, "base64");
+          const result = await uploadToCloudinary(buffer, {
+            folder: "appzeto/restaurant/menu",
+            resource_type: "image",
+          });
+          newMenuImages.push({
+            url: result.secure_url,
+            publicId: result.public_id,
+          });
+        } else {
+          newMenuImages.push(img);
+        }
+      }
+      restaurant.menuImages = newMenuImages;
+    }
+
+    // Update Basic Fields
+    if (restaurantName) restaurant.name = restaurantName;
+    if (ownerName) restaurant.ownerName = ownerName;
+    if (ownerEmail) restaurant.ownerEmail = ownerEmail;
+    if (ownerPhone) restaurant.ownerPhone = normalizePhoneNumber(ownerPhone) || restaurant.ownerPhone;
+    if (primaryContactNumber) restaurant.primaryContactNumber = normalizePhoneNumber(primaryContactNumber) || restaurant.primaryContactNumber;
+    if (location) restaurant.location = { ...restaurant.location, ...location };
+    if (cuisines) restaurant.cuisines = cuisines;
+
+    // Update Delivery Timings
+    if (openingTime || closingTime) {
+      restaurant.deliveryTimings = {
+        openingTime: openingTime || restaurant.deliveryTimings?.openingTime,
+        closingTime: closingTime || restaurant.deliveryTimings?.closingTime,
+      };
+    }
+
+    if (openDays) restaurant.openDays = openDays;
+    if (estimatedDeliveryTime) restaurant.estimatedDeliveryTime = estimatedDeliveryTime;
+    if (featuredDish) restaurant.featuredDish = featuredDish;
+    if (featuredPrice) restaurant.featuredPrice = featuredPrice;
+    if (offer) restaurant.offer = offer;
+    if (diningSettings) restaurant.diningSettings = diningSettings;
+
+    // Update Authentication Fields
+    if (email) restaurant.email = email.toLowerCase().trim();
+    if (normalizedPhone) {
+      restaurant.phone = normalizedPhone;
+      restaurant.phoneVerified = true;
+    }
+    if (password) {
+      restaurant.password = password; // Will be hashed by pre-save hook
+    }
+
+    // Update Onboarding Data (to keep sync)
+    if (!restaurant.onboarding) restaurant.onboarding = { step1: {}, step2: {}, step3: {}, step4: {} };
+    if (!restaurant.onboarding.step1) restaurant.onboarding.step1 = {};
+
+    restaurant.onboarding.step1.restaurantName = restaurant.name;
+    restaurant.onboarding.step1.ownerName = restaurant.ownerName;
+    restaurant.onboarding.step1.ownerEmail = restaurant.ownerEmail;
+    restaurant.onboarding.step1.ownerPhone = restaurant.ownerPhone;
+
+    // Save
+    await restaurant.save();
+
+    logger.info(`Restaurant updated by admin: ${id}`, { adminId: req.user._id });
+
+    return successResponse(res, 200, "Restaurant updated successfully", {
+      restaurant: {
+        id: restaurant._id,
+        name: restaurant.name,
+        email: restaurant.email,
+        phone: restaurant.phone,
+        isActive: restaurant.isActive,
+      },
+    });
+  } catch (error) {
+    logger.error(`Error updating restaurant: ${error.message}`, { error: error.stack });
+    return errorResponse(res, 500, "Failed to update restaurant");
+  }
+});
+
+/**
  * Create Restaurant by Admin
  * POST /api/admin/restaurants
  */
@@ -1751,6 +1935,7 @@ export const createRestaurant = asyncHandler(async (req, res) => {
       featuredDish,
       featuredPrice,
       offer,
+      diningSettings,
       // Authentication
       email,
       phone,
@@ -1948,6 +2133,7 @@ export const createRestaurant = asyncHandler(async (req, res) => {
       featuredDish: featuredDish || "",
       featuredPrice: featuredPrice || 249,
       offer: offer || "",
+      diningSettings: diningSettings || { isEnabled: false },
       signupMethod,
       // Admin created restaurants are active by default
       isActive: true,
@@ -2479,9 +2665,9 @@ export const getRestaurantAnalytics = asyncHandler(async (req, res) => {
     const avgMonthlyProfit =
       monthlyEarningsMap.size > 0
         ? Array.from(monthlyEarningsMap.values()).reduce(
-            (sum, val) => sum + val,
-            0,
-          ) / monthlyEarningsMap.size
+          (sum, val) => sum + val,
+          0,
+        ) / monthlyEarningsMap.size
         : 0;
 
     // Get commission percentage from RestaurantCommission

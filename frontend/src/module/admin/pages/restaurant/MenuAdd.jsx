@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import {
     ArrowLeft,
     Search,
@@ -20,9 +20,11 @@ import { toast } from "sonner"
 
 export default function MenuAdd() {
     const navigate = useNavigate()
+    const location = useLocation()
     const [restaurants, setRestaurants] = useState([])
     const [selectedRestaurant, setSelectedRestaurant] = useState(null)
     const [menu, setMenu] = useState(null)
+    const [globalCategories, setGlobalCategories] = useState([])
     const [loading, setLoading] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
     const [showAddDishModal, setShowAddDishModal] = useState(false)
@@ -51,6 +53,7 @@ export default function MenuAdd() {
         image: "",
         images: [],
         price: 0,
+        categoryId: "",
         foodType: "Non-Veg",
         category: "",
         description: "",
@@ -62,10 +65,33 @@ export default function MenuAdd() {
         variants: [], // Array of variants: [{ id, name, price, stock }]
     })
 
-    // Fetch restaurants
+    // Fetch restaurants and global categories
     useEffect(() => {
         fetchRestaurants()
+        fetchGlobalCategories()
     }, [])
+
+    const fetchGlobalCategories = async () => {
+        try {
+            const response = await adminAPI.getCategories()
+            if (response.data?.success) {
+                setGlobalCategories(response.data.data.categories || [])
+            }
+        } catch (error) {
+            console.error("Error fetching global categories:", error)
+        }
+    }
+
+    // Pre-select restaurant from navigation state
+    useEffect(() => {
+        if (restaurants.length > 0 && location.state?.restaurantId && !selectedRestaurant) {
+            const found = restaurants.find(r => r._id === location.state.restaurantId || r.id === location.state.restaurantId)
+            if (found) {
+                console.log("Auto-selecting restaurant:", found.name)
+                setSelectedRestaurant(found)
+            }
+        }
+    }, [restaurants, location.state])
 
     // Fetch menu when restaurant is selected
     useEffect(() => {
@@ -136,6 +162,7 @@ export default function MenuAdd() {
             image: "",
             images: [],
             price: 0,
+            categoryId: "",
             foodType: "Non-Veg",
             category: section.name,
             description: "",
@@ -190,6 +217,7 @@ export default function MenuAdd() {
             image: dish.image || "",
             images: Array.isArray(dish.images) ? dish.images : (dish.image ? [dish.image] : []),
             price: dish.price || 0,
+            categoryId: dish.categoryId || "",
             foodType: dish.foodType || "Non-Veg",
             category: dish.category || section.name,
             description: dish.description || "",
@@ -397,6 +425,7 @@ export default function MenuAdd() {
                 discountAmount: existingDish?.discountAmount || 0,
                 foodType: formData.foodType,
                 category: formData.category,
+                categoryId: formData.categoryId || null,
                 description: formData.description || "",
                 availabilityTimeStart: existingDish?.availabilityTimeStart || "12:01 AM",
                 availabilityTimeEnd: existingDish?.availabilityTimeEnd || "11:57 PM",
@@ -491,6 +520,7 @@ export default function MenuAdd() {
                         price: 0,
                         foodType: "Non-Veg",
                         category: formData.category, // Keep selected category
+                        categoryId: "",
                         description: "",
                         preparationTime: "",
                         isAvailable: true,
@@ -567,8 +597,8 @@ export default function MenuAdd() {
                                     key={restaurant._id || restaurant.id}
                                     onClick={() => handleRestaurantSelect(restaurant)}
                                     className={`p-3 rounded-lg border-2 text-left transition-all ${selectedRestaurant?._id === restaurant._id
-                                            ? "border-blue-500 bg-blue-50"
-                                            : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                                        ? "border-blue-500 bg-blue-50"
+                                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                                         }`}
                                 >
                                     <div className="font-semibold text-gray-900">{restaurant.name}</div>
@@ -849,6 +879,24 @@ export default function MenuAdd() {
                                         </div>
                                     )}
                                 </div>
+                            </div>
+
+                            {/* Global Category Association */}
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Add-on Category Correlation</h3>
+                                <p className="text-sm text-gray-600 mb-2">Select the global category to link add-ons for this dish</p>
+                                <select
+                                    value={formData.categoryId}
+                                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="">Select Global Category</option>
+                                    {globalCategories.map((cat) => (
+                                        <option key={cat._id} value={cat._id}>
+                                            {cat.name}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
                             {/* Basic Information */}

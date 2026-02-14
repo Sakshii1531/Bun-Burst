@@ -1,11 +1,29 @@
 import { useState, useMemo, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, Download, ChevronDown, Plus, Edit, Trash2, Info, MapPin, SlidersHorizontal, ArrowDownUp, Timer, Star, IndianRupee, UtensilsCrossed, BadgePercent, ShieldCheck, X, Loader2, Upload } from "lucide-react"
+import { Search, Download, ChevronDown, Plus, Edit, Trash2, Info, MapPin, SlidersHorizontal, ArrowDownUp, Timer, Star, IndianRupee, UtensilsCrossed, BadgePercent, ShieldCheck, X, Loader2, Upload, Sparkles, LayoutGrid, FileText, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { adminAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
@@ -57,11 +75,11 @@ export default function Category() {
       setLoading(false)
       return
     }
-    
+
     // Log API base URL for debugging
     console.log('API Base URL:', API_BASE_URL)
     console.log('Admin Token:', adminToken ? 'Present' : 'Missing')
-    
+
     fetchCategories()
   }, [])
 
@@ -108,7 +126,7 @@ export default function Category() {
       setLoading(true)
       const params = {}
       if (searchQuery) params.search = searchQuery
-      
+
       const response = await adminAPI.getCategories(params)
       if (response.data.success) {
         setCategories(response.data.data.categories || [])
@@ -133,12 +151,12 @@ export default function Category() {
           baseURL: error.config?.baseURL
         } : null
       })
-      
+
       if (error.response) {
         // Server responded with error status
         const status = error.response.status
         const errorData = error.response.data
-        
+
         if (status === 401) {
           toast.error('Authentication required. Please login again.')
         } else if (status === 403) {
@@ -160,7 +178,7 @@ export default function Category() {
         console.error('Request setup error:', error.message)
         toast.error(error.message || 'Failed to load categories')
       }
-      
+
       setCategories([])
     } finally {
       setLoading(false)
@@ -169,7 +187,7 @@ export default function Category() {
 
   const filteredCategories = useMemo(() => {
     let result = [...categories]
-    
+
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim()
       result = result.filter(cat =>
@@ -255,22 +273,22 @@ export default function Category() {
   const handleExportPDF = () => {
     try {
       const doc = new jsPDF()
-      
+
       // Add title
       doc.setFontSize(18)
       doc.setTextColor(30, 30, 30)
       doc.text('Category List', 14, 20)
-      
+
       // Add date
       doc.setFontSize(10)
       doc.setTextColor(100, 100, 100)
-      const date = new Date().toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+      const date = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
       })
       doc.text(`Generated on: ${date}`, 14, 28)
-      
+
       // Prepare table data
       const tableData = filteredCategories.map((category, index) => [
         category.sl || index + 1,
@@ -279,7 +297,7 @@ export default function Category() {
         category.status ? 'Active' : 'Inactive',
         category.id || 'N/A'
       ])
-      
+
       // Add table
       autoTable(doc, {
         startY: 35,
@@ -312,7 +330,7 @@ export default function Category() {
           4: { cellWidth: 50 }  // ID
         }
       })
-      
+
       // Add footer
       const pageCount = doc.internal.pages.length - 1
       for (let i = 1; i <= pageCount; i++) {
@@ -326,11 +344,11 @@ export default function Category() {
           { align: 'center' }
         )
       }
-      
+
       // Save PDF
       const fileName = `Categories_${new Date().toISOString().split('T')[0]}.pdf`
       doc.save(fileName)
-      
+
       toast.success('PDF exported successfully!')
     } catch (error) {
       console.error('Error exporting PDF:', error)
@@ -438,10 +456,10 @@ export default function Category() {
           toast.success('Category created successfully')
         }
       }
-      
+
       // Close modal and reset form
       handleCloseModal()
-      
+
       // Refresh from server to ensure consistency
       setTimeout(() => fetchCategories(), 500)
     } catch (error) {
@@ -460,7 +478,7 @@ export default function Category() {
           baseURL: error.config?.baseURL
         } : null
       })
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         toast.error('Cannot connect to server. Please check if backend is running on ' + API_BASE_URL.replace('/api', ''))
       } else if (error.response) {
@@ -474,61 +492,59 @@ export default function Category() {
   }
 
   return (
-    <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
+    <div className="p-4 lg:p-8 bg-slate-50/50 min-h-screen">
       {/* Header Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-            <div className="grid grid-cols-2 gap-0.5">
-              <div className="w-2 h-2 bg-white rounded-sm"></div>
-              <div className="w-2 h-2 bg-white rounded-sm"></div>
-              <div className="w-2 h-2 bg-white rounded-sm"></div>
-              <div className="w-2 h-2 bg-white rounded-sm"></div>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-3xl shadow-sm border border-slate-200/60 p-8 mb-8"
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-200 ring-4 ring-blue-50">
+              <LayoutGrid className="text-white w-7 h-7" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Category Dashboard</h1>
+              <p className="text-slate-500 font-medium flex items-center gap-2 mt-1">
+                <Sparkles className="w-4 h-4 text-orange-500" />
+                Manage and organize your menu categories
+              </p>
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Category</h1>
-        </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-slate-900">Category List</h2>
-            <span className="px-3 py-1 rounded-full text-sm font-semibold bg-slate-100 text-slate-700">
-              {filteredCategories.length}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative flex-1 sm:flex-initial min-w-[200px]">
-              <input
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            <div className="relative group">
+              <Input
                 type="text"
-                placeholder="Ex : Categories"
+                placeholder="Search categories..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2.5 w-full text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400"
+                className="pl-11 pr-4 py-6 w-full lg:w-[280px] rounded-2xl border-slate-200 bg-slate-50/50 group-hover:bg-white group-focus:bg-white transition-all shadow-none focus:ring-blue-500/20"
               />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
             </div>
 
-            <button 
+            <Button
+              variant="outline"
               onClick={handleExportPDF}
               disabled={filteredCategories.length === 0}
-              className="px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="py-6 px-6 rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold gap-2 transition-all border-2"
             >
-              <Download className="w-4 h-4" />
+              <FileText className="w-5 h-5" />
               <span>Export</span>
-              <ChevronDown className="w-3 h-3" />
-            </button>
+            </Button>
 
-            <button 
+            <Button
               onClick={handleAddNew}
-              className="px-4 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 transition-all shadow-sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white py-6 px-8 rounded-2xl shadow-xl shadow-blue-200 font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
-              <Plus className="w-4 h-4" />
-              <span>Add New Category</span>
-            </button>
+              <Plus className="w-5 h-5 mr-2 stroke-[3px]" />
+              New Category
+            </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Filters Section */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 mb-6">
@@ -553,18 +569,17 @@ export default function Category() {
                   key={filter.id}
                   variant="outline"
                   onClick={() => toggleFilter(filter.id)}
-                  className={`h-5 px-1.5 rounded-md flex items-center gap-1 whitespace-nowrap shrink-0 transition-all ${
-                    isActive
-                      ? 'bg-green-600 text-white border border-green-600 hover:bg-green-600/90'
-                      : 'bg-white border border-gray-200 hover:bg-gray-50'
-                  }`}
+                  className={`h-5 px-1.5 rounded-md flex items-center gap-1 whitespace-nowrap shrink-0 transition-all ${isActive
+                    ? 'bg-green-600 text-white border border-green-600 hover:bg-green-600/90'
+                    : 'bg-white border border-gray-200 hover:bg-gray-50'
+                    }`}
                 >
                   <span className={`text-[10px] font-bold ${isActive ? 'text-white' : 'text-black'}`}>{filter.label}</span>
                 </Button>
               )
             })}
           </div>
-          
+
           {/* Row 2 */}
           <div className="flex items-center gap-1.5 flex-wrap">
             {[
@@ -578,11 +593,10 @@ export default function Category() {
                   key={filter.id}
                   variant="outline"
                   onClick={() => toggleFilter(filter.id)}
-                  className={`h-5 px-1.5 rounded-md flex items-center gap-1 whitespace-nowrap shrink-0 transition-all ${
-                    isActive
-                      ? 'bg-green-600 text-white border border-green-600 hover:bg-green-600/90'
-                      : 'bg-white border border-gray-200 hover:bg-gray-50'
-                  }`}
+                  className={`h-5 px-1.5 rounded-md flex items-center gap-1 whitespace-nowrap shrink-0 transition-all ${isActive
+                    ? 'bg-green-600 text-white border border-green-600 hover:bg-green-600/90'
+                    : 'bg-white border border-gray-200 hover:bg-gray-50'
+                    }`}
                 >
                   {Icon && <Icon className={`h-2.5 w-2.5 ${isActive ? 'text-white' : 'text-gray-900'}`} />}
                   <span className={`text-[10px] font-bold ${isActive ? 'text-white' : 'text-black'}`}>{filter.label}</span>
@@ -593,121 +607,120 @@ export default function Category() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="overflow-x-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  SL
-                </th>
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  Image
-                </th>
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  Title
-                </th>
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  Action
-                </th>
+      {/* Table Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden"
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-100">
+                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">SL</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Image</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Title</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Type</th>
+                <th className="px-8 py-5 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Status</th>
+                <th className="px-8 py-5 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Action</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
-                      <p className="text-sm text-slate-500">Loading categories...</p>
+                  <td colSpan={6} className="px-8 py-32 text-center">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                      <p className="text-slate-500 font-medium animate-pulse">Fetching categories...</p>
                     </div>
                   </td>
                 </tr>
               ) : filteredCategories.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <p className="text-lg font-semibold text-slate-700 mb-1">No Data Found</p>
-                      <p className="text-sm text-slate-500">No categories match your search</p>
+                  <td colSpan={6} className="px-8 py-32 text-center text-slate-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-2">
+                        <Search className="w-8 h-8 text-slate-300" />
+                      </div>
+                      <p className="text-slate-900 font-bold text-lg">No categories found</p>
+                      <p className="text-slate-500">Try adjusting your search or add a new one</p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredCategories.map((category, index) => (
-                  <tr
-                    key={category.id}
-                    className="hover:bg-slate-50 transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-slate-700">{category.sl || index + 1}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center">
-                        <img
-                          src={category.image}
-                          alt={category.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.src = "https://via.placeholder.com/40"
-                          }}
-                        />
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-slate-900">{category.name}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-slate-700">{category.type || 'N/A'}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => handleToggleStatus(category.id)}
-                        disabled={loading}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                          category.status
-                            ? "bg-blue-600"
-                            : "bg-slate-300"
-                        }`}
-                        title={category.status ? "Click to deactivate" : "Click to activate"}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            category.status ? "translate-x-6" : "translate-x-1"
-                          }`}
-                        />
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => handleEdit(category)}
-                          className="p-1.5 rounded text-blue-600 hover:bg-blue-50 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(category.id)}
-                          className="p-1.5 rounded text-red-600 hover:bg-red-50 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                <AnimatePresence mode="popLayout">
+                  {filteredCategories.map((category, index) => (
+                    <motion.tr
+                      layout
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      key={category.id}
+                      className="hover:bg-slate-50/80 transition-all group"
+                    >
+                      <td className="px-8 py-5 whitespace-nowrap text-sm font-semibold text-slate-400">
+                        {category.sl || index + 1}
+                      </td>
+                      <td className="px-8 py-5 whitespace-nowrap">
+                        <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 ring-2 ring-slate-100 group-hover:ring-blue-100 transition-all">
+                          <img
+                            src={category.image}
+                            alt={category.name}
+                            className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                            onError={(e) => {
+                              e.target.src = "https://via.placeholder.com/40"
+                            }}
+                          />
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 whitespace-nowrap">
+                        <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">
+                          {category.name}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5 whitespace-nowrap">
+                        <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-none px-3 py-1 rounded-lg font-semibold">
+                          {category.type || 'N/A'}
+                        </Badge>
+                      </td>
+                      <td className="px-8 py-5 whitespace-nowrap text-center">
+                        <div className="flex justify-center">
+                          <Switch
+                            checked={category.status}
+                            onCheckedChange={() => handleToggleStatus(category.id)}
+                            className="data-[state=checked]:bg-blue-600"
+                          />
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 whitespace-nowrap text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(category)}
+                            className="w-10 h-10 rounded-xl text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(category.id)}
+                            className="w-10 h-10 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
               )}
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
 
       {/* Filter Modal - Bottom Sheet */}
       {typeof window !== "undefined" &&
@@ -716,17 +729,17 @@ export default function Category() {
             {isFilterOpen && (
               <div className="fixed inset-0 z-[100]">
                 {/* Backdrop */}
-                <div 
-                  className="absolute inset-0 bg-black/50" 
+                <div
+                  className="absolute inset-0 bg-black/50"
                   onClick={() => setIsFilterOpen(false)}
                 />
-                
+
                 {/* Modal Content */}
                 <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] flex flex-col animate-[slideUp_0.3s_ease-out]">
                   {/* Header */}
                   <div className="flex items-center justify-between px-4 py-4 border-b">
                     <h2 className="text-lg font-bold text-gray-900">Filters and sorting</h2>
-                    <button 
+                    <button
                       onClick={() => {
                         setActiveFilters(new Set())
                         setSortBy(null)
@@ -737,7 +750,7 @@ export default function Category() {
                       Clear all
                     </button>
                   </div>
-                  
+
                   {/* Body */}
                   <div className="flex flex-1 overflow-hidden">
                     {/* Left Sidebar - Tabs */}
@@ -764,9 +777,8 @@ export default function Category() {
                                 section.scrollIntoView({ behavior: 'smooth', block: 'start' })
                               }
                             }}
-                            className={`flex flex-col items-center gap-1 py-4 px-2 text-center relative transition-colors ${
-                              isActive ? 'bg-white text-green-600' : 'text-gray-500 hover:bg-gray-100'
-                            }`}
+                            className={`flex flex-col items-center gap-1 py-4 px-2 text-center relative transition-colors ${isActive ? 'bg-white text-green-600' : 'text-gray-500 hover:bg-gray-100'
+                              }`}
                           >
                             {isActive && (
                               <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-600 rounded-r" />
@@ -777,11 +789,11 @@ export default function Category() {
                         )
                       })}
                     </div>
-                    
+
                     {/* Right Content Area - Scrollable */}
                     <div ref={rightContentRef} className="flex-1 overflow-y-auto p-4">
                       {/* Sort By Tab */}
-                      <div 
+                      <div
                         ref={el => filterSectionRefs.current['sort'] = el}
                         data-section-id="sort"
                         className="space-y-4 mb-8"
@@ -798,11 +810,10 @@ export default function Category() {
                             <button
                               key={option.id || 'relevance'}
                               onClick={() => setSortBy(option.id)}
-                              className={`px-4 py-3 rounded-xl border text-left transition-colors ${
-                                sortBy === option.id
-                                  ? 'border-green-600 bg-green-50'
-                                  : 'border-gray-200 hover:border-green-600'
-                              }`}
+                              className={`px-4 py-3 rounded-xl border text-left transition-colors ${sortBy === option.id
+                                ? 'border-green-600 bg-green-50'
+                                : 'border-gray-200 hover:border-green-600'
+                                }`}
                             >
                               <span className={`text-sm font-medium ${sortBy === option.id ? 'text-green-600' : 'text-gray-700'}`}>
                                 {option.label}
@@ -811,77 +822,72 @@ export default function Category() {
                           ))}
                         </div>
                       </div>
-                      
+
                       {/* Time Tab */}
-                      <div 
+                      <div
                         ref={el => filterSectionRefs.current['time'] = el}
                         data-section-id="time"
                         className="space-y-4 mb-8"
                       >
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Delivery Time</h3>
                         <div className="grid grid-cols-2 gap-3">
-                          <button 
+                          <button
                             onClick={() => toggleFilter('delivery-under-30')}
-                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${
-                              activeFilters.has('delivery-under-30') 
-                                ? 'border-green-600 bg-green-50' 
-                                : 'border-gray-200 hover:border-green-600'
-                            }`}
+                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('delivery-under-30')
+                              ? 'border-green-600 bg-green-50'
+                              : 'border-gray-200 hover:border-green-600'
+                              }`}
                           >
                             <Timer className={`h-6 w-6 ${activeFilters.has('delivery-under-30') ? 'text-green-600' : 'text-gray-600'}`} strokeWidth={1.5} />
                             <span className={`text-sm font-medium ${activeFilters.has('delivery-under-30') ? 'text-green-600' : 'text-gray-700'}`}>Under 30 mins</span>
                           </button>
-                          <button 
+                          <button
                             onClick={() => toggleFilter('delivery-under-45')}
-                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${
-                              activeFilters.has('delivery-under-45') 
-                                ? 'border-green-600 bg-green-50' 
-                                : 'border-gray-200 hover:border-green-600'
-                            }`}
+                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('delivery-under-45')
+                              ? 'border-green-600 bg-green-50'
+                              : 'border-gray-200 hover:border-green-600'
+                              }`}
                           >
                             <Timer className={`h-6 w-6 ${activeFilters.has('delivery-under-45') ? 'text-green-600' : 'text-gray-600'}`} strokeWidth={1.5} />
                             <span className={`text-sm font-medium ${activeFilters.has('delivery-under-45') ? 'text-green-600' : 'text-gray-700'}`}>Under 45 mins</span>
                           </button>
                         </div>
                       </div>
-                      
+
                       {/* Rating Tab */}
-                      <div 
+                      <div
                         ref={el => filterSectionRefs.current['rating'] = el}
                         data-section-id="rating"
                         className="space-y-4 mb-8"
                       >
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Restaurant Rating</h3>
                         <div className="grid grid-cols-2 gap-3">
-                          <button 
+                          <button
                             onClick={() => toggleFilter('rating-35-plus')}
-                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${
-                              activeFilters.has('rating-35-plus') 
-                                ? 'border-green-600 bg-green-50' 
-                                : 'border-gray-200 hover:border-green-600'
-                            }`}
+                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('rating-35-plus')
+                              ? 'border-green-600 bg-green-50'
+                              : 'border-gray-200 hover:border-green-600'
+                              }`}
                           >
                             <Star className={`h-6 w-6 ${activeFilters.has('rating-35-plus') ? 'text-green-600 fill-green-600' : 'text-gray-400'}`} />
                             <span className={`text-sm font-medium ${activeFilters.has('rating-35-plus') ? 'text-green-600' : 'text-gray-700'}`}>Rated 3.5+</span>
                           </button>
-                          <button 
+                          <button
                             onClick={() => toggleFilter('rating-4-plus')}
-                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${
-                              activeFilters.has('rating-4-plus') 
-                                ? 'border-green-600 bg-green-50' 
-                                : 'border-gray-200 hover:border-green-600'
-                            }`}
+                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('rating-4-plus')
+                              ? 'border-green-600 bg-green-50'
+                              : 'border-gray-200 hover:border-green-600'
+                              }`}
                           >
                             <Star className={`h-6 w-6 ${activeFilters.has('rating-4-plus') ? 'text-green-600 fill-green-600' : 'text-gray-400'}`} />
                             <span className={`text-sm font-medium ${activeFilters.has('rating-4-plus') ? 'text-green-600' : 'text-gray-700'}`}>Rated 4.0+</span>
                           </button>
-                          <button 
+                          <button
                             onClick={() => toggleFilter('rating-45-plus')}
-                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${
-                              activeFilters.has('rating-45-plus') 
-                                ? 'border-green-600 bg-green-50' 
-                                : 'border-gray-200 hover:border-green-600'
-                            }`}
+                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('rating-45-plus')
+                              ? 'border-green-600 bg-green-50'
+                              : 'border-gray-200 hover:border-green-600'
+                              }`}
                           >
                             <Star className={`h-6 w-6 ${activeFilters.has('rating-45-plus') ? 'text-green-600 fill-green-600' : 'text-gray-400'}`} />
                             <span className={`text-sm font-medium ${activeFilters.has('rating-45-plus') ? 'text-green-600' : 'text-gray-700'}`}>Rated 4.5+</span>
@@ -890,63 +896,59 @@ export default function Category() {
                       </div>
 
                       {/* Distance Tab */}
-                      <div 
+                      <div
                         ref={el => filterSectionRefs.current['distance'] = el}
                         data-section-id="distance"
                         className="space-y-4 mb-8"
                       >
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Distance</h3>
                         <div className="grid grid-cols-2 gap-3">
-                          <button 
+                          <button
                             onClick={() => toggleFilter('distance-under-1km')}
-                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${
-                              activeFilters.has('distance-under-1km') 
-                                ? 'border-green-600 bg-green-50' 
-                                : 'border-gray-200 hover:border-green-600'
-                            }`}
+                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('distance-under-1km')
+                              ? 'border-green-600 bg-green-50'
+                              : 'border-gray-200 hover:border-green-600'
+                              }`}
                           >
                             <MapPin className={`h-6 w-6 ${activeFilters.has('distance-under-1km') ? 'text-green-600' : 'text-gray-600'}`} strokeWidth={1.5} />
                             <span className={`text-sm font-medium ${activeFilters.has('distance-under-1km') ? 'text-green-600' : 'text-gray-700'}`}>Under 1 km</span>
                           </button>
-                          <button 
+                          <button
                             onClick={() => toggleFilter('distance-under-2km')}
-                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${
-                              activeFilters.has('distance-under-2km') 
-                                ? 'border-green-600 bg-green-50' 
-                                : 'border-gray-200 hover:border-green-600'
-                            }`}
+                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('distance-under-2km')
+                              ? 'border-green-600 bg-green-50'
+                              : 'border-gray-200 hover:border-green-600'
+                              }`}
                           >
                             <MapPin className={`h-6 w-6 ${activeFilters.has('distance-under-2km') ? 'text-green-600' : 'text-gray-600'}`} strokeWidth={1.5} />
                             <span className={`text-sm font-medium ${activeFilters.has('distance-under-2km') ? 'text-green-600' : 'text-gray-700'}`}>Under 2 km</span>
                           </button>
                         </div>
                       </div>
-                      
+
                       {/* Price Tab */}
-                      <div 
+                      <div
                         ref={el => filterSectionRefs.current['price'] = el}
                         data-section-id="price"
                         className="space-y-4 mb-8"
                       >
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Dish Price</h3>
                         <div className="flex flex-col gap-3">
-                          <button 
+                          <button
                             onClick={() => toggleFilter('price-under-200')}
-                            className={`px-4 py-3 rounded-xl border text-left transition-colors ${
-                              activeFilters.has('price-under-200') 
-                                ? 'border-green-600 bg-green-50' 
-                                : 'border-gray-200 hover:border-green-600'
-                            }`}
+                            className={`px-4 py-3 rounded-xl border text-left transition-colors ${activeFilters.has('price-under-200')
+                              ? 'border-green-600 bg-green-50'
+                              : 'border-gray-200 hover:border-green-600'
+                              }`}
                           >
                             <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-green-600' : 'text-gray-700'}`}>Under ₹200</span>
                           </button>
-                          <button 
+                          <button
                             onClick={() => toggleFilter('price-under-500')}
-                            className={`px-4 py-3 rounded-xl border text-left transition-colors ${
-                              activeFilters.has('price-under-500') 
-                                ? 'border-green-600 bg-green-50' 
-                                : 'border-gray-200 hover:border-green-600'
-                            }`}
+                            className={`px-4 py-3 rounded-xl border text-left transition-colors ${activeFilters.has('price-under-500')
+                              ? 'border-green-600 bg-green-50'
+                              : 'border-gray-200 hover:border-green-600'
+                              }`}
                           >
                             <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-green-600' : 'text-gray-700'}`}>Under ₹500</span>
                           </button>
@@ -954,7 +956,7 @@ export default function Category() {
                       </div>
 
                       {/* Cuisine Tab */}
-                      <div 
+                      <div
                         ref={el => filterSectionRefs.current['cuisine'] = el}
                         data-section-id="cuisine"
                         className="space-y-4 mb-8"
@@ -965,11 +967,10 @@ export default function Category() {
                             <button
                               key={cuisine}
                               onClick={() => setSelectedCuisine(selectedCuisine === cuisine ? null : cuisine)}
-                              className={`px-4 py-3 rounded-xl border text-center transition-colors ${
-                                selectedCuisine === cuisine
-                                  ? 'border-green-600 bg-green-50'
-                                  : 'border-gray-200 hover:border-green-600'
-                              }`}
+                              className={`px-4 py-3 rounded-xl border text-center transition-colors ${selectedCuisine === cuisine
+                                ? 'border-green-600 bg-green-50'
+                                : 'border-gray-200 hover:border-green-600'
+                                }`}
                             >
                               <span className={`text-sm font-medium ${selectedCuisine === cuisine ? 'text-green-600' : 'text-gray-700'}`}>
                                 {cuisine}
@@ -978,7 +979,7 @@ export default function Category() {
                           ))}
                         </div>
                       </div>
-                      
+
                       {/* Trust Markers Tab */}
                       {activeFilterTab === 'trust' && (
                         <div className="space-y-4">
@@ -995,22 +996,21 @@ export default function Category() {
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Footer */}
                   <div className="flex items-center gap-4 px-4 py-4 border-t bg-white">
-                    <button 
+                    <button
                       onClick={() => setIsFilterOpen(false)}
                       className="flex-1 py-3 text-center font-semibold text-gray-700"
                     >
                       Close
                     </button>
-                    <button 
+                    <button
                       onClick={() => setIsFilterOpen(false)}
-                      className={`flex-1 py-3 font-semibold rounded-xl transition-colors ${
-                        activeFilters.size > 0 || sortBy || selectedCuisine
-                          ? 'bg-green-600 text-white hover:bg-green-700'
-                          : 'bg-gray-200 text-gray-500'
-                      }`}
+                      className={`flex-1 py-3 font-semibold rounded-xl transition-colors ${activeFilters.size > 0 || sortBy || selectedCuisine
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-gray-200 text-gray-500'
+                        }`}
                     >
                       {activeFilters.size > 0 || sortBy || selectedCuisine
                         ? 'Show results'
@@ -1025,165 +1025,185 @@ export default function Category() {
         )}
 
       {/* Create/Edit Category Modal */}
-      {typeof window !== "undefined" &&
-        createPortal(
-          <AnimatePresence>
-            {isModalOpen && (
-              <div className="fixed inset-0 z-[200]">
-                {/* Backdrop */}
-                <div 
-                  className="absolute inset-0 bg-black/50" 
-                  onClick={handleCloseModal}
-                />
-                
-                {/* Modal Content */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
-                >
-                  {/* Header */}
-                  <div className="flex items-center justify-between px-6 py-4 border-b">
-                    <h2 className="text-xl font-bold text-slate-900">
-                      {editingCategory ? 'Edit Category' : 'Add New Category'}
-                    </h2>
-                    <button 
-                      onClick={handleCloseModal}
-                      className="p-1 rounded hover:bg-slate-100 transition-colors"
-                    >
-                      <X className="w-5 h-5 text-slate-500" />
-                    </button>
-                  </div>
-                  
-                  {/* Form */}
-                  <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Category Type *
-                      </label>
-                      <select
-                        required
-                        value={formData.type}
-                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      >
-                        <option value="">Select category type</option>
-                        <option value="Starters">Starters</option>
-                        <option value="Main course">Main course</option>
-                        <option value="Desserts">Desserts</option>
-                        <option value="Beverages">Beverages</option>
-                        <option value="Varieties">Varieties</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Category Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter category name"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Category Image
-                      </label>
-                      <div className="space-y-3">
-                        {/* Image Preview */}
-                        {(imagePreview || formData.image) && (
-                          <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-slate-300">
-                            <img
-                              src={imagePreview || formData.image}
-                              alt="Category preview"
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.target.src = "https://via.placeholder.com/128"
-                              }}
-                            />
-                            {imagePreview && (
-                              <button
-                                type="button"
-                                onClick={handleRemoveImage}
-                                className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        
-                        {/* File Input */}
-                        <div className="flex items-center gap-3">
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/png,image/jpeg,image/jpg,image/webp"
-                            onChange={handleImageSelect}
-                            className="hidden"
-                            id="category-image-upload"
-                          />
-                          <label
-                            htmlFor="category-image-upload"
-                            className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors"
-                          >
-                            <Upload className="w-4 h-4 text-slate-600" />
-                            <span className="text-sm text-slate-700">
-                              {imagePreview ? 'Change Image' : 'Upload Image'}
-                            </span>
-                          </label>
-                          {uploadingImage && (
-                            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-500">
-                          Supported formats: PNG, JPG, JPEG, WEBP (Max 5MB)
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        id="status"
-                        checked={formData.status}
-                        onChange={(e) => setFormData({ ...formData, status: e.target.checked })}
-                        className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                      />
-                      <label htmlFor="status" className="text-sm font-medium text-slate-700">
-                        Active Status
-                      </label>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex items-center gap-3 pt-4">
-                      <button
-                        type="button"
-                        onClick={handleCloseModal}
-                        className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        {editingCategory ? 'Update' : 'Create'}
-                      </button>
-                    </div>
-                  </form>
-                </motion.div>
+      <AnimatePresence>
+        <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
+          <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none shadow-2xl rounded-2xl">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white relative">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
+                  <LayoutGrid className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <DialogHeader className="p-0 text-left">
+                    <DialogTitle className="text-xl font-bold text-white leading-tight">
+                      {editingCategory ? 'Update Category' : 'Create New Category'}
+                    </DialogTitle>
+                    <p className="text-blue-100 text-sm mt-0.5">
+                      {editingCategory ? 'Modify existing category details' : 'Organize your menu with a new section'}
+                    </p>
+                  </DialogHeader>
+                </div>
               </div>
-            )}
-          </AnimatePresence>,
-          document.body
-        )}
+              <button
+                onClick={handleCloseModal}
+                className="absolute top-6 right-6 p-1 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5 text-white/80" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 bg-white space-y-6">
+              <div className="grid grid-cols-1 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="type" className="text-sm font-semibold text-slate-700">Category Type *</Label>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value) => setFormData({ ...formData, type: value })}
+                  >
+                    <SelectTrigger className="h-11 bg-slate-50 border-slate-200 focus:ring-blue-500/20 focus:border-blue-500 transition-all rounded-xl">
+                      <SelectValue placeholder="Select Category Type" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="Starters">Starters</SelectItem>
+                      <SelectItem value="Main course">Main course</SelectItem>
+                      <SelectItem value="Desserts">Desserts</SelectItem>
+                      <SelectItem value="Beverages">Beverages</SelectItem>
+                      <SelectItem value="Varieties">Varieties</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-sm font-semibold text-slate-700">Category Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Enter category name"
+                    required
+                    className="h-11 bg-slate-50 border-slate-200 focus:bg-white focus:ring-blue-500/20 focus:border-blue-500 transition-all rounded-xl"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-slate-700">Category Image</Label>
+                  <div className="flex items-start gap-4">
+                    <div className="relative group w-24 h-24 rounded-2xl overflow-hidden bg-slate-50 border-2 border-dashed border-slate-200 hover:border-blue-400 transition-all">
+                      {imagePreview || formData.image ? (
+                        <>
+                          <img
+                            src={imagePreview || formData.image}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                            onError={(e) => e.target.src = "https://via.placeholder.com/100"}
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="p-1.5 bg-white text-blue-600 rounded-lg shadow-lg scale-90 group-hover:scale-100 transition-transform"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="w-full h-full flex flex-col items-center justify-center gap-1 text-slate-400"
+                        >
+                          <Upload className="w-6 h-6" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageSelect}
+                          className="hidden"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="rounded-lg h-9 bg-slate-50 border-slate-200 text-slate-600"
+                        >
+                          Upload File
+                        </Button>
+                        {imagePreview && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRemoveImage}
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
+                        Supported: PNG, JPG, JPEG, WEBP. Max size 5MB.
+                        A clear icon represents your category best.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all hover:bg-slate-100/50">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg transition-colors ${formData.status ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-500'}`}>
+                    <Check className={`w-4 h-4 transition-transform ${formData.status ? 'scale-110' : 'scale-90'}`} />
+                  </div>
+                  <div>
+                    <Label htmlFor="status" className="text-sm font-bold text-slate-800 cursor-pointer block">
+                      Active Status
+                    </Label>
+                    <p className="text-xs text-slate-500 font-medium">
+                      {formData.status ? 'Category will be live' : 'Hidden from customers'}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="status"
+                  checked={formData.status}
+                  onCheckedChange={(checked) => setFormData({ ...formData, status: checked })}
+                  className="data-[state=checked]:bg-blue-600"
+                />
+              </div>
+
+              <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleCloseModal}
+                  disabled={uploadingImage}
+                  className="flex-1 h-12 rounded-xl text-slate-600 hover:bg-slate-100 font-medium"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={uploadingImage}
+                  className="flex-[2] h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98]"
+                >
+                  {uploadingImage ? (
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  ) : null}
+                  {editingCategory ? 'Update Category' : 'Create Category'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </AnimatePresence>
 
       <style>{`
         @keyframes slideUp {

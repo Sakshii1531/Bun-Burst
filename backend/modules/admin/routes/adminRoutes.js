@@ -19,6 +19,7 @@ import {
   updateUserStatus,
   getRestaurants,
   createRestaurant,
+  updateRestaurant,
   updateRestaurantStatus,
   getRestaurantJoinRequests,
   approveRestaurant,
@@ -141,6 +142,14 @@ import {
   updateComplaintStatus,
   updateInternalNotes,
 } from "../controllers/restaurantComplaintController.js";
+import {
+  getAddons,
+  getAddonById,
+  createAddon,
+  updateAddon,
+  deleteAddon,
+  toggleAddonStatus,
+} from "../controllers/addonController.js";
 import {
   getOrderSettlementDetails,
   getRestaurantSettlements,
@@ -290,11 +299,12 @@ router.get("/customer-wallet-report", getCustomerWalletReport);
 // Restaurant Management
 router.get("/restaurants", getRestaurants);
 router.post("/restaurants", createRestaurant);
-router.get("/restaurants/requests", getRestaurantJoinRequests);
+router.put("/restaurants/:id", updateRestaurant);
+// router.get("/restaurants/requests", getRestaurantJoinRequests);
 router.get("/restaurant-analytics/:restaurantId", getRestaurantAnalytics);
-router.post("/restaurants/:id/approve", approveRestaurant);
-router.post("/restaurants/:id/reject", rejectRestaurant);
-router.post("/restaurants/:id/reverify", reverifyRestaurant);
+// router.post("/restaurants/:id/approve", approveRestaurant);
+// router.post("/restaurants/:id/reject", rejectRestaurant);
+// router.post("/restaurants/:id/reverify", reverifyRestaurant);
 router.put("/restaurants/:id/status", updateRestaurantStatus);
 router.put("/restaurants/:id/dining-settings", updateRestaurantDiningSettings);
 
@@ -379,30 +389,38 @@ router.get("/delivery-support-tickets/:id", getTicketByIdAdmin);
 router.put("/delivery-support-tickets/:id", updateTicket);
 
 // Restaurant Commission Management
-router.get("/restaurant-commission", getRestaurantCommissions);
-router.get(
-  "/restaurant-commission/approved-restaurants",
-  getApprovedRestaurants,
-);
-router.get(
-  "/restaurant-commission/restaurant/:restaurantId",
-  getCommissionByRestaurantId,
-);
-router.post("/restaurant-commission", createRestaurantCommission);
-router.post("/restaurant-commission/calculate", calculateRestaurantCommission);
-router.get("/restaurant-commission/:id", getRestaurantCommissionById);
-router.put("/restaurant-commission/:id", updateRestaurantCommission);
-router.delete("/restaurant-commission/:id", deleteRestaurantCommission);
-router.patch(
-  "/restaurant-commission/:id/status",
-  toggleRestaurantCommissionStatus,
-);
+// router.get("/restaurant-commission", getRestaurantCommissions);
+// router.get(
+//   "/restaurant-commission/approved-restaurants",
+//   getApprovedRestaurants,
+// );
+// router.get(
+//   "/restaurant-commission/restaurant/:restaurantId",
+//   getCommissionByRestaurantId,
+// );
+// router.post("/restaurant-commission", createRestaurantCommission);
+// router.post("/restaurant-commission/calculate", calculateRestaurantCommission);
+// router.get("/restaurant-commission/:id", getRestaurantCommissionById);
+// router.put("/restaurant-commission/:id", updateRestaurantCommission);
+// router.delete("/restaurant-commission/:id", deleteRestaurantCommission);
+// router.patch(
+//   "/restaurant-commission/:id/status",
+//   toggleRestaurantCommissionStatus,
+// );
 
 // Restaurant Complaint Management
 router.get("/restaurant-complaints", getAllComplaints);
 router.get("/restaurant-complaints/:id", getComplaintDetails);
 router.put("/restaurant-complaints/:id/status", updateComplaintStatus);
 router.put("/restaurant-complaints/:id/notes", updateInternalNotes);
+
+// Global Addon Management
+router.get("/addons", getAddons);
+router.get("/addons/:id", getAddonById);
+router.post("/addons", createAddon);
+router.put("/addons/:id", updateAddon);
+router.delete("/addons/:id", deleteAddon);
+router.patch("/addons/:id/status", toggleAddonStatus);
 
 // Food Approval Management
 router.get("/food-approvals", getPendingFoodApprovals);

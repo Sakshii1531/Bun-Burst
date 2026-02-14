@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Plus, Minus, ArrowLeft, ChevronRight, Clock, MapPin, Phone, FileText, Utensils, Tag, Percent, Truck, Leaf, Share2, ChevronUp, ChevronDown, X, Check, Settings, CreditCard, Wallet, Building2, Sparkles } from "lucide-react"
+import { Plus, Minus, ArrowLeft, ChevronRight, Clock, MapPin, Phone, FileText, Utensils, Tag, Percent, Truck, Leaf, Share2, ChevronUp, ChevronDown, X, Check, Settings, CreditCard, Wallet, Building2, Sparkles, Loader2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import confetti from "canvas-confetti"
 
@@ -82,9 +82,87 @@ export default function Cart() {
     );
   }
 
-  const { cart, updateQuantity, addToCart, getCartCount, clearCart, cleanCartForRestaurant } = cartContext;
+  const { cart, updateQuantity, updateCartItem, addToCart, getCartCount, clearCart, cleanCartForRestaurant } = cartContext;
   const { getDefaultAddress, getDefaultPaymentMethod, addresses, paymentMethods, userProfile } = useProfile()
   const { createOrder } = useOrders()
+
+  // Custom addon states
+  const [selectedItemForAddons, setSelectedItemForAddons] = useState(null)
+  const [categoryAddons, setCategoryAddons] = useState([])
+  const [loadingCategoryAddons, setLoadingCategoryAddons] = useState(false)
+  const [showAddonModal, setShowAddonModal] = useState(false)
+  const [selectedAddonsMap, setSelectedAddonsMap] = useState({})
+
+  // Addon Customization Handlers
+  const handleOpenAddons = async (item) => {
+    setSelectedItemForAddons(item)
+    const categoryId = item.categoryId
+
+    if (!categoryId) {
+      toast.error("This item doesn't support addon customization")
+      return
+    }
+
+    try {
+      setLoadingCategoryAddons(true)
+      setShowAddonModal(true)
+
+      // Initialize selected addons from item
+      const initialMap = {}
+      const existingAddons = item.selectedAddons || item.addons || []
+      existingAddons.forEach(a => {
+        initialMap[a.addonId] = true
+      })
+      setSelectedAddonsMap(initialMap)
+
+      const response = await adminAPI.getAddonsByCategory(categoryId)
+      if (response.data.success) {
+        setCategoryAddons(response.data.data.addons || [])
+      }
+    } catch (error) {
+      console.error("Error fetching addons:", error)
+      toast.error("Failed to load addons")
+    } finally {
+      setLoadingCategoryAddons(false)
+    }
+  }
+
+  const handleToggleAddon = (addonId) => {
+    setSelectedAddonsMap(prev => ({
+      ...prev,
+      [addonId]: !prev[addonId]
+    }))
+  }
+
+  const handleSaveAddons = () => {
+    if (!selectedItemForAddons) return
+
+    const selectedList = categoryAddons
+      .filter(a => selectedAddonsMap[a.id || a._id])
+      .map(a => ({
+        addonId: a.id || a._id,
+        name: a.name,
+        price: a.price
+      }))
+
+    const addonsTotal = selectedList.reduce((sum, a) => sum + (a.price || 0), 0)
+
+    updateCartItem(selectedItemForAddons.id, {
+      addons: selectedList, // Keep for backward compatibility
+      selectedAddons: selectedList, // New field as requested
+      price: (selectedItemForAddons.basePrice || selectedItemForAddons.price) + addonsTotal
+    })
+
+    setShowAddonModal(false)
+    setSelectedItemForAddons(null)
+    toast.success("Item customized successfully!")
+  }
+
+  const currentAddonsTotal = useMemo(() => {
+    return categoryAddons
+      .filter(a => selectedAddonsMap[a.id || a._id])
+      .reduce((sum, a) => sum + (a.price || 0), 0)
+  }, [categoryAddons, selectedAddonsMap])
   const { location: currentLocation } = useUserLocation() // Get live location address
   const { zoneId } = useZone(currentLocation) // Get user's zone
 
@@ -105,6 +183,7 @@ export default function Cart() {
   const [orderProgress, setOrderProgress] = useState(0)
   const [showOrderSuccess, setShowOrderSuccess] = useState(false)
   const [placedOrderId, setPlacedOrderId] = useState(null)
+
 
   // Restaurant and pricing state
   const [restaurantData, setRestaurantData] = useState(null)
@@ -528,11 +607,12 @@ export default function Cart() {
         const items = cart.map(item => ({
           itemId: item.id,
           name: item.name,
-          price: item.price, // Price should already be in INR
+          price: item.price,
           quantity: item.quantity || 1,
           image: item.image,
           description: item.description,
-          isVeg: item.isVeg !== false
+          isVeg: item.isVeg !== false,
+          addons: item.addons || []
         }))
 
         const response = await orderAPI.calculateOrder({
@@ -800,7 +880,8 @@ export default function Cart() {
         quantity: item.quantity || 1,
         image: item.image || "",
         description: item.description || "",
-        isVeg: item.isVeg !== false
+        isVeg: item.isVeg !== false,
+        addons: item.selectedAddons || item.addons || []
       }))
 
       console.log("📋 Order items to send:", orderItems)
@@ -1288,9 +1369,24 @@ export default function Cart() {
 
                       <div className="flex-1 min-w-0">
                         <p className="text-sm md:text-base font-medium text-foreground leading-tight">{item.name}</p>
-                        <button className="text-xs md:text-sm text-primary font-medium flex items-center gap-0.5 mt-0.5">
-                          Edit <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
-                        </button>
+                        {(item.selectedAddons || item.addons) && (item.selectedAddons || item.addons).length > 0 && (
+                          <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">
+                            {(item.selectedAddons || item.addons).map(a => a.name).join(", ")}
+                          </p>
+                        )}
+                        {item.categoryId ? (
+                          <button
+                            onClick={() => handleOpenAddons(item)}
+                            className="text-[10px] md:text-xs text-orange-600 font-bold flex items-center gap-1 mt-1.5 hover:text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 transition-all active:scale-95"
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            Customize
+                          </button>
+                        ) : (
+                          <button className="text-xs md:text-sm text-primary font-medium flex items-center gap-0.5 mt-0.5 opacity-50 cursor-not-allowed">
+                            Edit <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
+                          </button>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-3 md:gap-4">
@@ -1997,6 +2093,105 @@ export default function Cart() {
           </div>
         </div>
       )}
+
+      {/* Addon Customization Modal */}
+      <AnimatePresence>
+        {showAddonModal && (
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAddonModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-lg bg-card rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 md:p-6 border-b border-border bg-card sticky top-0 z-10">
+                <div>
+                  <h3 className="text-lg md:text-xl font-bold text-foreground">Customize Item</h3>
+                  <p className="text-xs md:text-sm text-muted-foreground">{selectedItemForAddons?.name}</p>
+                </div>
+                <button
+                  onClick={() => setShowAddonModal(false)}
+                  className="p-2 hover:bg-muted rounded-full transition-colors"
+                >
+                  <X className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+                {loadingCategoryAddons ? (
+                  <div className="flex flex-col items-center justify-center py-12 gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">Fetching best addons for you...</p>
+                  </div>
+                ) : categoryAddons.length > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-foreground mb-4 uppercase tracking-wider">Select Addons</p>
+                    {categoryAddons.map((addon) => (
+                      <div
+                        key={addon.id || addon._id}
+                        className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer active:scale-[0.98] ${selectedAddonsMap[addon.id || addon._id]
+                          ? 'border-primary bg-primary/5 shadow-md shadow-primary/5'
+                          : 'border-border hover:border-border/80 bg-card'
+                          }`}
+                        onClick={() => handleToggleAddon(addon.id || addon._id)}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${selectedAddonsMap[addon.id || addon._id] ? 'bg-primary border-primary' : 'border-muted-foreground/30'
+                            }`}>
+                            {selectedAddonsMap[addon.id || addon._id] && <Check className="h-4 w-4 text-white" />}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground text-base">{addon.name}</p>
+                            <p className="text-sm text-primary font-bold mt-0.5">₹{addon.price}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Sparkles className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground">No addons available for this category</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 md:p-6 border-t border-border bg-card sticky bottom-0 z-10">
+                <div className="flex items-center justify-between mb-4 px-1">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">Total Addons Price</span>
+                    <span className="text-xl font-bold text-foreground">₹{currentAddonsTotal}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm text-muted-foreground">Final Item Price</span>
+                    <span className="text-xl font-bold text-primary block">₹{(selectedItemForAddons?.basePrice || selectedItemForAddons?.price || 0) + currentAddonsTotal}</span>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleSaveAddons}
+                  disabled={loadingCategoryAddons}
+                  className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95"
+                >
+                  Save Customization
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Animation Styles */}
       <style>{`

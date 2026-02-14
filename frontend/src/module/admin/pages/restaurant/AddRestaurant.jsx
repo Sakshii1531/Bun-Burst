@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useState, useEffect } from "react"
+import { useNavigate, useParams } from "react-router-dom"
 import { Building2, Info, Tag, Upload, Calendar, FileText, MapPin, CheckCircle2, X, Image as ImageIcon, Clock, Loader2 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -22,6 +22,9 @@ const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 export default function AddRestaurant() {
   const navigate = useNavigate()
+  const { id } = useParams()
+  const isEditMode = !!id
+  const [loadingConfig, setLoadingConfig] = useState(false)
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
@@ -92,8 +95,10 @@ export default function AddRestaurant() {
   const [auth, setAuth] = useState({
     email: "",
     phone: "",
+    password: "", // Added password field
     signupMethod: "email",
   })
+  const [createdCredentials, setCreatedCredentials] = useState(null)
 
   const languageTabs = [
     { key: "default", label: "Default" },
@@ -102,6 +107,107 @@ export default function AddRestaurant() {
     { key: "ar", label: "Arabic - العربية (AR)" },
     { key: "es", label: "Spanish - español(ES)" },
   ]
+
+  // Fetch restaurant data in edit mode
+  useEffect(() => {
+    if (isEditMode && id) {
+      const fetchRestaurant = async () => {
+        try {
+          setLoadingConfig(true)
+          const response = await adminAPI.getRestaurantById(id)
+          if (response.data?.success) {
+            const data = response.data.data.restaurant || response.data.data
+
+            // Populate Step 1
+            setStep1({
+              restaurantName: data.name || "",
+              ownerName: data.ownerName || "",
+              ownerEmail: data.ownerEmail || "",
+              ownerPhone: data.ownerPhone || "",
+              primaryContactNumber: data.primaryContactNumber || "",
+              location: {
+                addressLine1: data.location?.addressLine1 || "",
+                addressLine2: data.location?.addressLine2 || "",
+                area: data.location?.area || "",
+                city: data.location?.city || "",
+                state: data.location?.state || "",
+                pincode: data.location?.pincode || "",
+                landmark: data.location?.landmark || "",
+              },
+            })
+
+            // Populate Step 2
+            setStep2({
+              menuImages: data.menuImages || [],
+              profileImage: data.profileImage || null,
+              cuisines: data.cuisines || [],
+              openingTime: data.deliveryTimings?.openingTime || "09:00",
+              closingTime: data.deliveryTimings?.closingTime || "22:00",
+              openDays: data.openDays || [],
+            })
+
+            // Populate Step 3
+            setStep3({
+              panNumber: data.documents?.panNumber || data.panNumber || "",
+              nameOnPan: data.documents?.nameOnPan || data.nameOnPan || "",
+              panImage: data.documents?.panImage || data.panImage || null,
+              gstRegistered: data.documents?.gstRegistered || !!data.gstNumber,
+              gstNumber: data.documents?.gstNumber || data.gstNumber || "",
+              gstLegalName: data.documents?.gstLegalName || data.gstLegalName || "",
+              gstAddress: data.documents?.gstAddress || data.gstAddress || "",
+              gstImage: data.documents?.gstImage || data.gstImage || null,
+              fssaiNumber: data.documents?.fssaiNumber || data.fssaiNumber || "",
+              fssaiExpiry: data.documents?.fssaiExpiry ? new Date(data.documents.fssaiExpiry).toISOString().split('T')[0] : "",
+              fssaiImage: data.documents?.fssaiImage || data.fssaiImage || null,
+              accountNumber: data.bankDetails?.accountNumber || data.accountNumber || "",
+              confirmAccountNumber: data.bankDetails?.accountNumber || data.accountNumber || "",
+              ifscCode: data.bankDetails?.ifscCode || data.ifscCode || "",
+              accountHolderName: data.bankDetails?.accountHolderName || data.accountHolderName || "",
+              accountType: data.bankDetails?.accountType || data.accountType || "",
+            })
+
+            // Populate Step 4
+            setStep4({
+              estimatedDeliveryTime: data.estimatedDeliveryTime || "25-30 mins",
+              featuredDish: data.featuredDish || "",
+              featuredPrice: data.featuredPrice || "249",
+              offer: data.offer || "",
+              diningSettings: data.diningSettings || {
+                isEnabled: false,
+                maxGuests: 6,
+                diningType: "family-dining"
+              }
+            })
+
+            // Populate Auth
+            setAuth({
+              email: data.email || "",
+              phone: data.phone || "",
+              password: "", // Security: don't show password
+              signupMethod: data.signupMethod || "email",
+            })
+          }
+        } catch (error) {
+          console.error("Error fetching restaurant:", error)
+          toast.error("Failed to fetch restaurant details")
+        } finally {
+          setLoadingConfig(false)
+        }
+      }
+      fetchRestaurant()
+    }
+  }, [isEditMode, id])
+
+  if (loadingConfig) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600" />
+          <p className="mt-2 text-sm text-slate-500">Loading restaurant details...</p>
+        </div>
+      </div>
+    )
+  }
 
   // Upload handler for images
   const handleUpload = async (file, folder) => {
@@ -178,6 +284,7 @@ export default function AddRestaurant() {
     const errors = []
     if (!auth.email && !auth.phone) errors.push("Either email or phone is required")
     if (auth.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(auth.email)) errors.push("Please enter a valid email address")
+    if (auth.password && auth.password.length < 6) errors.push("Password must be at least 6 characters")
     return errors
   }
 
@@ -295,22 +402,39 @@ export default function AddRestaurant() {
         // Auth
         email: auth.email || null,
         phone: auth.phone || null,
-        email: auth.email || null,
-        phone: auth.phone || null,
+        password: auth.password || null,
         signupMethod: auth.email ? 'email' : 'phone',
         // Dining Settings
         diningSettings: step4.diningSettings,
       }
 
       // Call backend API
-      const response = await adminAPI.createRestaurant(payload)
+      let response;
+      if (isEditMode) {
+        response = await adminAPI.updateRestaurant(id, payload)
+      } else {
+        response = await adminAPI.createRestaurant(payload)
+      }
 
       if (response.data.success) {
-        toast.success("Restaurant created successfully!")
-        setShowSuccessDialog(true)
-        setTimeout(() => {
-          navigate("/admin/restaurants")
-        }, 2000)
+        toast.success(isEditMode ? "Restaurant updated successfully!" : "Restaurant created successfully!")
+
+        // Capture generated credentials
+        const data = response.data.data
+        if (data && (data.generatedPassword || auth.password)) {
+          setCreatedCredentials({
+            email: data.restaurant?.email || auth.email,
+            password: data.generatedPassword || auth.password,
+            generated: !!data.generatedPassword
+          })
+          setShowSuccessDialog(true)
+          // No auto-navigate if credentials are shown
+        } else {
+          setShowSuccessDialog(true)
+          setTimeout(() => {
+            navigate("/admin/restaurants")
+          }, 2000)
+        }
       } else {
         throw new Error(response.data.message || "Failed to create restaurant")
       }
@@ -791,6 +915,17 @@ export default function AddRestaurant() {
             placeholder="+91 9876543210"
           />
         </div>
+        <div>
+          <Label className="text-xs text-gray-700">Password (optional)</Label>
+          <Input
+            type="password"
+            value={auth.password || ""}
+            onChange={(e) => setAuth({ ...auth, password: e.target.value || "" })}
+            className="mt-1 bg-white text-sm"
+            placeholder="Leave blank to auto-generate"
+          />
+          <p className="text-xs text-slate-500 mt-1">If left blank, a secure password will be generated for you.</p>
+        </div>
       </section>
     </div>
   )
@@ -808,7 +943,7 @@ export default function AddRestaurant() {
       <header className="px-4 py-4 sm:px-6 sm:py-5 bg-white flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Building2 className="w-5 h-5 text-blue-600" />
-          <div className="text-sm font-semibold text-black">Add New Restaurant</div>
+          <div className="text-sm font-semibold text-black">{isEditMode ? "Edit Restaurant" : "Add New Restaurant"}</div>
         </div>
         <div className="text-xs text-gray-600">Step {step} of 5</div>
       </header>
@@ -836,7 +971,7 @@ export default function AddRestaurant() {
             disabled={isSubmitting}
             className="text-sm bg-black text-white px-6"
           >
-            {step === 5 ? (isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating... </> : "Create Restaurant") : isSubmitting ? "Saving..." : "Continue"}
+            {step === 5 ? (isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {isEditMode ? "Updating..." : "Creating..."} </> : (isEditMode ? "Update Restaurant" : "Create Restaurant")) : isSubmitting ? "Saving..." : "Continue"}
           </Button>
         </div>
       </footer>
@@ -854,11 +989,43 @@ export default function AddRestaurant() {
               </div>
             </div>
             <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-slate-900 mb-2">Restaurant Created Successfully!</DialogTitle>
+              <DialogTitle className="text-2xl font-bold text-slate-900 mb-2">{isEditMode ? "Restaurant Updated Successfully!" : "Restaurant Created Successfully!"}</DialogTitle>
               <DialogDescription className="text-sm text-slate-600">
-                The restaurant has been created and can now login with the provided credentials.
+                The restaurant has been created.
               </DialogDescription>
             </DialogHeader>
+
+            {createdCredentials && createdCredentials.email && (
+              <div className="mt-4 bg-slate-50 p-4 rounded-lg border border-slate-200 text-left">
+                <h4 className="text-sm font-medium text-slate-900 mb-2">Login Credentials</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Email:</span>
+                    <span className="font-medium text-slate-900">{createdCredentials.email}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Password:</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono bg-slate-200 px-2 py-0.5 rounded text-slate-800">
+                        {createdCredentials.password}
+                      </span>
+                    </div>
+                  </div>
+                  {createdCredentials.generated && (
+                    <p className="text-xs text-amber-600 mt-2">
+                      Warning: This password was auto-generated. Please save it now or share it with the restaurant owner.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <Button
+              className="mt-6 w-full bg-slate-900 text-white hover:bg-slate-800"
+              onClick={() => navigate("/admin/restaurants")}
+            >
+              Done & Go to List
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

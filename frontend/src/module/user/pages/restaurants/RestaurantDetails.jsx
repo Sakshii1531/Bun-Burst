@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { restaurantAPI, diningAPI } from "@/lib/api"
+import { restaurantAPI, diningAPI, adminAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
@@ -38,6 +38,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 import AnimatedPage from "../../components/AnimatedPage"
 import { useCart } from "../../context/CartContext"
 import { useProfile } from "../../context/ProfileContext"
@@ -80,6 +81,11 @@ export default function RestaurantDetails() {
     sortBy: null, // "low-to-high" | "high-to-low"
     vegNonVeg: null, // "veg" | "non-veg"
   })
+
+  // Addon states
+  const [itemAddons, setItemAddons] = useState([])
+  const [selectedAddons, setSelectedAddons] = useState([])
+  const [loadingAddons, setLoadingAddons] = useState(false)
 
   // Restaurant data state
   const [restaurant, setRestaurant] = useState(null)
@@ -723,7 +729,7 @@ export default function RestaurantDetails() {
   }, [restaurant?.name, cart])
 
   // Helper function to update item quantity in both local state and cart
-  const updateItemQuantity = (item, newQuantity, event = null) => {
+  const updateItemQuantity = (item, newQuantity, event = null, addons = []) => {
     // Check authentication
     if (!isModuleAuthenticated('user')) {
       toast.error("Please login to add items to cart")
@@ -737,10 +743,12 @@ export default function RestaurantDetails() {
       return;
     }
 
-    // Note: We don't block cart operations based on restaurant availability
-    // Only block if user is out of service zone
+    // Generate a unique ID if there are addons
+    const cartItemId = addons.length > 0
+      ? `${item.id}-${addons.map(a => a._id || a.id).sort().join('-')}`
+      : item.id
 
-    // Update local state
+    // Update local state (only for the base item to show quantity badge in list)
     setQuantities((prev) => ({
       ...prev,
       [item.id]: newQuantity,
@@ -756,127 +764,69 @@ export default function RestaurantDetails() {
     // Ensure we have a valid restaurantId
     const validRestaurantId = restaurant?.restaurantId || restaurant?._id || restaurant?.id;
     if (!validRestaurantId) {
-      console.error('❌ Cannot add item to cart: Restaurant ID is missing!', {
-        restaurant: restaurant,
-        restaurantId: restaurant?.restaurantId,
-        _id: restaurant?._id,
-        id: restaurant?.id
-      });
+      console.error('❌ Cannot add item to cart: Restaurant ID is missing!');
       toast.error('Restaurant ID is missing. Please refresh the page.');
       return;
     }
 
-    // Log for debugging
-    console.log('🛒 Adding item to cart:', {
-      itemName: item.name,
-      restaurantName: restaurant.name,
-      restaurantId: validRestaurantId,
-      restaurant_id: restaurant._id,
-      restaurant_restaurantId: restaurant.restaurantId
-    });
-
     // Prepare cart item with all required properties
+    const addonsPrice = addons.reduce((sum, addon) => sum + (addon.price || 0), 0)
     const cartItem = {
-      id: item.id,
+      id: cartItemId,
+      baseItemId: item.id, // Store original ID
       name: item.name,
-      price: item.price,
+      price: item.price + addonsPrice,
+      basePrice: item.price,
+      addons: addons.map(a => ({ addonId: a._id || a.id, name: a.name, price: a.price })), // Keep for backward compatibility
+      selectedAddons: addons.map(a => ({ addonId: a._id || a.id, name: a.name, price: a.price })), // New field as requested
       image: item.image,
-      restaurant: restaurant.name, // Use restaurant.name directly (already validated)
-      restaurantId: validRestaurantId, // Use validated restaurantId
+      restaurant: restaurant.name,
+      restaurantId: validRestaurantId,
+      categoryId: item.categoryId || null,
       description: item.description,
-      originalPrice: item.originalPrice,
-      isVeg: item.isVeg !== false // Add isVeg property
+      originalPrice: item.originalPrice ? (item.originalPrice + addonsPrice) : null,
+      isVeg: item.isVeg !== false
     }
 
-    // Get source position for animation from event target
-    // Prefer currentTarget (the button) over target (might be icon inside button)
+    // Get source position for animation
     let sourcePosition = null
     if (event) {
-      // Use currentTarget (the button element) for accurate button position
-      // If currentTarget is not available, try to find the button element
       let buttonElement = event.currentTarget
       if (!buttonElement && event.target) {
-        // If we clicked on an icon inside, find the closest button
         buttonElement = event.target.closest('button') || event.target
       }
 
       if (buttonElement) {
-        // Store button reference and current viewport position
-        // We'll recalculate position right before animation to account for scroll
         const rect = buttonElement.getBoundingClientRect()
-        const scrollX = window.pageXOffset || window.scrollX || 0
-        const scrollY = window.pageYOffset || window.scrollY || 0
-
-        // Store both viewport position and scroll at capture time
-        // This allows us to adjust for scroll changes later
         sourcePosition = {
-          // Viewport-relative position at capture time
           viewportX: rect.left + rect.width / 2,
           viewportY: rect.top + rect.height / 2,
-          // Scroll position at capture time
-          scrollX: scrollX,
-          scrollY: scrollY,
-          // Store button identifier to potentially find it again
-          itemId: item.id,
+          scrollX: window.pageXOffset || window.scrollX || 0,
+          scrollY: window.pageYOffset || window.scrollY || 0,
+          itemId: cartItemId,
         }
       }
     }
 
     // Update cart context
-    if (newQuantity <= 0) {
-      // Pass sourcePosition and product info for removal animation
-      const productInfo = {
-        id: item.id,
-        name: item.name,
-        imageUrl: item.image,
-      }
-      removeFromCart(item.id, sourcePosition, productInfo)
-    } else {
-      const existingCartItem = getCartItem(item.id)
-      if (existingCartItem) {
-        // Prepare product info for animation
-        const productInfo = {
-          id: item.id,
-          name: item.name,
-          imageUrl: item.image,
-        }
-
-        // If incrementing quantity, trigger add animation with sourcePosition
-        if (newQuantity > existingCartItem.quantity && sourcePosition) {
-          try {
-            addToCart(cartItem, sourcePosition)
-            if (newQuantity > existingCartItem.quantity + 1) {
-              updateQuantity(item.id, newQuantity)
-            }
-          } catch (error) {
-            // Handle restaurant mismatch error
-            console.error('❌ Error adding item to cart:', error);
-            toast.error(error.message || 'Cannot add item from different restaurant. Please clear cart first.');
-            return; // Don't update quantity if add failed
-          }
-        }
-        // If decreasing quantity, trigger removal animation with sourcePosition
-        else if (newQuantity < existingCartItem.quantity && sourcePosition) {
-          updateQuantity(item.id, newQuantity, sourcePosition, productInfo)
-        }
-        // Otherwise just update quantity without animation
-        else {
-          updateQuantity(item.id, newQuantity)
-        }
+    try {
+      if (newQuantity <= 0) {
+        removeFromCart(cartItemId, sourcePosition, { id: cartItemId, name: item.name, imageUrl: item.image })
       } else {
-        // Add to cart first (adds with quantity 1), then update to desired quantity
-        // Pass sourcePosition when adding a new item
-        try {
-          addToCart(cartItem, sourcePosition)
-          if (newQuantity > 1) {
-            updateQuantity(item.id, newQuantity)
+        const existingCartItem = getCartItem(cartItemId)
+        if (existingCartItem) {
+          if (newQuantity > existingCartItem.quantity) {
+            addToCart(cartItem, sourcePosition)
+          } else {
+            updateQuantity(cartItemId, newQuantity, sourcePosition, { id: cartItemId, name: item.name, imageUrl: item.image })
           }
-        } catch (error) {
-          // Handle restaurant mismatch error
-          console.error('❌ Error adding item to cart:', error);
-          toast.error(error.message || 'Cannot add item from different restaurant. Please clear cart first.');
+        } else {
+          addToCart(cartItem, sourcePosition)
         }
       }
+    } catch (error) {
+      console.error('❌ Error updating cart:', error);
+      toast.error(error.message || 'Error updating cart');
     }
   }
 
@@ -1087,7 +1037,51 @@ export default function RestaurantDetails() {
   // Handle item card click
   const handleItemClick = (item) => {
     setSelectedItem(item)
+    setSelectedAddons([]) // Reset selected addons when opening item
     setShowItemDetail(true)
+  }
+
+  // Fetch addons when selectedItem changes
+  useEffect(() => {
+    const fetchItemAddons = async (categoryId) => {
+      try {
+        setLoadingAddons(true)
+        const response = await adminAPI.getAddonsByCategory(categoryId)
+        if (response.data?.success) {
+          setItemAddons(response.data.data.addons || [])
+        }
+      } catch (error) {
+        console.error("Error fetching item addons:", error)
+        setItemAddons([])
+      } finally {
+        setLoadingAddons(false)
+      }
+    }
+
+    if (showItemDetail && selectedItem?.categoryId) {
+      fetchItemAddons(selectedItem.categoryId)
+    } else if (!showItemDetail) {
+      setItemAddons([])
+      setSelectedAddons([])
+    }
+  }, [showItemDetail, selectedItem])
+
+  const toggleAddon = (addon) => {
+    setSelectedAddons(prev => {
+      const isSelected = prev.find(a => a._id === addon._id)
+      if (isSelected) {
+        return prev.filter(a => a._id !== addon._id)
+      } else {
+        return [...prev, addon]
+      }
+    })
+  }
+
+  const calculateTotalPrice = () => {
+    if (!selectedItem) return 0
+    const basePrice = selectedItem.price || 0
+    const addonsPrice = selectedAddons.reduce((sum, addon) => sum + (addon.price || 0), 0)
+    return basePrice + addonsPrice
   }
 
   // Helper function to calculate final price after discount
@@ -1728,7 +1722,11 @@ export default function RestaurantDetails() {
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     if (!shouldShowGrayscale) {
-                                      updateItemQuantity(item, 1, e)
+                                      if (item.categoryId) {
+                                        handleItemClick(item)
+                                      } else {
+                                        updateItemQuantity(item, 1, e)
+                                      }
                                     }
                                   }}
                                   disabled={shouldShowGrayscale}
@@ -1940,7 +1938,11 @@ export default function RestaurantDetails() {
                                             onClick={(e) => {
                                               e.stopPropagation()
                                               if (!shouldShowGrayscale) {
-                                                updateItemQuantity(item, 1, e)
+                                                if (item.categoryId) {
+                                                  handleItemClick(item)
+                                                } else {
+                                                  updateItemQuantity(item, 1, e)
+                                                }
                                               }
                                             }}
                                             disabled={shouldShowGrayscale}
@@ -2615,6 +2617,53 @@ export default function RestaurantDetails() {
                         NOT ELIGIBLE FOR COUPONS
                       </p>
                     )}
+
+                    {/* Add-ons Section */}
+                    {itemAddons.length > 0 && (
+                      <div className="mt-6 border-t border-gray-100 dark:border-gray-800 pt-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+                            Add-ons
+                          </h3>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            Optional
+                          </span>
+                        </div>
+                        <div className="space-y-3">
+                          {itemAddons.map((addon) => (
+                            <div
+                              key={addon._id}
+                              className="flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-orange-200 dark:hover:border-orange-900/30 transition-colors cursor-pointer group"
+                              onClick={() => toggleAddon(addon)}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Checkbox
+                                  checked={selectedAddons.some(a => a._id === addon._id)}
+                                  onCheckedChange={() => toggleAddon(addon)}
+                                  id={`addon-${addon._id}`}
+                                  className="border-gray-300 dark:border-gray-600 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                                />
+                                <Label
+                                  htmlFor={`addon-${addon._id}`}
+                                  className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer group-hover:text-gray-900 dark:group-hover:text-white"
+                                >
+                                  {addon.name}
+                                </Label>
+                              </div>
+                              <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                +₹{addon.price}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {loadingAddons && (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Bottom Action Bar */}
@@ -2669,7 +2718,7 @@ export default function RestaurantDetails() {
                           }`}
                         onClick={(e) => {
                           if (!shouldShowGrayscale) {
-                            updateItemQuantity(selectedItem, (quantities[selectedItem.id] || 0) + 1, e)
+                            updateItemQuantity(selectedItem, (quantities[selectedItem.id] || 0) + 1, e, selectedAddons)
                             setShowItemDetail(false)
                           }
                         }}
@@ -2677,13 +2726,8 @@ export default function RestaurantDetails() {
                       >
                         <span>Add item</span>
                         <div className="flex items-center gap-1">
-                          {selectedItem.originalPrice && selectedItem.originalPrice > selectedItem.price && (
-                            <span className="text-sm line-through text-red-200">
-                              ₹{Math.round(selectedItem.originalPrice)}
-                            </span>
-                          )}
                           <span className="text-base font-bold">
-                            ₹{Math.round(selectedItem.price)}
+                            ₹{Math.round(calculateTotalPrice())}
                           </span>
                         </div>
                       </Button>

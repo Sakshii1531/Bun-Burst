@@ -1072,6 +1072,14 @@ export const adminAPI = {
     return apiClient.post(API_ENDPOINTS.ADMIN.RESTAURANTS, data);
   },
 
+  // Update restaurant
+  updateRestaurant: (id, data) => {
+    return apiClient.put(
+      API_ENDPOINTS.ADMIN.RESTAURANT_BY_ID.replace(":id", id),
+      data,
+    );
+  },
+
   // Get restaurant by ID
   getRestaurantById: (id) => {
     return apiClient.get(
@@ -1201,6 +1209,31 @@ export const adminAPI = {
   // Restaurant Complaint Management
   getRestaurantComplaints: (params = {}) => {
     return apiClient.get(API_ENDPOINTS.ADMIN.RESTAURANT_COMPLAINTS, { params });
+  },
+
+  // Addon Management
+  getAddons: (params = {}) => {
+    return apiClient.get(API_ENDPOINTS.ADMIN.ADDONS, { params });
+  },
+  getAddonsByCategory: (categoryId) => {
+    return apiClient.get(
+      API_ENDPOINTS.ADMIN.ADDONS_BY_CATEGORY.replace(":categoryId", categoryId),
+    );
+  },
+  getAddonById: (id) => {
+    return apiClient.get(API_ENDPOINTS.ADMIN.ADDON_BY_ID.replace(":id", id));
+  },
+  createAddon: (data) => {
+    return apiClient.post(API_ENDPOINTS.ADMIN.ADDONS, data);
+  },
+  updateAddon: (id, data) => {
+    return apiClient.put(API_ENDPOINTS.ADMIN.ADDON_BY_ID.replace(":id", id), data);
+  },
+  deleteAddon: (id) => {
+    return apiClient.delete(API_ENDPOINTS.ADMIN.ADDON_BY_ID.replace(":id", id));
+  },
+  toggleAddonStatus: (id) => {
+    return apiClient.patch(API_ENDPOINTS.ADMIN.ADDON_STATUS.replace(":id", id));
   },
   getRestaurantComplaintById: (id) => {
     return apiClient.get(

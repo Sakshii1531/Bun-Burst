@@ -62,11 +62,7 @@ export default function Footer() {
       { name: "Favorites", href: "/user/profile/favorites" },
       { name: "Offers", href: "/user/offers" },
     ],
-    restaurants: [
-      { name: "Partner With Us", href: "/user/help" },
-      { name: "Restaurant Login", href: "/restaurant" },
-      { name: "Delivery", href: "/delivery" },
-    ],
+    // restaurants category removed as public access is disabled
   }
 
   return (

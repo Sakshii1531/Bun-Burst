@@ -13,6 +13,7 @@ const menuItemSchema = new mongoose.Schema({
   nameArabic: { type: String, default: '' },
   image: { type: String, default: '' },
   category: { type: String, default: 'Varieties' },
+  categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'AdminCategoryManagement', default: null },
   rating: { type: Number, default: 0.0 },
   reviews: { type: Number, default: 0 },
   price: { type: Number, required: true },
@@ -41,10 +42,10 @@ const menuItemSchema = new mongoose.Schema({
   gst: { type: Number, default: 0 },
   images: { type: [String], default: [] }, // Multiple images support
   preparationTime: { type: String, default: '' }, // Preparation time in minutes (e.g., "15-20 min")
-  approvalStatus: { 
-    type: String, 
-    enum: ['pending', 'approved', 'rejected'], 
-    default: 'pending' 
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
   },
   rejectionReason: { type: String, default: '' },
   requestedAt: { type: Date, default: Date.now },
@@ -76,10 +77,10 @@ const addonSchema = new mongoose.Schema({
   image: { type: String, default: '' },
   images: { type: [String], default: [] }, // Multiple images support
   isAvailable: { type: Boolean, default: true },
-  approvalStatus: { 
-    type: String, 
-    enum: ['pending', 'approved', 'rejected'], 
-    default: 'pending' 
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
   },
   rejectionReason: { type: String, default: '' },
   requestedAt: { type: Date, default: Date.now },

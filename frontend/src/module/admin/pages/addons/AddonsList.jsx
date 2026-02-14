@@ -1,343 +1,473 @@
 import { useState, useMemo, useEffect } from "react"
-import { Search, Trash2, Loader2 } from "lucide-react"
-import { adminAPI, restaurantAPI } from "@/lib/api"
-import apiClient from "@/lib/api"
+import { Search, Trash2, Loader2, Plus, Edit2, Check, X, Filter, Sparkles, Tag } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 
 export default function AddonsList() {
   const [searchQuery, setSearchQuery] = useState("")
   const [addons, setAddons] = useState([])
+  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
-  const [deleting, setDeleting] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
 
-  // Fetch all addons from all restaurants
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingAddon, setEditingAddon] = useState(null)
+  const [formData, setFormData] = useState({
+    name: "",
+    price: "",
+    categoryId: "",
+    isActive: true,
+    description: ""
+  })
+
+  // Fetch data
   useEffect(() => {
-    const fetchAllAddons = async () => {
-      try {
-        setLoading(true)
-        
-        // First, fetch all restaurants
-        const restaurantsResponse = await adminAPI.getRestaurants({ limit: 1000 })
-        const restaurants = restaurantsResponse?.data?.data?.restaurants || 
-                          restaurantsResponse?.data?.restaurants || 
-                          []
-        
-        if (restaurants.length === 0) {
-          setAddons([])
-          setLoading(false)
-          return
-        }
-
-        // Fetch addons for each restaurant
-        const allAddons = []
-        
-        for (const restaurant of restaurants) {
-          try {
-            const restaurantId = restaurant._id || restaurant.id
-            const addonsResponse = await restaurantAPI.getAddonsByRestaurantId(restaurantId)
-            const restaurantAddons = addonsResponse?.data?.data?.addons || 
-                                    addonsResponse?.data?.addons || 
-                                    []
-            
-            // Map addons with restaurant information
-            restaurantAddons.forEach((addon) => {
-              allAddons.push({
-                id: addon.id || `${restaurantId}-${addon.name}`,
-                _id: addon._id,
-                name: addon.name || "Unnamed Addon",
-                image: addon.image || addon.images?.[0] || "https://via.placeholder.com/40",
-                price: addon.price || 0,
-                description: addon.description || "",
-                isAvailable: addon.isAvailable !== false,
-                approvalStatus: addon.approvalStatus || 'pending',
-                restaurantId: restaurantId,
-                restaurantName: restaurant.name || "Unknown Restaurant",
-                originalAddon: addon // Keep original addon data
-              })
-            })
-          } catch (error) {
-            // Silently skip restaurants that don't have addons or have errors
-            console.warn(`Failed to fetch addons for restaurant ${restaurant._id || restaurant.id}:`, error.message)
-          }
-        }
-        
-        setAddons(allAddons)
-      } catch (error) {
-        console.error("Error fetching addons:", error)
-        toast.error("Failed to load addons from restaurants")
-        setAddons([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchAllAddons()
+    fetchData()
   }, [])
 
-  // Format ID to ADDON format (e.g., ADDON606927)
-  const formatAddonId = (id) => {
-    if (!id) return "ADDON000000"
-    
-    const idString = String(id)
-    // Extract last 6 digits from the ID
-    // Handle formats like "addon-1768285606927-r7kwd45t8" or "1768285606927-r7kwd45t8"
-    const parts = idString.split(/[-.]/)
-    let lastDigits = ""
-    
-    // Get the last part and extract digits
-    if (parts.length > 0) {
-      const lastPart = parts[parts.length - 1]
-      // Extract only digits from the last part
-      const digits = lastPart.match(/\d+/g)
-      if (digits && digits.length > 0) {
-        // Get last 6 digits from all digits found
-        const allDigits = digits.join("")
-        lastDigits = allDigits.slice(-6).padStart(6, "0")
-      } else {
-        // If no digits in last part, look for digits in all parts
-        const allParts = parts.join("")
-        const allDigits = allParts.match(/\d+/g)
-        if (allDigits && allDigits.length > 0) {
-          const combinedDigits = allDigits.join("")
-          lastDigits = combinedDigits.slice(-6).padStart(6, "0")
-        }
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const [addonsRes, categoriesRes] = await Promise.all([
+        adminAPI.getAddons(),
+        adminAPI.getCategories()
+      ])
+
+      if (addonsRes.data?.success) {
+        setAddons(addonsRes.data.data.addons || [])
       }
+
+      if (categoriesRes.data?.success) {
+        setCategories(categoriesRes.data.data.categories || [])
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error)
+      toast.error("Failed to load addons or categories")
+    } finally {
+      setLoading(false)
     }
-    
-    // If no digits found, use a hash of the ID
-    if (!lastDigits) {
-      const hash = idString.split("").reduce((acc, char) => {
-        return ((acc << 5) - acc) + char.charCodeAt(0) | 0
-      }, 0)
-      lastDigits = Math.abs(hash).toString().slice(-6).padStart(6, "0")
-    }
-    
-    return `ADDON${lastDigits}`
   }
 
-  const filteredAddons = useMemo(() => {
-    let result = [...addons]
-    
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim()
-      result = result.filter(addon =>
-        addon.name.toLowerCase().includes(query) ||
-        addon.id.toString().includes(query) ||
-        addon.restaurantName?.toLowerCase().includes(query)
-      )
+  const handleOpenModal = (addon = null) => {
+    if (addon) {
+      setEditingAddon(addon)
+      setFormData({
+        name: addon.name,
+        price: addon.price,
+        categoryId: addon.categoryId?._id?.toString() || addon.categoryId?.id?.toString() || (typeof addon.categoryId === 'string' ? addon.categoryId : ""),
+        isActive: addon.isActive,
+        description: addon.description || ""
+      })
+    } else {
+      setEditingAddon(null)
+      setFormData({
+        name: "",
+        price: "",
+        categoryId: "",
+        isActive: true,
+        description: ""
+      })
     }
+    setIsModalOpen(true)
+  }
 
-    return result
-  }, [addons, searchQuery])
-
-  const handleDelete = async (id) => {
-    const addon = addons.find(a => a.id === id)
-    if (!addon) return
-
-    if (!window.confirm(`Are you sure you want to delete "${addon.name}"? This action cannot be undone.`)) {
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!formData.name || !formData.price || !formData.categoryId) {
+      toast.error("Please fill in all required fields")
       return
     }
 
     try {
-      setDeleting(true)
-      
-      // Get the restaurant's menu to find and remove the addon
-      const menuResponse = await restaurantAPI.getMenuByRestaurantId(addon.restaurantId)
-      const menu = menuResponse?.data?.data?.menu || menuResponse?.data?.menu
-      
-      if (!menu) {
-        throw new Error("Menu not found")
+      setSubmitting(true)
+      let response
+      if (editingAddon) {
+        response = await adminAPI.updateAddon(editingAddon._id, formData)
+      } else {
+        response = await adminAPI.createAddon(formData)
       }
 
-      // Find and remove the addon from the menu
-      const addonIndex = menu.addons?.findIndex(a => 
-        String(a.id) === String(addon.id) || 
-        String(a.id) === String(addon.originalAddon?.id)
-      )
-
-      if (addonIndex === -1 || !menu.addons) {
-        throw new Error("Addon not found in menu")
+      if (response.data?.success) {
+        toast.success(`Addon ${editingAddon ? 'updated' : 'created'} successfully`)
+        setIsModalOpen(false)
+        fetchData()
       }
-
-      // Remove addon from array
-      menu.addons.splice(addonIndex, 1)
-
-      // Update menu in backend
-      try {
-        const response = await apiClient.put(
-          `/restaurant/menu`,
-          { 
-            sections: menu.sections || [],
-            addons: menu.addons
-          }
-        )
-        
-        if (!response.data || !response.data.success) {
-          throw new Error(response.data?.message || "Failed to update menu")
-        }
-      } catch (apiError) {
-        if (apiError.response?.status === 401 || apiError.response?.status === 403) {
-          throw new Error("Admin cannot directly update restaurant menus. Please contact developer to add admin menu update endpoint.")
-        }
-        throw apiError
-      }
-
-      // Remove from local state
-      setAddons(addons.filter(a => a.id !== id))
-      toast.success("Addon deleted successfully")
     } catch (error) {
-      console.error("Error deleting addon:", error)
-      toast.error(error?.response?.data?.message || error?.message || "Failed to delete addon")
+      console.error("Error submitting addon:", error)
+      toast.error(error.response?.data?.message || "Failed to save addon")
     } finally {
-      setDeleting(false)
+      setSubmitting(false)
     }
   }
 
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this addon?")) return
+
+    try {
+      setDeletingId(id)
+      const response = await adminAPI.deleteAddon(id)
+      if (response.data?.success) {
+        toast.success("Addon deleted successfully")
+        setAddons(addons.filter(a => a._id !== id))
+      }
+    } catch (error) {
+      console.error("Error deleting addon:", error)
+      toast.error("Failed to delete addon")
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const handleToggleStatus = async (id) => {
+    try {
+      const response = await adminAPI.toggleAddonStatus(id)
+      if (response.data?.success) {
+        setAddons(addons.map(a =>
+          a._id === id ? { ...a, isActive: !a.isActive } : a
+        ))
+        toast.success(`Addon ${response.data.data.addon.isActive ? 'activated' : 'deactivated'}`)
+      }
+    } catch (error) {
+      console.error("Error toggling status:", error)
+      toast.error("Failed to update status")
+    }
+  }
+
+  const filteredAddons = useMemo(() => {
+    return addons.filter(addon =>
+      addon.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      addon.categoryId?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }, [addons, searchQuery])
+
   return (
-    <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
+    <div className="p-4 lg:p-8 bg-slate-50/50 min-h-screen">
       {/* Header Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-            <div className="grid grid-cols-2 gap-0.5">
-              <div className="w-2 h-2 bg-white rounded-sm"></div>
-              <div className="w-2 h-2 bg-white rounded-sm"></div>
-              <div className="w-2 h-2 bg-white rounded-sm"></div>
-              <div className="w-2 h-2 bg-white rounded-sm"></div>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-3xl shadow-sm border border-slate-200/60 p-8 mb-8"
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-200 ring-4 ring-orange-50">
+              <Sparkles className="text-white w-7 h-7" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Manage Addons</h1>
+              <p className="text-slate-500 font-medium flex items-center gap-2 mt-1">
+                <Tag className="w-4 h-4 text-orange-500" />
+                Customize your menu extras and options
+              </p>
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Addon</h1>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-slate-900">Addon List</h2>
-            <span className="px-3 py-1 rounded-full text-sm font-semibold bg-slate-100 text-slate-700">
-              {filteredAddons.length}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative flex-1 sm:flex-initial min-w-[200px]">
-              <input
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            <div className="relative group">
+              <Input
                 type="text"
-                placeholder="Ex : Addons"
+                placeholder="Search addons..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2.5 w-full text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400"
+                className="pl-11 pr-4 py-6 w-full lg:w-[320px] rounded-2xl border-slate-200 bg-slate-50/50 group-hover:bg-white group-focus:bg-white transition-all shadow-none focus:ring-orange-500/20"
               />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-hover:text-orange-500 transition-colors" />
             </div>
+            <Button
+              onClick={() => handleOpenModal()}
+              className="bg-orange-600 hover:bg-orange-700 text-white py-6 px-8 rounded-2xl shadow-xl shadow-orange-200 font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <Plus className="w-5 h-5 mr-2 stroke-[3px]" />
+              New Addon
+            </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {/* Table Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden"
+      >
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  SL
-                </th>
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  Image
-                </th>
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  Price
-                </th>
-                <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  Action
-                </th>
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-100">
+                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">SL</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Name</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Category</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Price</th>
+                <th className="px-8 py-5 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Status</th>
+                <th className="px-8 py-5 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Action</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
-                      <p className="text-sm text-slate-500">Loading addons from restaurants...</p>
+                  <td colSpan={6} className="px-8 py-32 text-center">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin" />
+                      <p className="text-slate-500 font-medium animate-pulse">Fetching your addons...</p>
                     </div>
                   </td>
                 </tr>
               ) : filteredAddons.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <p className="text-lg font-semibold text-slate-700 mb-1">No Data Found</p>
-                      <p className="text-sm text-slate-500">No addons match your search</p>
+                  <td colSpan={6} className="px-8 py-32 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-2">
+                        <Search className="w-8 h-8 text-slate-300" />
+                      </div>
+                      <p className="text-slate-900 font-bold text-lg">No addons found</p>
+                      <p className="text-slate-500">Try adjusting your search or add a new one</p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredAddons.map((addon, index) => (
-                  <tr
-                    key={addon.id}
-                    className="hover:bg-slate-50 transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-slate-700">{index + 1}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center">
-                        <img
-                          src={addon.image}
-                          alt={addon.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.src = "https://via.placeholder.com/40"
-                          }}
-                        />
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium text-slate-900">{addon.name}</span>
-                        <span className="text-xs text-slate-500">ID #{formatAddonId(addon.id)}</span>
-                        {addon.restaurantName && (
-                          <span className="text-xs text-slate-400 mt-0.5">
-                            {addon.restaurantName}
-                          </span>
-                        )}
-                        {addon.description && (
-                          <span className="text-xs text-slate-500 mt-0.5">
-                            {addon.description}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-slate-900">
-                        ₹{addon.price.toFixed(2)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button
-                        onClick={() => handleDelete(addon.id)}
-                        disabled={deleting}
-                        className="p-1.5 rounded text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Delete"
-                      >
-                        {deleting ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                <AnimatePresence mode="popLayout">
+                  {filteredAddons.map((addon, index) => (
+                    <motion.tr
+                      layout
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      key={addon._id}
+                      className="hover:bg-slate-50/80 transition-all group"
+                    >
+                      <td className="px-8 py-5 whitespace-nowrap text-sm font-semibold text-slate-400">{index + 1}</td>
+                      <td className="px-8 py-5 whitespace-nowrap">
+                        <span className="font-bold text-slate-900 group-hover:text-orange-600 transition-colors">{addon.name}</span>
+                      </td>
+                      <td className="px-8 py-5 whitespace-nowrap">
+                        <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none px-3 py-1 rounded-lg font-semibold hover:bg-orange-50 hover:text-orange-600 transition-all">
+                          {addon.categoryId?.name || "Uncategorized"}
+                        </Badge>
+                      </td>
+                      <td className="px-8 py-5 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 font-bold text-slate-900">
+                          <span className="text-orange-600 text-xs">₹</span>
+                          <span>{addon.price.toFixed(2)}</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 whitespace-nowrap text-center">
+                        <div className="flex justify-center">
+                          <Switch
+                            checked={addon.isActive}
+                            onCheckedChange={() => handleToggleStatus(addon._id)}
+                            className="data-[state=checked]:bg-green-500"
+                          />
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 whitespace-nowrap text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenModal(addon)}
+                            className="w-10 h-10 rounded-xl text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(addon._id)}
+                            disabled={deletingId === addon._id}
+                            className="w-10 h-10 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-all"
+                          >
+                            {deletingId === addon._id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-red-400" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
               )}
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
+
+      {/* Add/Edit Modal */}
+      <AnimatePresence>
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none shadow-2xl rounded-2xl">
+            <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 text-white relative">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
+                  <Plus className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <DialogHeader className="p-0">
+                    <DialogTitle className="text-xl font-bold text-white leading-tight">
+                      {editingAddon ? 'Update Addon' : 'Create New Addon'}
+                    </DialogTitle>
+                    <p className="text-orange-100 text-sm mt-0.5">
+                      {editingAddon ? 'Modify existing addon details' : 'Add a new extra item to your menu'}
+                    </p>
+                  </DialogHeader>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="absolute top-6 right-6 p-1 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5 text-white/80" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 bg-white space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="name" className="text-sm font-semibold text-slate-700">Addon Name *</Label>
+                  <div className="relative">
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Ex: Extra Cheese, Peri Peri..."
+                      required
+                      className="pl-4 h-11 bg-slate-50 border-slate-200 focus:bg-white focus:ring-orange-500/20 focus:border-orange-500 transition-all rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="categoryId" className="text-sm font-semibold text-slate-700">Category *</Label>
+                  <Select
+                    value={formData.categoryId}
+                    onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+                  >
+                    <SelectTrigger className="h-11 bg-slate-50 border-slate-200 focus:ring-orange-500/20 focus:border-orange-500 transition-all rounded-xl">
+                      <SelectValue placeholder="Select Category" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[101] rounded-xl min-w-[200px] shadow-2xl border-slate-200">
+                      {categories && categories.length > 0 ? (
+                        categories.map((cat) => {
+                          const catId = (cat.id || cat._id || cat).toString();
+                          return (
+                            <SelectItem
+                              key={catId}
+                              value={catId}
+                              className="rounded-lg cursor-pointer"
+                            >
+                              {cat.name || "Unnamed Category"}
+                            </SelectItem>
+                          );
+                        })
+                      ) : (
+                        <div className="p-3 text-center text-xs text-slate-500 italic">
+                          No categories found
+                        </div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="price" className="text-sm font-semibold text-slate-700">Price * (₹)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      placeholder="0.00"
+                      required
+                      className="pl-8 h-11 bg-slate-50 border-slate-200 focus:bg-white focus:ring-orange-500/20 focus:border-orange-500 transition-all rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="description" className="text-sm font-semibold text-slate-700">Description (Optional)</Label>
+                  <Input
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Brief description of the addon..."
+                    className="h-11 bg-slate-50 border-slate-200 focus:bg-white focus:ring-orange-500/20 focus:border-orange-500 transition-all rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all hover:bg-slate-100/50">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg transition-colors ${formData.isActive ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-500'}`}>
+                    <Check className={`w-4 h-4 transition-transform ${formData.isActive ? 'scale-110' : 'scale-90'}`} />
+                  </div>
+                  <div>
+                    <Label htmlFor="isActive" className="text-sm font-bold text-slate-800 cursor-pointer block">
+                      Active Status
+                    </Label>
+                    <p className="text-xs text-slate-500">
+                      {formData.isActive ? 'Addon will be visible in menu' : 'Addon will be hidden from menu'}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="isActive"
+                  checked={formData.isActive}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                  className="data-[state=checked]:bg-green-500"
+                />
+              </div>
+
+              <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsModalOpen(false)}
+                  disabled={submitting}
+                  className="flex-1 h-12 rounded-xl text-slate-600 hover:bg-slate-100 font-medium"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-[2] h-12 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-lg shadow-orange-200 transition-all active:scale-[0.98]"
+                >
+                  {submitting ? (
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  ) : null}
+                  {editingAddon ? 'Update Addon' : 'Create Addon'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </AnimatePresence>
     </div>
   )
 }
-

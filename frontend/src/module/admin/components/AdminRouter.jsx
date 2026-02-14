@@ -177,6 +177,7 @@ export default function AdminRouter() {
           {/* Restaurants */}
           <Route path="restaurants" element={<RestaurantsList />} />
           <Route path="restaurants/add" element={<AddRestaurant />} />
+          <Route path="restaurants/edit/:id" element={<AddRestaurant />} />
           <Route path="restaurants/joining-request" element={<JoiningRequest />} />
           <Route path="restaurants/commission" element={<RestaurantCommission />} />
           <Route path="restaurants/complaints" element={<RestaurantComplaints />} />

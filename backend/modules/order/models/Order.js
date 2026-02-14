@@ -27,7 +27,12 @@ const orderItemSchema = new mongoose.Schema({
   isVeg: {
     type: Boolean,
     default: true
-  }
+  },
+  addons: [{
+    addonId: String,
+    name: String,
+    price: Number
+  }]
 }, { _id: true });
 
 const orderSchema = new mongoose.Schema({

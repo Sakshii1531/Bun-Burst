@@ -394,6 +394,11 @@ export default function UserOrderDetails() {
                 <span className="text-sm text-gray-700 font-medium">
                   {item.quantity || item.qty || 1} x {item.name}
                 </span>
+                {item.addons && item.addons.length > 0 && (
+                  <div className="text-[10px] text-gray-500 ml-5 mt-0.5">
+                    Add-ons: {item.addons.map(a => a.name).join(", ")}
+                  </div>
+                )}
               </div>
               <span className="text-sm text-gray-800 font-medium">
                 ₹{(item.price || 0).toFixed(2)}
