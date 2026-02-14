@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { Building2, Info, Tag, Upload, Calendar, FileText, MapPin, CheckCircle2, X, Image as ImageIcon, Clock, Loader2 } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Building2, Info, Tag, Upload, Calendar, FileText, MapPin, X, Image as ImageIcon, Clock, Loader2 } from "lucide-react"
+
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -27,7 +27,6 @@ export default function AddRestaurant() {
   const [loadingConfig, setLoadingConfig] = useState(false)
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [formErrors, setFormErrors] = useState({})
 
   // Step 1: Basic Info
@@ -98,7 +97,6 @@ export default function AddRestaurant() {
     password: "", // Added password field
     signupMethod: "email",
   })
-  const [createdCredentials, setCreatedCredentials] = useState(null)
 
   const languageTabs = [
     { key: "default", label: "Default" },
@@ -418,23 +416,7 @@ export default function AddRestaurant() {
 
       if (response.data.success) {
         toast.success(isEditMode ? "Restaurant updated successfully!" : "Restaurant created successfully!")
-
-        // Capture generated credentials
-        const data = response.data.data
-        if (data && (data.generatedPassword || auth.password)) {
-          setCreatedCredentials({
-            email: data.restaurant?.email || auth.email,
-            password: data.generatedPassword || auth.password,
-            generated: !!data.generatedPassword
-          })
-          setShowSuccessDialog(true)
-          // No auto-navigate if credentials are shown
-        } else {
-          setShowSuccessDialog(true)
-          setTimeout(() => {
-            navigate("/admin/restaurants")
-          }, 2000)
-        }
+        navigate("/admin/restaurants")
       } else {
         throw new Error(response.data.message || "Failed to create restaurant")
       }
@@ -915,17 +897,7 @@ export default function AddRestaurant() {
             placeholder="+91 9876543210"
           />
         </div>
-        <div>
-          <Label className="text-xs text-gray-700">Password (optional)</Label>
-          <Input
-            type="password"
-            value={auth.password || ""}
-            onChange={(e) => setAuth({ ...auth, password: e.target.value || "" })}
-            className="mt-1 bg-white text-sm"
-            placeholder="Leave blank to auto-generate"
-          />
-          <p className="text-xs text-slate-500 mt-1">If left blank, a secure password will be generated for you.</p>
-        </div>
+
       </section>
     </div>
   )
@@ -976,59 +948,7 @@ export default function AddRestaurant() {
         </div>
       </footer>
 
-      {/* Success Dialog */}
-      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <DialogContent className="max-w-md bg-white p-0">
-          <div className="p-8 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="relative">
-                <div className="absolute inset-0 bg-emerald-100 rounded-full animate-ping opacity-75"></div>
-                <div className="relative bg-emerald-500 rounded-full p-4">
-                  <CheckCircle2 className="w-12 h-12 text-white" />
-                </div>
-              </div>
-            </div>
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-slate-900 mb-2">{isEditMode ? "Restaurant Updated Successfully!" : "Restaurant Created Successfully!"}</DialogTitle>
-              <DialogDescription className="text-sm text-slate-600">
-                The restaurant has been created.
-              </DialogDescription>
-            </DialogHeader>
 
-            {createdCredentials && createdCredentials.email && (
-              <div className="mt-4 bg-slate-50 p-4 rounded-lg border border-slate-200 text-left">
-                <h4 className="text-sm font-medium text-slate-900 mb-2">Login Credentials</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Email:</span>
-                    <span className="font-medium text-slate-900">{createdCredentials.email}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Password:</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono bg-slate-200 px-2 py-0.5 rounded text-slate-800">
-                        {createdCredentials.password}
-                      </span>
-                    </div>
-                  </div>
-                  {createdCredentials.generated && (
-                    <p className="text-xs text-amber-600 mt-2">
-                      Warning: This password was auto-generated. Please save it now or share it with the restaurant owner.
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <Button
-              className="mt-6 w-full bg-slate-900 text-white hover:bg-slate-800"
-              onClick={() => navigate("/admin/restaurants")}
-            >
-              Done & Go to List
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
