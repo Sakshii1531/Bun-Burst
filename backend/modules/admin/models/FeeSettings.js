@@ -1,21 +1,22 @@
 import mongoose from 'mongoose';
 
+
 const deliveryFeeRangeSchema = new mongoose.Schema({
-  min: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-  max: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-  fee: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
+  min: { type: Number, required: true, min: 0 },
+  max: { type: Number, required: true, min: 0 },
+  fee: { type: Number, required: true, min: 0 },
+}, { _id: false });
+
+const distanceSlabSchema = new mongoose.Schema({
+  minKm: { type: Number, required: true, min: 0 },
+  maxKm: { type: Number, required: true, min: 0 },
+  fee: { type: Number, required: true, min: 0 },
+}, { _id: false });
+
+const amountRuleSchema = new mongoose.Schema({
+  minAmount: { type: Number, required: true, min: 0 },
+  maxAmount: { type: Number, required: true, min: 0 },
+  deliveryFee: { type: Number, required: true, min: 0 },
 }, { _id: false });
 
 const feeSettingsSchema = new mongoose.Schema(
@@ -29,13 +30,20 @@ const feeSettingsSchema = new mongoose.Schema(
     deliveryFeeRanges: {
       type: [deliveryFeeRangeSchema],
       default: [],
-      comment: 'Delivery fee based on order value ranges'
+      comment: 'Legacy: Delivery fee based on order value ranges'
+    },
+    distanceConfig: {
+      maxDeliveryDistance: { type: Number, default: 20 },
+      slabs: { type: [distanceSlabSchema], default: [] }
+    },
+    amountConfig: {
+      rules: { type: [amountRuleSchema], default: [] }
     },
     freeDeliveryThreshold: {
       type: Number,
       default: 149,
       min: 0,
-      comment: 'Free delivery if order value is above this amount'
+      comment: 'Legacy: Free delivery if order value is above this amount'
     },
     platformFee: {
       type: Number,

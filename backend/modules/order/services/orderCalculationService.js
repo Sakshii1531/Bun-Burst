@@ -12,11 +12,11 @@ const getFeeSettings = async () => {
     const feeSettings = await FeeSettings.findOne({ isActive: true })
       .sort({ createdAt: -1 })
       .lean();
-    
+
     if (feeSettings) {
       return feeSettings;
     }
-    
+
     // Return default values if no active settings found
     return {
       deliveryFee: 25,
@@ -42,58 +42,84 @@ const getFeeSettings = async () => {
 export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddress = null) => {
   // Get fee settings from database
   const feeSettings = await getFeeSettings();
-  
-  // Check restaurant settings for free delivery threshold (takes priority)
-  if (restaurant?.freeDeliveryAbove) {
-    if (orderValue >= restaurant.freeDeliveryAbove) {
-      return 0; // Free delivery
+
+  let deliveryFee = 0;
+
+  // 1. Calculate Distance & Base Fee
+  if (deliveryAddress?.location?.coordinates && restaurant?.location?.coordinates && feeSettings.distanceConfig) {
+    const distance = calculateDistance(
+      restaurant.location.coordinates,
+      deliveryAddress.location.coordinates
+    );
+
+    // Check Max Distance
+    const maxDistance = feeSettings.distanceConfig.maxDeliveryDistance || 20;
+    if (distance > maxDistance) {
+      throw new Error(`Delivery unavailable: Location is too far (${distance.toFixed(1)}km, max ${maxDistance}km)`);
     }
-  } else {
-    // Use admin settings for free delivery threshold
-    const freeDeliveryThreshold = feeSettings.freeDeliveryThreshold || 149;
-    if (orderValue >= freeDeliveryThreshold) {
-      return 0;
-    }
-  }
-  
-  // Check if delivery fee ranges are configured
-  if (feeSettings.deliveryFeeRanges && Array.isArray(feeSettings.deliveryFeeRanges) && feeSettings.deliveryFeeRanges.length > 0) {
-    // Sort ranges by min value to ensure proper checking
-    const sortedRanges = [...feeSettings.deliveryFeeRanges].sort((a, b) => a.min - b.min);
-    
-    // Find matching range (orderValue >= min && orderValue < max)
-    // For the last range, we check orderValue >= min && orderValue <= max
-    for (let i = 0; i < sortedRanges.length; i++) {
-      const range = sortedRanges[i];
-      const isLastRange = i === sortedRanges.length - 1;
-      
-      if (isLastRange) {
-        // Last range: include max value
-        if (orderValue >= range.min && orderValue <= range.max) {
-          return range.fee;
+
+    // Find Matching Slab
+    const slabs = feeSettings.distanceConfig.slabs || [];
+    // Sort slabs by minKm
+    const sortedSlabs = [...slabs].sort((a, b) => a.minKm - b.minKm);
+
+    const matchSlab = sortedSlabs.find(s => distance >= s.minKm && distance < s.maxKm);
+
+    if (matchSlab) {
+      deliveryFee = matchSlab.fee;
+    } else {
+      // If distance fits in the gap or is less than max but not covered by a specific slab (edge case)
+      // Fallback to the fee of the slab that covers this range or highest?
+      // If no slab found but within maxDistance, ideally we should have a default or last slab.
+      // Let's check if it's beyond the last slab
+      if (sortedSlabs.length > 0) {
+        const lastSlab = sortedSlabs[sortedSlabs.length - 1];
+        if (distance >= lastSlab.maxKm && distance <= maxDistance) {
+          // Use the last slab's fee or a default? 
+          // If the user configures slabs 0-5, 5-10. Max is 20. 
+          // 15km is valid but no slab. 
+          // Prompt says "Find matching distance slab. Set deliveryFee from slab."
+          // If no match, what? 
+          // I'll assume standard fallback or use the default fee.
+          deliveryFee = feeSettings.deliveryFee || 25;
+        } else {
+          deliveryFee = feeSettings.deliveryFee || 25;
         }
       } else {
-        // Other ranges: exclude max value (handled by next range)
-        if (orderValue >= range.min && orderValue < range.max) {
-          return range.fee;
-        }
+        deliveryFee = feeSettings.deliveryFee || 25;
       }
     }
+  } else {
+    // Fallback if no address or no new config: use legacy default
+    deliveryFee = feeSettings.deliveryFee || 25;
+
+    // Legacy Range Logic (if no distance config is active/found, we might fall back to this or just skip)
+    // The prompt implies we SHOULD use distance logic. If we can't (no address), we use a base fee.
   }
-  
-  // Fallback to default delivery fee if no range matches
-  const baseDeliveryFee = feeSettings.deliveryFee || 25;
-  
-  // TODO: Add distance-based calculation when address coordinates are available
-  // if (deliveryAddress?.location?.coordinates && restaurant?.location?.coordinates) {
-  //   const distance = calculateDistance(
-  //     restaurant.location.coordinates,
-  //     deliveryAddress.location.coordinates
-  //   );
-  //   deliveryFee = baseFee + (distance * perKmFee);
-  // }
-  
-  return baseDeliveryFee;
+
+  // 2. Amount-based Rules (Override)
+
+  // Check Admin Amount Rules (Numeric Override)
+  if (feeSettings.amountConfig && feeSettings.amountConfig.rules) {
+    const rule = feeSettings.amountConfig.rules.find(r => orderValue >= r.minAmount && orderValue < r.maxAmount);
+    if (rule) {
+      // Use the specific fee from the rule
+      deliveryFee = rule.deliveryFee;
+    }
+  }
+
+  // Check Restaurant Override (Legacy/Specific)
+  if (restaurant?.freeDeliveryAbove && orderValue >= restaurant.freeDeliveryAbove) {
+    return 0;
+  }
+
+  // Legacy Admin Threshold (Fallback)
+  if ((!feeSettings.amountConfig || !feeSettings.amountConfig.rules || feeSettings.amountConfig.rules.length === 0) &&
+    feeSettings.freeDeliveryThreshold && orderValue >= feeSettings.freeDeliveryThreshold) {
+    return 0;
+  }
+
+  return deliveryFee;
 };
 
 /**
@@ -120,11 +146,11 @@ export const calculateGST = async (subtotal, discount = 0) => {
  */
 export const calculateDiscount = (coupon, subtotal) => {
   if (!coupon) return 0;
-  
+
   if (coupon.minOrder && subtotal < coupon.minOrder) {
     return 0; // Minimum order not met
   }
-  
+
   if (coupon.type === 'percentage') {
     const maxDiscount = coupon.maxDiscount || Infinity;
     const discount = Math.min(
@@ -135,7 +161,7 @@ export const calculateDiscount = (coupon, subtotal) => {
   } else if (coupon.type === 'flat') {
     return Math.min(coupon.discount, subtotal); // Can't discount more than subtotal
   }
-  
+
   // Default: flat discount
   return Math.min(coupon.discount || 0, subtotal);
 };
@@ -147,19 +173,19 @@ export const calculateDiscount = (coupon, subtotal) => {
 export const calculateDistance = (coord1, coord2) => {
   const [lng1, lat1] = coord1;
   const [lng2, lat2] = coord2;
-  
+
   const R = 6371; // Earth's radius in kilometers
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
-  
-  const a = 
+
+  const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  
+
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c;
-  
+
   return distance;
 };
 
@@ -178,11 +204,11 @@ export const calculateOrderPricing = async ({
     const subtotal = items.reduce((sum, item) => {
       return sum + (item.price || 0) * (item.quantity || 1);
     }, 0);
-    
+
     if (subtotal <= 0) {
       throw new Error('Order subtotal must be greater than 0');
     }
-    
+
     // Get restaurant details
     let restaurant = null;
     if (restaurantId) {
@@ -198,11 +224,11 @@ export const calculateOrderPricing = async ({
         }).lean();
       }
     }
-    
+
     // Calculate coupon discount
     let discount = 0;
     let appliedCoupon = null;
-    
+
     if (couponCode && restaurant) {
       try {
         // Get restaurant ObjectId
@@ -213,7 +239,7 @@ export const calculateOrderPricing = async ({
 
         if (restaurantObjectId) {
           const now = new Date();
-          
+
           // Find active offer with this coupon code for this restaurant
           const offer = await Offer.findOne({
             restaurant: restaurantObjectId,
@@ -229,32 +255,32 @@ export const calculateOrderPricing = async ({
           if (offer) {
             // Find the specific item coupon
             const couponItem = offer.items.find(item => item.couponCode === couponCode);
-            
+
             if (couponItem) {
               // Check if coupon is valid for items in cart
               const cartItemIds = items.map(item => item.itemId);
               const isValidForCart = couponItem.itemId && cartItemIds.includes(couponItem.itemId);
-              
+
               // Check minimum order value
               const minOrderMet = !offer.minOrderValue || subtotal >= offer.minOrderValue;
-              
+
               if (isValidForCart && minOrderMet) {
                 // Calculate discount based on offer type
                 const itemInCart = items.find(item => item.itemId === couponItem.itemId);
                 if (itemInCart) {
                   const itemQuantity = itemInCart.quantity || 1;
-                  
+
                   // Calculate discount per item
                   const discountPerItem = couponItem.originalPrice - couponItem.discountedPrice;
-                  
+
                   // Apply discount to all quantities of this item
                   discount = Math.round(discountPerItem * itemQuantity);
-                  
+
                   // Ensure discount doesn't exceed item subtotal
                   const itemSubtotal = (itemInCart.price || 0) * itemQuantity;
                   discount = Math.min(discount, itemSubtotal);
                 }
-                
+
                 appliedCoupon = {
                   code: couponCode,
                   discount: discount,
@@ -275,29 +301,29 @@ export const calculateOrderPricing = async ({
         // Continue without coupon if there's an error
       }
     }
-    
+
     // Calculate delivery fee
     const deliveryFee = await calculateDeliveryFee(
       subtotal,
       restaurant,
       deliveryAddress
     );
-    
+
     // Apply free delivery from coupon
     const finalDeliveryFee = appliedCoupon?.freeDelivery ? 0 : deliveryFee;
-    
+
     // Calculate platform fee
     const platformFee = await calculatePlatformFee();
-    
+
     // Calculate GST on subtotal after discount
     const gst = await calculateGST(subtotal, discount);
-    
+
     // Calculate total
     const total = subtotal - discount + finalDeliveryFee + platformFee + gst;
-    
+
     // Calculate savings (discount + any delivery savings)
     const savings = discount + (deliveryFee > finalDeliveryFee ? deliveryFee - finalDeliveryFee : 0);
-    
+
     return {
       subtotal: Math.round(subtotal),
       discount: Math.round(discount),

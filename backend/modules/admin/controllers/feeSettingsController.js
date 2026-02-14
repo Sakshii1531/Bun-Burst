@@ -54,7 +54,7 @@ export const getFeeSettings = asyncHandler(async (req, res) => {
  */
 export const createOrUpdateFeeSettings = asyncHandler(async (req, res) => {
   try {
-    const { deliveryFee, deliveryFeeRanges, freeDeliveryThreshold, platformFee, gstRate, isActive } = req.body;
+    const { deliveryFee, deliveryFeeRanges, freeDeliveryThreshold, platformFee, gstRate, isActive, distanceConfig, amountConfig } = req.body;
 
     // Validate platform fee
     if (platformFee === undefined || platformFee < 0) {
@@ -100,6 +100,8 @@ export const createOrUpdateFeeSettings = asyncHandler(async (req, res) => {
       isActive: isActive !== false,
       createdBy: req.admin?._id || null,
       updatedBy: req.admin?._id || null,
+      distanceConfig,
+      amountConfig
     };
 
     // Add delivery fee ranges if provided
