@@ -39,12 +39,17 @@ export async function processAutoReadyOrders() {
       // Check if ETA has elapsed (with 5 second buffer to account for cron interval)
       if (elapsedMinutes >= estimatedTime) {
         try {
-          // Update order status to ready
+          // Generate digital bill
+          const { generateBill } = await import('./billGenerationService.js');
+          const billUrl = await generateBill(order);
+
+          // Update order status to ready and add billUrl
           const updatedOrder = await Order.findByIdAndUpdate(
             order._id,
             {
               $set: {
                 status: 'ready',
+                billUrl: billUrl, // Save generated bill URL
                 'tracking.ready': {
                   status: true,
                   timestamp: now
@@ -82,7 +87,7 @@ export async function processAutoReadyOrders() {
 
     return {
       processed: processedCount,
-      message: processedCount > 0 
+      message: processedCount > 0
         ? `Marked ${processedCount} order(s) as ready automatically`
         : 'No orders ready yet'
     };

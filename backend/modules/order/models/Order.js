@@ -227,6 +227,14 @@ const orderSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  billUrl: {
+    type: String,
+    default: null
+  },
+  digitalBillHtml: {
+    type: String,
+    default: null
+  },
   cancelledAt: {
     type: Date
   },

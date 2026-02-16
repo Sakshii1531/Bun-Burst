@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { Search, Loader2, DollarSign, Calendar, RefreshCcw } from "lucide-react"
+import { Search, Loader2, IndianRupee, Calendar, RefreshCcw } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -105,7 +105,7 @@ export default function DeliverySalarySetup() {
                     {/* Header */}
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                         <div className="flex items-center gap-3">
-                            <DollarSign className="w-6 h-6 text-blue-600" />
+                            <IndianRupee className="w-6 h-6 text-blue-600" />
                             <div>
                                 <h1 className="text-2xl font-bold text-slate-900">Delivery Salary Setup</h1>
                                 <p className="text-sm text-slate-500">Manage monthly fixed salaries for delivery partners</p>
@@ -231,8 +231,8 @@ export default function DeliverySalarySetup() {
                                                         </td>
                                                         <td className="px-6 py-4 text-center">
                                                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${dm.isActive
-                                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                                                                    : 'bg-red-50 text-red-700 border border-red-100'
+                                                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                                                : 'bg-red-50 text-red-700 border border-red-100'
                                                                 }`}>
                                                                 {dm.isActive ? 'Active' : 'Inactive'}
                                                             </span>
@@ -262,7 +262,7 @@ export default function DeliverySalarySetup() {
                 <DialogContent className="max-w-md bg-white p-0">
                     <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100">
                         <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <DollarSign className="w-5 h-5 text-blue-600" />
+                            <IndianRupee className="w-5 h-5 text-blue-600" />
                             Salary Setup
                         </DialogTitle>
                     </DialogHeader>
@@ -286,7 +286,7 @@ export default function DeliverySalarySetup() {
                                     Monthly Fixed Salary (₹) <span className="text-red-500">*</span>
                                 </label>
                                 <div className="relative">
-                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                     <input
                                         type="number"
                                         value={editFormData?.salary}

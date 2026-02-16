@@ -5,7 +5,9 @@ import {
   getUserOrders,
   getOrderDetails,
   calculateOrder,
-  cancelOrder
+  cancelOrder,
+  getOrderBill,
+  getDigitalBillHtml
 } from '../controllers/orderController.js';
 import { authenticate } from '../../auth/middleware/auth.js';
 
@@ -32,6 +34,12 @@ router.get('/:id', getOrderDetails);
 
 // Cancel order
 router.patch('/:id/cancel', cancelOrder);
+
+// Get order bill
+router.get('/:id/bill', getOrderBill);
+
+// Get digital bill HTML
+router.get('/:id/digital-bill', getDigitalBillHtml);
 
 export default router;
 

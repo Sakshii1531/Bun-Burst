@@ -168,39 +168,7 @@ export default function ViewOrderDetectDeliveryDialog({ isOpen, onOpenChange, or
             </div>
           </div>
 
-          {/* Delivery Bill Uploaded */}
-          <div className="mt-6 pt-6 border-t border-slate-200">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-              <Package className="w-4 h-4" />
-              Delivery Bill Uploaded
-            </h3>
-            {order.originalOrder?.billImageUrl ? (
-              <div className="mt-2">
-                <div
-                  className="relative group cursor-pointer overflow-hidden rounded-lg border border-slate-200 w-full max-w-sm"
-                  onClick={() => window.open(order.originalOrder.billImageUrl, '_blank')}
-                >
-                  <img
-                    src={order.originalOrder.billImageUrl}
-                    alt="Delivery Bill"
-                    className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                    <span className="opacity-0 group-hover:opacity-100 bg-white/90 text-slate-700 text-xs font-medium px-3 py-1.5 rounded-full shadow-sm transition-opacity">
-                      Click to view full image
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-                <p className="text-sm text-slate-500 italic flex items-center gap-2">
-                  <XCircle className="w-4 h-4 text-slate-400" />
-                  No bill uploaded yet.
-                </p>
-              </div>
-            )}
-          </div>
+
 
           {/* Order Date & Time */}
           <div className="mt-6 pt-6 border-t border-slate-200">

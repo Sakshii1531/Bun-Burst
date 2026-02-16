@@ -27,6 +27,10 @@ import {
   IndianRupee,
   Loader2,
   Camera,
+  FileText,
+  Eye,
+  Package,
+  Receipt,
 } from "lucide-react"
 import BottomPopup from "../components/BottomPopup"
 import FeedNavbar from "../components/FeedNavbar"
@@ -610,6 +614,10 @@ export default function DeliveryHome() {
   const [showOrderDeliveredAnimation, setShowOrderDeliveredAnimation] = useState(false)
   const [showCustomerReviewPopup, setShowCustomerReviewPopup] = useState(false)
   const [showPaymentPage, setShowPaymentPage] = useState(false)
+  const [showDigitalBillPopup, setShowDigitalBillPopup] = useState(false)
+  const [digitalBillData, setDigitalBillData] = useState(null)
+  const [isLoadingBill, setIsLoadingBill] = useState(false)
+  const [isUploadingBill, setIsUploadingBill] = useState(false)
   const [customerRating, setCustomerRating] = useState(0)
   const [customerReviewText, setCustomerReviewText] = useState("")
   const [orderEarnings, setOrderEarnings] = useState(0) // Store earnings from completed order
@@ -634,12 +642,6 @@ export default function DeliveryHome() {
   const orderIdConfirmSwipeStartX = useRef(0)
   const orderIdConfirmSwipeStartY = useRef(0)
   const orderIdConfirmIsSwiping = useRef(false)
-  // Bill image upload state
-  const [billImageUrl, setBillImageUrl] = useState(null)
-  const [isUploadingBill, setIsUploadingBill] = useState(false)
-  const [billImageUploaded, setBillImageUploaded] = useState(false)
-  const fileInputRef = useRef(null)
-  const cameraInputRef = useRef(null)
   const [orderDeliveredButtonProgress, setOrderDeliveredButtonProgress] = useState(0)
   const [orderDeliveredIsAnimatingToComplete, setOrderDeliveredIsAnimatingToComplete] = useState(false)
   const orderDeliveredButtonRef = useRef(null)
@@ -3481,9 +3483,7 @@ export default function DeliveryHome() {
   }
 
   const handleOrderIdConfirmTouchEnd = (e) => {
-    // Disable swipe if bill image is not uploaded
-    if (!billImageUploaded) {
-      toast.error('Please upload bill image first')
+    if (!orderIdConfirmIsSwiping.current) {
       setOrderIdConfirmButtonProgress(0)
       return
     }
@@ -3595,21 +3595,18 @@ export default function DeliveryHome() {
           const orderIdForApi = selectedRestaurant?.orderId || selectedRestaurant?.id
           const confirmedOrderIdForApi = selectedRestaurant?.orderId || (orderIdForApi && String(orderIdForApi).startsWith('ORD-') ? orderIdForApi : undefined)
 
-          // Call backend API to confirm order ID with bill image
+          // Call backend API to confirm order ID
           console.log('📦 Confirming order ID:', {
             orderIdForApi,
             confirmedOrderIdForApi,
             lat: currentLocation[0],
-            lng: currentLocation[1],
-            billImageUrl
+            lng: currentLocation[1]
           })
 
-          // Update API call to include bill image URL
+          // Confirm order ID
           const response = await deliveryAPI.confirmOrderId(orderIdForApi, confirmedOrderIdForApi, {
             lat: currentLocation[0],
             lng: currentLocation[1]
-          }, {
-            billImageUrl: billImageUrl
           })
 
           console.log('✅ Order ID confirmed, response:', response.data)
@@ -6318,18 +6315,29 @@ export default function DeliveryHome() {
             return;
           }
 
-          const order = orderResponse.data.data;
+          // Correctly extract order object from API response
+          // The controller returns { order: ... } inside data
+          const remoteOrder = orderResponse.data?.data?.order || orderResponse.data?.order || orderResponse.data?.data;
 
-          // Check if order is cancelled or deleted
-          if (order.status === 'cancelled' || order.status === 'delivered') {
-            console.log(`⚠️ Order is ${order.status}, removing from localStorage`);
-            localStorage.removeItem('deliveryActiveOrder');
-            setSelectedRestaurant(null);
-            return;
+          if (remoteOrder) {
+            const status = remoteOrder.status;
+            // Check if order is cancelled or delivered using the fresh data
+            if (status === 'cancelled' || status === 'delivered') {
+              console.log(`⚠️ Order is ${status}, removing from localStorage`);
+              localStorage.removeItem('deliveryActiveOrder');
+              setSelectedRestaurant(null);
+              return;
+            }
+
+            // Update activeOrderData with fresh info (e.g., digitalBillHtml)
+            if (remoteOrder.digitalBillHtml && activeOrderData.restaurantInfo) {
+              console.log('✅ Found digitalBillHtml in fresh order data, updating local state');
+              activeOrderData.restaurantInfo.digitalBillHtml = remoteOrder.digitalBillHtml;
+              // Also update localStorage to persist this
+              localStorage.setItem('deliveryActiveOrder', JSON.stringify(activeOrderData));
+            }
           }
 
-          // Check if order is still assigned to current delivery partner
-          // (This check will be done by backend, but we can verify here too)
           console.log('✅ Order verified in database, restoring...');
         } catch (verifyError) {
           // If order doesn't exist (404) or any other error, clear localStorage
@@ -9270,8 +9278,8 @@ export default function DeliveryHome() {
                         key={reason}
                         onClick={() => setRejectReason(reason)}
                         className={`w-full text-left p-4 rounded-lg border-2 transition-all ${rejectReason === reason
-                            ? "border-black bg-red-50"
-                            : "border-gray-200 bg-white hover:border-gray-300"
+                          ? "border-black bg-red-50"
+                          : "border-gray-200 bg-white hover:border-gray-300"
                           }`}
                       >
                         <div className="flex items-center justify-between">
@@ -9304,8 +9312,8 @@ export default function DeliveryHome() {
                     onClick={handleRejectConfirm}
                     disabled={!rejectReason}
                     className={`flex-1 py-3 rounded-lg font-semibold text-sm transition-colors ${rejectReason
-                        ? "!bg-black !text-white"
-                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      ? "!bg-black !text-white"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
                       }`}
                   >
                     Confirm
@@ -9696,69 +9704,296 @@ export default function DeliveryHome() {
               </p>
             </div>
 
-            {/* Bill Image Upload Section */}
-            <div className="mb-6">
-              <p className="text-gray-600 text-sm mb-3 text-center">
-                {billImageUploaded ? '✅ Bill image uploaded' : 'Please capture bill image'}
-              </p>
-
-              {/* Camera Button */}
-              <div className="flex justify-center mb-4">
+            {/* Digital Bill Section - Always show, check via API */}
+            <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-100">
+              <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Digital Bill
+              </h3>
+              <div className="flex items-center gap-3">
                 <button
-                  onClick={handleCameraCapture}
-                  disabled={isUploadingBill}
-                  className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors ${isUploadingBill
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : billImageUploaded
-                        ? 'bg-green-600 hover:bg-green-700'
-                        : 'bg-blue-600 hover:bg-blue-700'
-                    } text-white font-medium`}
+                  onClick={async () => {
+                    const orderId = selectedRestaurant?.orderId || selectedRestaurant?.id || newOrder?.orderId || newOrder?.orderMongoId;
+                    setIsLoadingBill(true);
+                    try {
+                      const response = await deliveryAPI.getOrderDetails(orderId);
+                      const order = response.data?.data?.order || response.data?.order || response.data?.data;
+                      if (order) {
+                        setDigitalBillData(order);
+                        setShowDigitalBillPopup(true);
+                      } else {
+                        toast.error('Failed to load bill');
+                      }
+                    } catch (error) {
+                      console.error('Error loading bill:', error);
+                      toast.error('Failed to load bill');
+                    } finally {
+                      setIsLoadingBill(false);
+                    }
+                  }}
+                  disabled={isLoadingBill}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
-                  {isUploadingBill ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Uploading...</span>
-                    </>
-                  ) : billImageUploaded ? (
-                    <>
-                      <CheckCircle className="w-5 h-5" />
-                      <span>Bill Uploaded</span>
-                    </>
-                  ) : (
-                    <>
-                      <Camera className="w-5 h-5" />
-                      <span>Capture Bill</span>
-                    </>
-                  )}
+                  {isLoadingBill ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+                  {isLoadingBill ? 'Loading...' : 'View'}
+                </button>
+                <button
+                  onClick={async () => {
+                    const orderId = selectedRestaurant?.orderId || selectedRestaurant?.id || newOrder?.orderId || newOrder?.orderMongoId;
+
+                    // If we already have bill data, use it. Otherwise fetch it.
+                    let orderData = digitalBillData;
+                    if (!orderData) {
+                      setIsLoadingBill(true);
+                      try {
+                        const response = await deliveryAPI.getOrderDetails(orderId);
+                        orderData = response.data?.data?.order || response.data?.order || response.data?.data;
+                      } catch (error) {
+                        console.error('Error loading bill:', error);
+                        toast.error('Failed to download bill');
+                        setIsLoadingBill(false);
+                        return;
+                      }
+                      setIsLoadingBill(false);
+                    }
+
+                    if (!orderData) {
+                      toast.error('No bill data available');
+                      return;
+                    }
+
+                    // Generate HTML bill
+                    const billHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice #${orderData.orderId || 'N/A'}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: #f9fafb;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: white;
+      padding: 32px;
+      text-align: center;
+    }
+    .header h1 { font-size: 32px; margin-bottom: 8px; }
+    .header p { font-size: 16px; opacity: 0.9; }
+    .content { padding: 32px; }
+    .section { margin-bottom: 32px; }
+    .section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .info-box {
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .info-box h3 { font-size: 18px; margin-bottom: 4px; }
+    .info-box p { color: #6b7280; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+    thead { background: #f3f4f6; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    th { font-weight: 600; font-size: 12px; text-transform: uppercase; color: #6b7280; }
+    td { font-size: 14px; }
+    .text-right { text-align: right; }
+    .font-semibold { font-weight: 600; }
+    .pricing-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+    .pricing-row.total {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e40af;
+    }
+    .footer {
+      border-top: 2px solid #e5e7eb;
+      padding-top: 16px;
+      text-align: center;
+      color: #6b7280;
+      font-size: 12px;
+    }
+    .addons { font-size: 12px; color: #6b7280; margin-top: 4px; }
+    @media print {
+      body { padding: 0; background: white; }
+      .container { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📄 Digital Invoice</h1>
+      <p>Order #${orderData.orderId || 'N/A'}</p>
+    </div>
+    
+    <div class="content">
+      <!-- Restaurant Info -->
+      <div class="section">
+        <div class="section-title">From</div>
+        <div class="info-box">
+          <h3>${orderData.restaurantId?.name || orderData.restaurantName || 'Restaurant'}</h3>
+          <p>${orderData.restaurantId?.address || orderData.restaurantId?.location?.address || 'Address'}</p>
+        </div>
+      </div>
+
+      <!-- Customer Info -->
+      <div class="section">
+        <div class="section-title">Bill To</div>
+        <div class="info-box">
+          <h3>${orderData.userId?.name || orderData.userName || 'Customer'}</h3>
+          <p>${orderData.deliveryAddress?.street || orderData.deliveryLocation?.address || 'Delivery Address'}</p>
+        </div>
+      </div>
+
+      <!-- Order Items -->
+      <div class="section">
+        <div class="section-title">Order Items</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="text-right">Qty</th>
+              <th class="text-right">Price</th>
+              <th class="text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${orderData.items?.map(item => `
+              <tr>
+                <td>
+                  <div class="font-semibold">${item.name || item.menuItemId?.name || 'Item'}</div>
+                  ${item.selectedAddons && item.selectedAddons.length > 0 ? `
+                    <div class="addons">Addons: ${item.selectedAddons.map(a => a.name).join(', ')}</div>
+                  ` : ''}
+                </td>
+                <td class="text-right">${item.quantity || 1}</td>
+                <td class="text-right">₹${(item.price || 0).toFixed(2)}</td>
+                <td class="text-right font-semibold">₹${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</td>
+              </tr>
+            `).join('') || '<tr><td colspan="4">No items</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pricing Summary -->
+      <div class="section">
+        <div class="pricing-row">
+          <span>Subtotal</span>
+          <span class="font-semibold">₹${(orderData.pricing?.subtotal || orderData.pricing?.itemTotal || 0).toFixed(2)}</span>
+        </div>
+        ${(orderData.pricing?.tax || 0) > 0 ? `
+          <div class="pricing-row">
+            <span>Tax & Fees</span>
+            <span class="font-semibold">₹${orderData.pricing.tax.toFixed(2)}</span>
+          </div>
+        ` : ''}
+        ${(orderData.pricing?.deliveryFee || 0) > 0 ? `
+          <div class="pricing-row">
+            <span>Delivery Fee</span>
+            <span class="font-semibold">₹${orderData.pricing.deliveryFee.toFixed(2)}</span>
+          </div>
+        ` : ''}
+        ${(orderData.pricing?.discount || 0) > 0 ? `
+          <div class="pricing-row" style="color: #059669;">
+            <span>Discount</span>
+            <span class="font-semibold">-₹${orderData.pricing.discount.toFixed(2)}</span>
+          </div>
+        ` : ''}
+        <div class="pricing-row total">
+          <span>Total Amount</span>
+          <span>₹${(orderData.pricing?.total || 0).toFixed(2)}</span>
+        </div>
+      </div>
+
+      <!-- Payment Info -->
+      <div class="section">
+        <div class="pricing-row">
+          <span>Payment Method</span>
+          <span class="font-semibold">${orderData.payment?.method === 'cash' ? 'Cash on Delivery' : 'Online Payment'}</span>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <p>Bill generated on ${new Date(orderData.createdAt).toLocaleString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}</p>
+        <p style="margin-top: 8px;">Thank you for your order!</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+                    `.trim();
+
+                    // Create and download the HTML file
+                    const blob = new Blob([billHtml], { type: 'text/html' });
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `Invoice-${orderId}.html`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+
+                    toast.success('Bill downloaded successfully!');
+                  }}
+                  disabled={isLoadingBill}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white text-blue-700 border border-blue-200 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors disabled:opacity-50"
+                >
+                  {isLoadingBill ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
+                  {isLoadingBill ? 'Loading...' : 'Download'}
                 </button>
               </div>
-
-              {/* Hidden file input for camera (sr-only keeps it in DOM for mobile camera) */}
-              <input
-                id="bill-camera-input"
-                ref={cameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleBillImageSelect}
-                className="sr-only"
-              />
+              <p className="text-xs text-blue-700 text-center mt-2">
+                Auto-generated digital invoice
+              </p>
             </div>
+
+
 
             {/* Order Picked Up Button with Swipe */}
             <div className="relative w-full">
               <motion.div
                 ref={orderIdConfirmButtonRef}
-                className={`relative w-full rounded-full overflow-hidden shadow-xl ${billImageUploaded ? 'bg-green-600' : 'bg-gray-400 cursor-not-allowed'
-                  }`}
+                className="relative w-full bg-green-600 rounded-full overflow-hidden shadow-xl"
                 style={{
-                  touchAction: billImageUploaded ? 'pan-x' : 'none',
-                  opacity: billImageUploaded ? 1 : 0.6
+                  touchAction: 'pan-x'
                 }}
-                onTouchStart={billImageUploaded ? handleOrderIdConfirmTouchStart : undefined}
-                onTouchMove={billImageUploaded ? handleOrderIdConfirmTouchMove : undefined}
-                onTouchEnd={billImageUploaded ? handleOrderIdConfirmTouchEnd : undefined}
-                whileTap={billImageUploaded ? { scale: 0.98 } : {}}
+                onTouchStart={handleOrderIdConfirmTouchStart}
+                onTouchMove={handleOrderIdConfirmTouchMove}
+                onTouchEnd={handleOrderIdConfirmTouchEnd}
+                whileTap={{ scale: 0.98 }}
               >
                 {/* Swipe progress background */}
                 <motion.div
@@ -9804,11 +10039,9 @@ export default function DeliveryHome() {
                         damping: 25
                       } : { duration: 0 }}
                     >
-                      {!billImageUploaded
-                        ? 'Upload Bill First'
-                        : orderIdConfirmButtonProgress > 0.5
-                          ? 'Release to Confirm'
-                          : 'Order Picked Up'}
+                      {orderIdConfirmButtonProgress > 0.5
+                        ? 'Release to Confirm'
+                        : 'Order Picked Up'}
                     </motion.span>
                   </div>
                 </div>
@@ -10395,6 +10628,201 @@ export default function DeliveryHome() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+
+      {/* Digital Bill Popup Modal */}
+      <AnimatePresence>
+        {showDigitalBillPopup && digitalBillData && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/70 z-[200]"
+              onClick={() => setShowDigitalBillPopup(false)}
+            />
+
+            {/* Bill Card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 50 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[201] max-w-lg mx-auto max-h-[85vh] overflow-y-auto"
+            >
+              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 relative">
+                  <button
+                    onClick={() => setShowDigitalBillPopup(false)}
+                    className="absolute top-4 right-4 w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                      <Receipt className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-white text-xl font-bold">Digital Bill</h2>
+                      <p className="text-blue-100 text-sm">Invoice #{digitalBillData.orderId || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bill Content */}
+                <div className="p-6 space-y-5">
+                  {/* Restaurant Info */}
+                  <div className="border-b border-gray-200 pb-4">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">From</p>
+                    <h3 className="text-lg font-bold text-gray-900">
+                      {digitalBillData.restaurantId?.name || digitalBillData.restaurantName || 'Restaurant'}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {digitalBillData.restaurantId?.address || digitalBillData.restaurantId?.location?.address || 'Address'}
+                    </p>
+                  </div>
+
+                  {/* Customer Info */}
+                  <div className="border-b border-gray-200 pb-4">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Bill To</p>
+                    <h3 className="text-base font-semibold text-gray-900">
+                      {digitalBillData.userId?.name || digitalBillData.userName || 'Customer'}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {digitalBillData.deliveryAddress?.street || digitalBillData.deliveryLocation?.address || 'Delivery Address'}
+                    </p>
+                  </div>
+
+                  {/* Order Items */}
+                  <div className="border-b border-gray-200 pb-4">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Items</p>
+                    <div className="space-y-3">
+                      {digitalBillData.items?.map((item, index) => (
+                        <div key={index} className="flex justify-between items-start gap-3">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{item.name || item.menuItemId?.name}</p>
+                            <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                            {item.selectedAddons && item.selectedAddons.length > 0 && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Addons: {item.selectedAddons.map(a => a.name).join(', ')}
+                              </p>
+                            )}
+                          </div>
+                          <p className="text-sm font-semibold text-gray-900">
+                            ₹{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Pricing Details */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm text-gray-600">Subtotal</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        ₹{(digitalBillData.pricing?.subtotal || digitalBillData.pricing?.itemTotal || 0).toFixed(2)}
+                      </p>
+                    </div>
+                    {(digitalBillData.pricing?.tax || 0) > 0 && (
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm text-gray-600">Tax & Fees</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          ₹{digitalBillData.pricing.tax.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                    {(digitalBillData.pricing?.deliveryFee || 0) > 0 && (
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm text-gray-600">Delivery Fee</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          ₹{digitalBillData.pricing.deliveryFee.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                    {(digitalBillData.pricing?.discount || 0) > 0 && (
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm text-green-600">Discount</p>
+                        <p className="text-sm font-medium text-green-600">
+                          -₹{digitalBillData.pricing.discount.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Total */}
+                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+                    <div className="flex justify-between items-center">
+                      <p className="text-base font-bold text-gray-900">Total Amount</p>
+                      <p className="text-xl font-bold text-blue-700">
+                        ₹{(digitalBillData.pricing?.total || 0).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Payment Method */}
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                    <p className="text-sm text-gray-600">Payment Method</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {digitalBillData.payment?.method === 'cash' ? 'Cash on Delivery' : 'Online Payment'}
+                    </p>
+                  </div>
+
+                </div>
+
+                {/* Upload Button */}
+                <div className="pt-4 border-t border-gray-200">
+                  <button
+                    onClick={async () => {
+                      const mongoId = digitalBillData._id;
+                      const orderId = digitalBillData.orderId;
+
+                      try {
+                        setIsUploadingBill(true);
+
+                        // Mark the order as having digital bill uploaded
+                        await deliveryAPI.confirmOrderId(
+                          mongoId,
+                          orderId,
+                          {},
+                          {
+                            digitalBillUploaded: true,
+                            digitalBillUploadedAt: new Date().toISOString()
+                          }
+                        );
+
+                        toast.success('Digital bill uploaded successfully!');
+                        setShowDigitalBillPopup(false);
+                      } catch (error) {
+                        console.error('Error uploading bill:', error);
+                        toast.error(error.response?.data?.message || 'Failed to upload bill');
+                      } finally {
+                        setIsUploadingBill(false);
+                      }
+                    }}
+                    disabled={isUploadingBill}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                  >
+                    {isUploadingBill ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Uploading Bill...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-5 h-5" />
+                        Upload Digital Bill
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div >
   )
 }

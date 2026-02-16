@@ -102,7 +102,7 @@ export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddre
   // Check Admin Amount Rules (Numeric Override)
   if (feeSettings.amountConfig && feeSettings.amountConfig.rules) {
     const rule = feeSettings.amountConfig.rules.find(r => orderValue >= r.minAmount && orderValue < r.maxAmount);
-    if (rule) {
+    if (rule && typeof rule.deliveryFee === 'number') {
       // Use the specific fee from the rule
       deliveryFee = rule.deliveryFee;
     }
@@ -119,7 +119,7 @@ export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddre
     return 0;
   }
 
-  return deliveryFee;
+  return (typeof deliveryFee === 'number' && !isNaN(deliveryFee)) ? deliveryFee : (feeSettings.deliveryFee || 25);
 };
 
 /**

@@ -171,7 +171,7 @@ export const getOrders = asyncHandler(async (req, res) => {
     // Fetch orders with population
     const orders = await Order.find(query)
       .populate('userId', 'name email phone')
-      .populate('restaurantId', 'name slug')
+      .populate('restaurantId', 'name slug address')
       .populate('deliveryPartnerId', 'name phone')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))

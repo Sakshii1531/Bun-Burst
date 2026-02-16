@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
-import { Eye, MapPin, Package, User, Phone, Mail, Calendar, Clock, Truck, CreditCard, X, Receipt } from "lucide-react"
+import { Eye, MapPin, Package, User, Phone, Mail, Calendar, Clock, Truck, CreditCard, X, Receipt, FileText, CheckCircle } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -36,12 +36,22 @@ const getPaymentStatusColor = (paymentStatus) => {
   return "text-slate-600"
 }
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
 export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
   const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [deliveryPartners, setDeliveryPartners] = useState([])
   const [selectedPartner, setSelectedPartner] = useState("")
   const [isLoadingPartners, setIsLoadingPartners] = useState(false)
   const [isAssigning, setIsAssigning] = useState(false)
+  const [showDigitalBillPopup, setShowDigitalBillPopup] = useState(false)
+  const [isLoadingBill, setIsLoadingBill] = useState(false)
 
   useEffect(() => {
     if (showAssignDialog) {
@@ -364,6 +374,264 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
               </div>
             )}
 
+            {/* Digital Bill - Always show */}
+            <div className="border-t border-slate-200 pt-4">
+              <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-orange-600" />
+                Digital Invoice
+                {order.digitalBillUploaded && (
+                  <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                    <CheckCircle className="w-3 h-3" />
+                    Uploaded by Delivery Boy
+                  </span>
+                )}
+              </h3>
+              {order.digitalBillUploadedAt && (
+                <p className="text-xs text-slate-500 mb-3">
+                  Uploaded on {new Date(order.digitalBillUploadedAt).toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              )}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setShowDigitalBillPopup(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors shadow-sm"
+                >
+                  <Eye className="w-4 h-4" />
+                  View Bill
+                </button>
+                <button
+                  onClick={async () => {
+                    setIsLoadingBill(true);
+                    try {
+                      // Generate HTML bill
+                      const billHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice #${order.orderId || 'N/A'}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: #f9fafb;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+      color: white;
+      padding: 32px;
+      text-align: center;
+    }
+    .header h1 { font-size: 32px; margin-bottom: 8px; }
+    .header p { font-size: 16px; opacity: 0.9; }
+    .content { padding: 32px; }
+    .section { margin-bottom: 32px; }
+    .section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .info-box {
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .info-box h3 { font-size: 18px; margin-bottom: 4px; }
+    .info-box p { color: #6b7280; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+    thead { background: #f3f4f6; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    th { font-weight: 600; font-size: 12px; text-transform: uppercase; color: #6b7280; }
+    td { font-size: 14px; }
+    .text-right { text-align: right; }
+    .font-semibold { font-weight: 600; }
+    .pricing-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+    .pricing-row.total {
+      background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #9a3412;
+    }
+    .footer {
+      border-top: 2px solid #e5e7eb;
+      padding-top: 16px;
+      text-align: center;
+      color: #6b7280;
+      font-size: 12px;
+    }
+    .addons { font-size: 12px; color: #6b7280; margin-top: 4px; }
+    @media print {
+      body { padding: 0; background: white; }
+      .container { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📄 Digital Invoice</h1>
+      <p>Order #${order.orderId || 'N/A'}</p>
+    </div>
+    
+    <div class="content">
+      <!-- Restaurant Info -->
+      <div class="section">
+        <div class="section-title">From</div>
+        <div class="info-box">
+          <h3>${order.restaurantId?.name || order.restaurantName || 'Restaurant'}</h3>
+          <p>${order.restaurantId?.address || order.restaurantId?.location?.address || 'Address'}</p>
+        </div>
+      </div>
+
+      <!-- Customer Info -->
+      <div class="section">
+        <div class="section-title">Bill To</div>
+        <div class="info-box">
+          <h3>${order.userId?.name || order.userName || 'Customer'}</h3>
+          <p>${order.deliveryAddress?.street || order.deliveryLocation?.address || 'Delivery Address'}</p>
+        </div>
+      </div>
+
+      <!-- Order Items -->
+      <div class="section">
+        <div class="section-title">Order Items</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="text-right">Qty</th>
+              <th class="text-right">Price</th>
+              <th class="text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${order.items?.map(item => `
+              <tr>
+                <td>
+                  <div class="font-semibold">${item.name || item.menuItemId?.name || 'Item'}</div>
+                  ${item.selectedAddons && item.selectedAddons.length > 0 ? `
+                    <div class="addons">Addons: ${item.selectedAddons.map(a => a.name).join(', ')}</div>
+                  ` : ''}
+                </td>
+                <td class="text-right">${item.quantity || 1}</td>
+                <td class="text-right">₹${(item.price || 0).toFixed(2)}</td>
+                <td class="text-right font-semibold">₹${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</td>
+              </tr>
+            `).join('') || '<tr><td colspan="4">No items</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pricing Summary -->
+      <div class="section">
+        <div class="pricing-row">
+          <span>Subtotal</span>
+          <span class="font-semibold">₹${(order.pricing?.subtotal || order.pricing?.itemTotal || 0).toFixed(2)}</span>
+        </div>
+        ${(order.pricing?.tax || 0) > 0 ? `
+          <div class="pricing-row">
+            <span>Tax & Fees</span>
+            <span class="font-semibold">₹${order.pricing.tax.toFixed(2)}</span>
+          </div>
+        ` : ''}
+        ${(order.pricing?.deliveryFee || 0) > 0 ? `
+          <div class="pricing-row">
+            <span>Delivery Fee</span>
+            <span class="font-semibold">₹${order.pricing.deliveryFee.toFixed(2)}</span>
+          </div>
+        ` : ''}
+        ${(order.pricing?.discount || 0) > 0 ? `
+          <div class="pricing-row" style="color: #059669;">
+            <span>Discount</span>
+            <span class="font-semibold">-₹${order.pricing.discount.toFixed(2)}</span>
+          </div>
+        ` : ''}
+        <div class="pricing-row total">
+          <span>Total Amount</span>
+          <span>₹${(order.pricing?.total || 0).toFixed(2)}</span>
+        </div>
+      </div>
+
+      <!-- Payment Info -->
+      <div class="section">
+        <div class="pricing-row">
+          <span>Payment Method</span>
+          <span class="font-semibold">${order.payment?.method === 'cash' ? 'Cash on Delivery' : 'Online Payment'}</span>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <p>Bill generated on ${new Date(order.createdAt).toLocaleString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}</p>
+        <p style="margin-top: 8px;">Thank you for your order!</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+                      `.trim();
+
+                      // Create and download the HTML file
+                      const blob = new Blob([billHtml], { type: 'text/html' });
+                      const url = window.URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `Invoice-${order.orderId || order.id}.html`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      window.URL.revokeObjectURL(url);
+
+                      toast.success('Bill downloaded successfully!');
+                    } catch (error) {
+                      console.error('Error downloading bill:', error);
+                      toast.error('Failed to download bill');
+                    } finally {
+                      setIsLoadingBill(false);
+                    }
+                  }}
+                  disabled={isLoadingBill}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <Package className="w-4 h-4" />
+                  {isLoadingBill ? 'Downloading...' : 'Download Bill'}
+                </button>
+              </div>
+            </div>
+
             {/* Delivery Address */}
             {order.address && (
               <div className="border-t border-slate-200 pt-4">
@@ -484,44 +752,204 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
 
       {/* Assign Delivery Partner Dialog */}
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-        <DialogContent className="max-w-md bg-white">
-          <DialogHeader>
-            <DialogTitle>Assign Delivery Partner</DialogTitle>
-            <DialogDescription>
-              Select a delivery partner to assign to Order #{order.orderId}
+        <DialogContent className="max-w-md bg-white p-0">
+          <DialogHeader className="px-6 pt-6 pb-2">
+            <DialogTitle className="text-lg font-semibold text-slate-900">Assign Delivery Partner</DialogTitle>
+            <DialogDescription className="text-sm text-slate-500 mt-1">
+              Assign a delivery partner for Order <span className="font-mono font-medium text-slate-700">#{order.orderId}</span>
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <label className="block text-sm font-medium text-slate-700 mb-2">Select Partner</label>
-            <select
-              className="w-full p-2 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-              value={selectedPartner}
-              onChange={(e) => setSelectedPartner(e.target.value)}
-              disabled={isLoadingPartners}
-            >
-              <option value="">-- Select Delivery Partner --</option>
-              {deliveryPartners.map(p => (
-                <option key={p._id} value={p._id}>
-                  {p.name} {p.phone ? `(${p.phone})` : ''} {p.availability?.isOnline ? '(Online)' : '(Offline)'}
-                </option>
-              ))}
-            </select>
-            {isLoadingPartners && <p className="text-xs text-slate-500 mt-1">Loading partners...</p>}
+
+          <div className="px-6 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Select Partner</label>
+              <Select
+                value={selectedPartner}
+                onValueChange={setSelectedPartner}
+                disabled={isLoadingPartners}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={isLoadingPartners ? "Loading partners..." : "Select a delivery partner"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {deliveryPartners.length === 0 ? (
+                    <div className="p-2 text-sm text-slate-500 text-center">No active partners found</div>
+                  ) : (
+                    deliveryPartners.map((p) => (
+                      <SelectItem key={p._id} value={p._id}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${p.availability?.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                          <span className="font-medium">{p.name}</span>
+                          {p.phone && <span className="text-slate-500 text-xs">({p.phone})</span>}
+                          {p.availability?.isOnline ? (
+                            <span className="text-emerald-600 text-xs bg-emerald-50 px-1.5 py-0.5 rounded">Online</span>
+                          ) : (
+                            <span className="text-slate-500 text-xs bg-slate-100 px-1.5 py-0.5 rounded">Offline</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="flex justify-end gap-3 mt-4">
+
+          <div className="px-6 pb-6 pt-2 flex justify-end gap-3 bg-slate-50/50 border-t border-slate-100 mt-2">
             <button
               onClick={() => setShowAssignDialog(false)}
-              className="px-4 py-2 text-sm text-slate-600 bg-slate-100 rounded-md hover:bg-slate-200"
+              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleAssign}
               disabled={!selectedPartner || isAssigning}
-              className="px-4 py-2 text-sm text-white bg-orange-600 rounded-md hover:bg-orange-700 disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
             >
-              {isAssigning ? 'Assigning...' : 'Assign'}
+              {isAssigning ? 'Assigning...' : 'Assign Partner'}
             </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Digital Bill Popup Modal */}
+      <Dialog open={showDigitalBillPopup} onOpenChange={setShowDigitalBillPopup}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+          <div className="bg-white rounded-lg shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-6 py-5 relative">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                  <Receipt className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-white text-xl font-bold">Digital Invoice</h2>
+                  <p className="text-orange-100 text-sm">Invoice #{order?.orderId || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bill Content */}
+            <div className="p-6 space-y-5">
+              {/* Restaurant Info */}
+              <div className="border-b border-gray-200 pb-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">From</p>
+                <h3 className="text-lg font-bold text-gray-900">
+                  {order.restaurant || order.restaurantName || order.restaurantId?.name || 'Bun Burst Cafe'}
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  {order.restaurantAddress || order.restaurantId?.address || order.restaurantId?.location?.address || 'Address'}
+                </p>
+              </div>
+
+              {/* Customer Info */}
+              <div className="border-b border-gray-200 pb-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Bill To</p>
+                <h3 className="text-base font-semibold text-gray-900">
+                  {order.customerName || order.userId?.name || 'Customer'}
+                </h3>
+                <div className="text-sm text-gray-600 mt-1">
+                  {formatAddress(order.address)}
+                </div>
+              </div>
+
+              {/* Order Items */}
+              <div className="border-b border-gray-200 pb-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Items</p>
+                <div className="space-y-3">
+                  {order.items?.map((item, index) => (
+                    <div key={index} className="flex justify-between items-start gap-3">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{item.name || item.menuItemId?.name}</p>
+                        <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                        {item.selectedAddons && item.selectedAddons.length > 0 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Addons: {item.selectedAddons.map(a => a.name).join(', ')}
+                          </p>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        ₹{((item.price || item.unitPrice || 0) * (item.quantity || 1)).toFixed(2)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Pricing Details */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-gray-600">Subtotal</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    ₹{(order.totalItemAmount || order.pricing?.subtotal || 0).toFixed(2)}
+                  </p>
+                </div>
+                {(order.vatTax || order.pricing?.tax || 0) > 0 && (
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-600">Tax & Fees (GST)</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      ₹{(order.vatTax || order.pricing?.tax || 0).toFixed(2)}
+                    </p>
+                  </div>
+                )}
+                {(order.deliveryCharge || order.pricing?.deliveryFee || 0) > 0 && (
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-600">Delivery Fee</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      ₹{(order.deliveryCharge || order.pricing?.deliveryFee || 0).toFixed(2)}
+                    </p>
+                  </div>
+                )}
+                {(order.platformFee || order.pricing?.platformFee || 0) > 0 && (
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-600">Platform Fee</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      ₹{(order.platformFee || order.pricing?.platformFee || 0).toFixed(2)}
+                    </p>
+                  </div>
+                )}
+                {((order.itemDiscount || 0) + (order.couponDiscount || 0) + (order.pricing?.discount || 0)) > 0 && (
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-green-600">Total Discount</p>
+                    <p className="text-sm font-medium text-green-600">
+                      -₹{((order.itemDiscount || 0) + (order.couponDiscount || 0) + (order.pricing?.discount || 0)).toFixed(2)}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Total */}
+              <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+                <div className="flex justify-between items-center">
+                  <p className="text-base font-bold text-gray-900">Total Amount</p>
+                  <p className="text-xl font-bold text-orange-700">
+                    ₹{(order.totalAmount || order.total || order.pricing?.total || 0).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                <p className="text-sm text-gray-600">Payment Method</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {order?.payment?.method === 'cash' ? 'Cash on Delivery' : 'Online Payment'}
+                </p>
+              </div>
+
+              {/* Footer */}
+              <div className="text-center pt-4 border-t border-gray-200">
+                <p className="text-xs text-gray-500">
+                  Bill generated on {order?.createdAt ? new Date(order.createdAt).toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }) : 'N/A'}
+                </p>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

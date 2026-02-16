@@ -172,7 +172,7 @@ export const createOrder = async (req, res) => {
     // CRITICAL: Validate that restaurant's location (pin) is within an active zone
     const restaurantLat = restaurant.location?.latitude || restaurant.location?.coordinates?.[1];
     const restaurantLng = restaurant.location?.longitude || restaurant.location?.coordinates?.[0];
-    
+
     if (!restaurantLat || !restaurantLng) {
       logger.error('❌ Restaurant location not found:', {
         restaurantId: restaurant._id?.toString() || restaurant.restaurantId,
@@ -191,7 +191,7 @@ export const createOrder = async (req, res) => {
 
     for (const zone of activeZones) {
       if (!zone.coordinates || zone.coordinates.length < 3) continue;
-      
+
       let isInZone = false;
       if (typeof zone.containsPoint === 'function') {
         isInZone = zone.containsPoint(restaurantLat, restaurantLng);
@@ -205,16 +205,16 @@ export const createOrder = async (req, res) => {
           const yi = typeof coordI === 'object' ? (coordI.longitude || coordI.lng) : null;
           const xj = typeof coordJ === 'object' ? (coordJ.latitude || coordJ.lat) : null;
           const yj = typeof coordJ === 'object' ? (coordJ.longitude || coordJ.lng) : null;
-          
+
           if (xi === null || yi === null || xj === null || yj === null) continue;
-          
-          const intersect = ((yi > restaurantLng) !== (yj > restaurantLng)) && 
-                           (restaurantLat < (xj - xi) * (restaurantLng - yi) / (yj - yi) + xi);
+
+          const intersect = ((yi > restaurantLng) !== (yj > restaurantLng)) &&
+            (restaurantLat < (xj - xi) * (restaurantLng - yi) / (yj - yi) + xi);
           if (intersect) inside = !inside;
         }
         isInZone = inside;
       }
-      
+
       if (isInZone) {
         restaurantInZone = true;
         restaurantZone = zone;
@@ -244,10 +244,10 @@ export const createOrder = async (req, res) => {
 
     // CRITICAL: Validate user's zone matches restaurant's zone (strict zone matching)
     const { zoneId: userZoneId } = req.body; // User's zone ID from frontend
-    
+
     if (userZoneId) {
       const restaurantZoneId = restaurantZone._id.toString();
-      
+
       if (restaurantZoneId !== userZoneId) {
         logger.warn('⚠️ Zone mismatch - user and restaurant are in different zones:', {
           userZoneId,
@@ -260,7 +260,7 @@ export const createOrder = async (req, res) => {
           message: 'This restaurant is not available in your zone. Please select a restaurant from your current delivery zone.'
         });
       }
-      
+
       logger.info('✅ Zone match validated - user and restaurant are in the same zone:', {
         zoneId: userZoneId,
         restaurantId: restaurant._id?.toString() || restaurant.restaurantId
@@ -339,18 +339,18 @@ export const createOrder = async (req, res) => {
 
     // Calculate initial ETA
     try {
-      const restaurantLocation = restaurant.location 
+      const restaurantLocation = restaurant.location
         ? {
-            latitude: restaurant.location.latitude,
-            longitude: restaurant.location.longitude
-          }
+          latitude: restaurant.location.latitude,
+          longitude: restaurant.location.longitude
+        }
         : null;
 
       const userLocation = address.location?.coordinates
         ? {
-            latitude: address.location.coordinates[1],
-            longitude: address.location.coordinates[0]
-          }
+          latitude: address.location.coordinates[1],
+          longitude: address.location.coordinates[0]
+        }
         : null;
 
       if (restaurantLocation && userLocation) {
@@ -401,6 +401,9 @@ export const createOrder = async (req, res) => {
       // Continue with order creation even if ETA calculation fails
     }
 
+    // Generate digital bill HTML
+    order.digitalBillHtml = generateDigitalBillHtml(order);
+
     await order.save();
 
     // Log order creation for debugging
@@ -420,7 +423,7 @@ export const createOrder = async (req, res) => {
       try {
         // Find or create wallet
         const wallet = await UserWallet.findOrCreateByUserId(userId);
-        
+
         // Check if sufficient balance
         if (pricing.total > wallet.balance) {
           return res.status(400).json({
@@ -721,7 +724,7 @@ export const verifyOrderPayment = async (req, res) => {
           userId
         });
       }
-      
+
       // If not found, try by orderId string
       if (!order) {
         order = await Order.findOne({
@@ -804,10 +807,10 @@ export const verifyOrderPayment = async (req, res) => {
     try {
       // Calculate settlement breakdown
       await calculateOrderSettlement(order._id);
-      
+
       // Hold funds in escrow
       await holdEscrow(order._id, userId, order.pricing.total);
-      
+
       logger.info(`✅ Order settlement calculated and escrow held for order ${order.orderId}`);
     } catch (settlementError) {
       logger.error(`❌ Error calculating settlement for order ${order.orderId}:`, settlementError);
@@ -819,7 +822,7 @@ export const verifyOrderPayment = async (req, res) => {
     try {
       const restaurantId = order.restaurantId?.toString() || order.restaurantId;
       const restaurantName = order.restaurantName;
-      
+
       // CRITICAL: Log detailed info before notification
       logger.info('🔔 CRITICAL: Attempting to notify restaurant about confirmed order:', {
         orderId: order.orderId,
@@ -833,7 +836,7 @@ export const verifyOrderPayment = async (req, res) => {
         orderCreatedAt: order.createdAt,
         orderItems: order.items.map(item => ({ name: item.name, quantity: item.quantity }))
       });
-      
+
       // Verify order has restaurantId before notifying
       if (!restaurantId) {
         logger.error('❌ CRITICAL: Cannot notify restaurant - order.restaurantId is missing!', {
@@ -846,7 +849,7 @@ export const verifyOrderPayment = async (req, res) => {
         });
         throw new Error('Order restaurantId is missing');
       }
-      
+
       // Verify order has restaurantName before notifying
       if (!restaurantName) {
         logger.warn('⚠️ Order restaurantName is missing:', {
@@ -854,9 +857,9 @@ export const verifyOrderPayment = async (req, res) => {
           restaurantId: restaurantId
         });
       }
-      
+
       const notificationResult = await notifyRestaurantNewOrder(order, restaurantId);
-      
+
       logger.info(`✅ Successfully notified restaurant about confirmed order:`, {
         orderId: order.orderId,
         restaurantId: restaurantId,
@@ -932,7 +935,7 @@ export const getUserOrders = async (req, res) => {
     // But we'll try both formats to be safe
     const mongoose = (await import('mongoose')).default;
     const query = { userId };
-    
+
     // If userId is a string that looks like ObjectId, also try ObjectId format
     if (typeof userId === 'string' && mongoose.Types.ObjectId.isValid(userId)) {
       query.$or = [
@@ -941,7 +944,7 @@ export const getUserOrders = async (req, res) => {
       ];
       delete query.userId; // Remove direct userId since we're using $or
     }
-    
+
     // Add status filter if provided
     if (status) {
       if (query.$or) {
@@ -1004,7 +1007,7 @@ export const getOrderDetails = async (req, res) => {
 
     // Try to find order by MongoDB _id or orderId (custom order ID)
     let order = null;
-    
+
     // First try MongoDB _id if it's a valid ObjectId
     if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
       order = await Order.findOne({
@@ -1015,7 +1018,7 @@ export const getOrderDetails = async (req, res) => {
         .populate('userId', 'name fullName phone email')
         .lean();
     }
-    
+
     // If not found, try by orderId (custom order ID like "ORD-123456-789")
     if (!order) {
       order = await Order.findOne({
@@ -1212,3 +1215,227 @@ export const calculateOrder = async (req, res) => {
   }
 };
 
+/**
+ * Get digital bill for an order
+ * GET /api/order/:id/bill
+ */
+export const getOrderBill = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    // Check if user is admin or restaurant owner or delivery boy or customer
+    // For now, we'll assume basic auth handles user identification
+
+    // Find order
+    let order = null;
+    let mongoose = (await import('mongoose')).default;
+
+    if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+      order = await Order.findById(id)
+        .populate('restaurantId', 'name address phone')
+        .populate('userId', 'name phone')
+        .lean();
+    }
+
+    if (!order) {
+      order = await Order.findOne({ orderId: id })
+        .populate('restaurantId', 'name address phone')
+        .populate('userId', 'name phone')
+        .lean();
+    }
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Check if bill already exists
+    if (order.billUrl) {
+      return res.json({
+        success: true,
+        data: {
+          billUrl: order.billUrl
+        }
+      });
+    }
+
+    // Generate bill if not exists
+    const { generateBill } = await import('../services/billGenerationService.js');
+    const billUrl = await generateBill(order);
+
+    // Save bill URL to order
+    await Order.findByIdAndUpdate(order._id, { billUrl });
+
+    res.json({
+      success: true,
+      data: {
+        billUrl
+      }
+    });
+
+  } catch (error) {
+    logger.error(`Error fetching order bill: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate/retrieve bill'
+    });
+  }
+};
+
+/**
+ * Get digital bill HTML
+ * GET /api/orders/:id/digital-bill
+ */
+export const getDigitalBillHtml = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find order
+    let order = await Order.findById(id);
+    if (!order) {
+      order = await Order.findOne({ orderId: id });
+    }
+
+    if (!order) {
+      return res.status(404).send('Order not found');
+    }
+
+    if (!order.digitalBillHtml) {
+      // Try to generate it if missing
+      order.digitalBillHtml = generateDigitalBillHtml(order);
+      await order.save();
+    }
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send(order.digitalBillHtml);
+  } catch (error) {
+    logger.error(`Error fetching digital bill: ${error.message}`);
+    res.status(500).send('Server Error');
+  }
+};
+
+/**
+ * Helper to generate Digital Bill HTML
+ */
+function generateDigitalBillHtml(order) {
+  try {
+    const date = new Date().toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const itemsHtml = (order.items || []).map(item => {
+      const addonText = item.addons && item.addons.length > 0
+        ? `<br><span style="font-size: 12px; color: #666;">Addons: ${item.addons.map(a => a.name).join(', ')}</span>`
+        : '';
+      return `
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 10px;">
+            <div style="font-weight: 500;">${item.name}</div>
+            ${addonText}
+          </td>
+          <td style="padding: 10px; text-align: center;">${item.quantity}</td>
+          <td style="padding: 10px; text-align: right;">₹${(item.price * item.quantity).toFixed(2)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Order Bill #${order.orderId}</title>
+        <style>
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+          .logo { font-size: 24px; font-weight: bold; color: #f97316; margin-bottom: 10px; }
+          .bill-info { display: flex; justify-content: space-between; margin-bottom: 20px; }
+          .bill-to { margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th { text-align: left; padding: 10px; background: #f8f9fa; border-bottom: 2px solid #ddd; }
+          .totals { text-align: right; margin-top: 20px; }
+          .total-row { display: flex; justify-content: flex-end; padding: 5px 0; }
+          .total-label { width: 150px; }
+          .total-value { width: 100px; font-weight: bold; }
+          .grand-total { font-size: 1.2em; color: #f97316; border-top: 2px solid #eee; padding-top: 10px; margin-top: 10px; }
+          .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="logo">Bun Burst</div>
+          <div>Digital Bill</div>
+        </div>
+        
+        <div class="bill-info">
+          <div>
+            <strong>Order ID:</strong> ${order.orderId}<br>
+            <strong>Date:</strong> ${date}
+          </div>
+          <div style="text-align: right;">
+            <strong>Status:</strong> ${(order.status || 'PENDING').toUpperCase()}
+          </div>
+        </div>
+
+        <div class="bill-to">
+          <strong>Bill To:</strong><br>
+          ${order.customerName || 'Customer'}<br>
+          ${order.address ? (order.address.formattedAddress || `${order.address.flat || ''} ${order.address.area || ''} ${order.address.city || ''}`) : ''}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th style="text-align: center;">Qty</th>
+              <th style="text-align: right;">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div class="total-row">
+            <span class="total-label">Subtotal:</span>
+            <span class="total-value">₹${(order.pricing.subtotal || 0).toFixed(2)}</span>
+          </div>
+          <div class="total-row">
+            <span class="total-label">Delivery Fee:</span>
+            <span class="total-value">₹${(order.pricing.deliveryFee || 0).toFixed(2)}</span>
+          </div>
+          ${order.pricing.tax > 0 ? `
+          <div class="total-row">
+            <span class="total-label">Tax:</span>
+            <span class="total-value">₹${order.pricing.tax.toFixed(2)}</span>
+          </div>` : ''}
+          ${order.pricing.discount > 0 ? `
+          <div class="total-row" style="color: green;">
+            <span class="total-label">Discount:</span>
+            <span class="total-value">-₹${order.pricing.discount.toFixed(2)}</span>
+          </div>` : ''}
+          <div class="total-row grand-total">
+            <span class="total-label">Total:</span>
+            <span class="total-value">₹${(order.pricing.total || 0).toFixed(2)}</span>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>Thank you for ordering with Bun Burst!</p>
+          <p>This is a computer generated bill and does not require a physical signature.</p>
+        </div>
+      </body>
+      </html>
+    `;
+  } catch (e) {
+    console.error('Error generating bill HTML', e);
+    return '<p>Error generating bill. Please contact support.</p>';
+  }
+}
