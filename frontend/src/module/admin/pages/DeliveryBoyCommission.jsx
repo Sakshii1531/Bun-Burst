@@ -38,7 +38,7 @@ export default function DeliveryBoyCommission() {
     if (!searchQuery.trim()) {
       return commissions
     }
-    
+
     const query = searchQuery.toLowerCase().trim()
     return commissions.filter(commission =>
       commission.name.toLowerCase().includes(query) ||
@@ -52,7 +52,7 @@ export default function DeliveryBoyCommission() {
     // Check if distance falls within this commission tier
     if (distance < commission.minDistance) return 0
     if (commission.maxDistance !== null && distance > commission.maxDistance) return 0
-    
+
     // Calculate commission: base payout + (distance × commission per km)
     const distanceCommission = distance * commission.commissionPerKm
     return commission.basePayout + distanceCommission
@@ -77,7 +77,7 @@ export default function DeliveryBoyCommission() {
     try {
       setLoading(true)
       const response = await adminAPI.getCommissionRules({ status: true })
-      
+
       // Handle different response structures
       let commissionsData = null
       if (response?.data?.success && response?.data?.data?.commissions) {
@@ -87,7 +87,7 @@ export default function DeliveryBoyCommission() {
       } else if (response?.data?.commissions) {
         commissionsData = response.data.commissions
       }
-      
+
       if (commissionsData && Array.isArray(commissionsData)) {
         // Add serial numbers based on array index
         const commissionsWithSl = commissionsData.map((commission, index) => ({
@@ -110,7 +110,7 @@ export default function DeliveryBoyCommission() {
         method: error.config?.method,
         baseURL: error.config?.baseURL
       })
-      
+
       // Handle network errors
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         const errorMessage = `Cannot connect to backend server. Please ensure the backend is running on ${API_BASE_URL.replace('/api', '')}`
@@ -122,7 +122,7 @@ export default function DeliveryBoyCommission() {
         setCommissions([])
         return
       }
-      
+
       const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch commission rules'
       toast.error(errorMessage)
       setCommissions([])
@@ -172,7 +172,7 @@ export default function DeliveryBoyCommission() {
 
   const confirmDelete = async () => {
     if (!selectedCommission) return
-    
+
     // Prevent deletion if it's the only rule - always keep at least one rule
     if (commissions.length <= 1) {
       toast.error('Cannot delete the only commission rule. At least one rule must exist.')
@@ -180,7 +180,7 @@ export default function DeliveryBoyCommission() {
       setSelectedCommission(null)
       return
     }
-    
+
     try {
       setDeleting(true)
       await adminAPI.deleteCommissionRule(selectedCommission._id)
@@ -211,14 +211,14 @@ export default function DeliveryBoyCommission() {
     if (!formData.basePayout.trim() || parseFloat(formData.basePayout) < 0) {
       errors.basePayout = "Base payout must be 0 or greater"
     }
-    
+
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
 
   const handleSave = async () => {
     if (!validateForm()) return
-    
+
     try {
       setSaving(true)
       const commissionData = {
@@ -229,7 +229,7 @@ export default function DeliveryBoyCommission() {
         basePayout: parseFloat(formData.basePayout),
         status: selectedCommission ? selectedCommission.status : true,
       }
-      
+
       if (selectedCommission) {
         // Update existing commission
         const response = await adminAPI.updateCommissionRule(selectedCommission._id, commissionData)
@@ -241,7 +241,7 @@ export default function DeliveryBoyCommission() {
         } else if (response?.data?.commission) {
           commission = response.data.commission
         }
-        
+
         if (commission) {
           const updatedCommission = {
             ...commission,
@@ -258,7 +258,7 @@ export default function DeliveryBoyCommission() {
           toast.error('Only one commission rule is allowed. Please edit the existing rule instead.')
           return
         }
-        
+
         // Create new commission (only if no existing rule)
         const response = await adminAPI.createCommissionRule(commissionData)
         let commission = null
@@ -269,7 +269,7 @@ export default function DeliveryBoyCommission() {
         } else if (response?.data?.commission) {
           commission = response.data.commission
         }
-        
+
         if (commission) {
           const newCommission = {
             ...commission,
@@ -279,7 +279,7 @@ export default function DeliveryBoyCommission() {
           toast.success('Commission rule created successfully')
         }
       }
-      
+
       setIsAddEditOpen(false)
       setFormData({ name: "", minDistance: "", maxDistance: "", commissionPerKm: "", basePayout: "" })
       setSelectedCommission(null)
@@ -295,12 +295,12 @@ export default function DeliveryBoyCommission() {
         method: error.config?.method,
         baseURL: error.config?.baseURL
       })
-      
+
       // Log full response data for debugging
       if (error.response?.data) {
         console.error('Full error response:', JSON.stringify(error.response.data, null, 2))
       }
-      
+
       // Handle network errors
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         const errorMessage = `Cannot connect to backend server. Please ensure the backend is running on ${API_BASE_URL.replace('/api', '')}`
@@ -311,7 +311,7 @@ export default function DeliveryBoyCommission() {
         console.error('   3. Check browser console for CORS errors')
         return
       }
-      
+
       // Handle other errors - extract message from different possible response structures
       let errorMessage = 'Failed to save commission rule'
       if (error.response?.data) {
@@ -333,9 +333,9 @@ export default function DeliveryBoyCommission() {
       } else {
         errorMessage = error.message || errorMessage
       }
-      
+
       toast.error(errorMessage)
-      
+
       // Set form errors if validation errors from backend
       if (error.response?.data?.errors) {
         setFormErrors(error.response.data.errors)
@@ -400,7 +400,7 @@ export default function DeliveryBoyCommission() {
             </div>
 
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={() => setIsSettingsOpen(true)}
                 className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all"
               >
@@ -416,7 +416,7 @@ export default function DeliveryBoyCommission() {
               <div className="text-sm text-slate-700">
                 <p className="font-semibold text-blue-900 mb-1">Distance-Based Commission System</p>
                 <p className="text-slate-600">
-                  Commission is calculated as: <strong>Base Payout + (Distance × Commission Per Km)</strong>. 
+                  Commission is calculated as: <strong>Base Payout + (Distance × Commission Per Km)</strong>.
                   Each rule applies to a specific distance range. For orders outside any range, the nearest applicable rule will be used.
                 </p>
               </div>
@@ -526,14 +526,12 @@ export default function DeliveryBoyCommission() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <button
                             onClick={() => handleToggleStatus(commission)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                              commission.status ? "bg-blue-600" : "bg-slate-300"
-                            }`}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${commission.status ? "bg-blue-600" : "bg-slate-300"
+                              }`}
                           >
                             <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                commission.status ? "translate-x-6" : "translate-x-1"
-                              }`}
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${commission.status ? "translate-x-6" : "translate-x-1"
+                                }`}
                             />
                           </button>
                         </td>
@@ -566,7 +564,7 @@ export default function DeliveryBoyCommission() {
               </tbody>
             </table>
           </div>
-          
+
         </div>
       </div>
 
@@ -585,9 +583,8 @@ export default function DeliveryBoyCommission() {
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-                  formErrors.name ? "border-red-500" : "border-slate-300"
-                }`}
+                className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${formErrors.name ? "border-red-500" : "border-slate-300"
+                  }`}
                 placeholder="e.g., Short Distance (0-2 km)"
               />
               {formErrors.name && <p className="text-xs text-red-500 mt-1">{formErrors.name}</p>}
@@ -602,9 +599,8 @@ export default function DeliveryBoyCommission() {
                 min="0"
                 value={formData.minDistance}
                 onChange={(e) => setFormData({ ...formData, minDistance: e.target.value })}
-                className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-                  formErrors.minDistance ? "border-red-500" : "border-slate-300"
-                }`}
+                className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${formErrors.minDistance ? "border-red-500" : "border-slate-300"
+                  }`}
                 placeholder="e.g., 0"
               />
               {formErrors.minDistance && <p className="text-xs text-red-500 mt-1">{formErrors.minDistance}</p>}
@@ -619,9 +615,8 @@ export default function DeliveryBoyCommission() {
                 min="0"
                 value={formData.maxDistance}
                 onChange={(e) => setFormData({ ...formData, maxDistance: e.target.value })}
-                className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-                  formErrors.maxDistance ? "border-red-500" : "border-slate-300"
-                }`}
+                className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${formErrors.maxDistance ? "border-red-500" : "border-slate-300"
+                  }`}
                 placeholder="e.g., 2 (or leave empty)"
               />
               {formErrors.maxDistance && <p className="text-xs text-red-500 mt-1">{formErrors.maxDistance}</p>}
@@ -636,9 +631,8 @@ export default function DeliveryBoyCommission() {
                 min="0"
                 value={formData.commissionPerKm}
                 onChange={(e) => setFormData({ ...formData, commissionPerKm: e.target.value })}
-                className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-                  formErrors.commissionPerKm ? "border-red-500" : "border-slate-300"
-                }`}
+                className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${formErrors.commissionPerKm ? "border-red-500" : "border-slate-300"
+                  }`}
                 placeholder="e.g., 15"
               />
               {formErrors.commissionPerKm && <p className="text-xs text-red-500 mt-1">{formErrors.commissionPerKm}</p>}
@@ -653,9 +647,8 @@ export default function DeliveryBoyCommission() {
                 min="0"
                 value={formData.basePayout}
                 onChange={(e) => setFormData({ ...formData, basePayout: e.target.value })}
-                className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-                  formErrors.basePayout ? "border-red-500" : "border-slate-300"
-                }`}
+                className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${formErrors.basePayout ? "border-red-500" : "border-slate-300"
+                  }`}
                 placeholder="e.g., 20"
               />
               {formErrors.basePayout && <p className="text-xs text-red-500 mt-1">{formErrors.basePayout}</p>}

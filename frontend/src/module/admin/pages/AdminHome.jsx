@@ -78,7 +78,7 @@ export default function AdminHome() {
         { label: "Pending", value: 0, color: "#10b981" },
       ]
     }
-    
+
     const byStatus = dashboardData.orders.byStatus
     return [
       { label: "Delivered", value: byStatus.delivered || 0, color: "#0ea5e9" },
@@ -95,7 +95,7 @@ export default function AdminHome() {
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
       return monthNames.map(month => ({ month, commission: 0, revenue: 0, orders: 0 }))
     }
-    
+
     // Use real monthly data from backend
     return dashboardData.monthlyData.map(item => ({
       month: item.month,
@@ -117,7 +117,7 @@ export default function AdminHome() {
   const gstTotal = dashboardData?.gst?.total || 0
   // Total revenue = Commission + Platform Fee + Delivery Fee + GST
   const totalAdminEarnings = commissionTotal + platformFeeTotal + deliveryFeeTotal + gstTotal
-  
+
   // Additional stats
   const totalRestaurants = dashboardData?.restaurants?.total || 0
   const pendingRestaurantRequests = dashboardData?.restaurants?.pendingRequests || 0

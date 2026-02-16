@@ -417,8 +417,8 @@ router.put("/restaurant-complaints/:id/notes", updateInternalNotes);
 // Global Addon Management
 router.get("/addons", getAddons);
 router.get("/addons/:id", getAddonById);
-router.post("/addons", createAddon);
-router.put("/addons/:id", updateAddon);
+router.post("/addons", uploadMiddleware.single('image'), createAddon);
+router.put("/addons/:id", uploadMiddleware.single('image'), updateAddon);
 router.delete("/addons/:id", deleteAddon);
 router.patch("/addons/:id/status", toggleAddonStatus);
 

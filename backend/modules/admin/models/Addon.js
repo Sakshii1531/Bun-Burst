@@ -25,6 +25,10 @@ const addonSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+        image: {
+            type: String,
+            default: '',
+        },
     },
     {
         timestamps: true,

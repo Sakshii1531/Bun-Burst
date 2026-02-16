@@ -29,7 +29,7 @@ export default function Cashback() {
 
   const filteredCashbacks = useMemo(() => {
     let result = [...cashbacks]
-    
+
     if (cashbackType !== "all") {
       if (cashbackType === "Percentage") {
         result = result.filter(cb => cb.cashbackType === "Percentage")
@@ -102,11 +102,10 @@ export default function Cashback() {
               <button
                 key={tab.key}
                 onClick={() => setActiveLanguage(tab.key)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeLanguage === tab.key
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeLanguage === tab.key
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-slate-600 hover:text-slate-900"
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -328,14 +327,12 @@ export default function Cashback() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         onClick={() => handleToggleStatus(cashback.sl)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                          cashback.status ? "bg-blue-600" : "bg-slate-300"
-                        }`}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${cashback.status ? "bg-blue-600" : "bg-slate-300"
+                          }`}
                       >
                         <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            cashback.status ? "translate-x-6" : "translate-x-1"
-                          }`}
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${cashback.status ? "translate-x-6" : "translate-x-1"
+                            }`}
                         />
                       </button>
                     </td>

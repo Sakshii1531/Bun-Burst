@@ -155,11 +155,10 @@ export default function CashLimitSettlement() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                              tx.status === "Completed"
+                            className={`px-2 py-0.5 rounded text-xs font-semibold ${tx.status === "Completed"
                                 ? "bg-green-100 text-green-700"
                                 : "bg-slate-100 text-slate-700"
-                            }`}
+                              }`}
                           >
                             {tx.status || "—"}
                           </span>

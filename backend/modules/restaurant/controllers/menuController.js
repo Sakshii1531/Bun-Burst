@@ -1,5 +1,6 @@
 import Menu from '../models/Menu.js';
 import Restaurant from '../models/Restaurant.js';
+import AdminCategoryManagement from '../../admin/models/AdminCategoryManagement.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 import mongoose from 'mongoose';
@@ -400,6 +401,7 @@ export const addItemToSection = asyncHandler(async (req, res) => {
     rating: item.rating ?? 0.0,
     reviews: item.reviews ?? 0,
     price: Number(item.price) || 0,
+    categoryId: item.categoryId || null,
     stock: item.stock || "Unlimited",
     discount: item.discount || null,
     originalPrice: item.originalPrice || null,
@@ -544,6 +546,7 @@ export const addItemToSubsection = asyncHandler(async (req, res) => {
     rating: item.rating ?? 0.0,
     reviews: item.reviews ?? 0,
     price: Number(item.price) || 0,
+    categoryId: item.categoryId || null,
     stock: item.stock || "Unlimited",
     discount: item.discount || null,
     originalPrice: item.originalPrice || null,
@@ -626,6 +629,13 @@ export const getMenuByRestaurantId = async (req, res) => {
     console.log('[USER MENU] Processing menu for restaurant:', restaurant._id);
     console.log('[USER MENU] Total sections:', menu.sections?.length || 0);
 
+    // Fetch admin categories to link legacy items that don't have categoryId
+    const adminCategories = await AdminCategoryManagement.find({ status: true }).lean();
+    const categoryNameMap = new Map();
+    adminCategories.forEach(cat => {
+      categoryNameMap.set(cat.name.toLowerCase().trim(), cat._id);
+    });
+
     // Filter menu for user side: only show enabled sections and available items
     const filteredSections = (menu.sections || [])
       .filter(section => {
@@ -638,6 +648,9 @@ export const getMenuByRestaurantId = async (req, res) => {
         return isEnabled;
       })
       .map(section => {
+        // Find if this section matches a global category
+        const sectionCategoryId = categoryNameMap.get(section.name.toLowerCase().trim());
+
         console.log(`[USER MENU] Processing section: "${section.name}", items: ${section.items?.length || 0}`);
         // Filter direct items - only show available AND approved items
         // Items where isAvailable is not explicitly false AND approvalStatus is 'approved' should be shown
@@ -651,12 +664,15 @@ export const getMenuByRestaurantId = async (req, res) => {
             console.log(`[USER MENU] Filtering out item "${item.name}": isAvailable=${item.isAvailable}, approvalStatus=${item.approvalStatus}`);
           }
 
-          // Debug logging for preparationTime - log ALL items to see what's in the data
-          if (shouldShow) {
-            console.log(`[USER MENU] Item "${item.name}": preparationTime="${item.preparationTime}" (type: ${typeof item.preparationTime}, exists: ${item.hasOwnProperty('preparationTime')})`);
-          }
-
           return shouldShow;
+        }).map(item => {
+          // ENSURE categoryId is present - either from item itself, or from section name match
+          const itemCategoryId = item.categoryId || sectionCategoryId || (item.category ? categoryNameMap.get(item.category.toLowerCase().trim()) : null);
+
+          return {
+            ...item,
+            categoryId: itemCategoryId
+          };
         });
 
         // Filter subsections and their items
@@ -667,18 +683,17 @@ export const getMenuByRestaurantId = async (req, res) => {
               const isApproved = item.approvalStatus === 'approved' || !item.approvalStatus; // Include approved or legacy items without approvalStatus
               const shouldShow = isAvailable && isApproved;
 
-              // Debug logging for filtered items
-              if (!shouldShow) {
-                console.log(`[USER MENU] Filtering out subsection item "${item.name}": isAvailable=${item.isAvailable}, approvalStatus=${item.approvalStatus}`);
-              }
-
-              // Debug logging for preparationTime - log ALL items to see what's in the data
-              if (shouldShow) {
-                console.log(`[USER MENU] Subsection item "${item.name}": preparationTime="${item.preparationTime}" (type: ${typeof item.preparationTime}, exists: ${item.hasOwnProperty('preparationTime')})`);
-              }
-
               return shouldShow;
+            }).map(item => {
+              // ENSURE categoryId is present
+              const itemCategoryId = item.categoryId || sectionCategoryId || (item.category ? categoryNameMap.get(item.category.toLowerCase().trim()) : null);
+
+              return {
+                ...item,
+                categoryId: itemCategoryId
+              };
             });
+
             // Only include subsection if it has available items
             if (availableSubsectionItems.length > 0) {
               return {
@@ -1076,6 +1091,7 @@ export const updateMenuByAdmin = asyncHandler(async (req, res) => {
           rating: item.rating ?? 0.0,
           reviews: item.reviews ?? 0,
           price: item.price || 0,
+          categoryId: item.categoryId || null,
           stock: item.stock || "Unlimited",
           discount: item.discount || null,
           originalPrice: item.originalPrice || null,
@@ -1132,6 +1148,7 @@ export const updateMenuByAdmin = asyncHandler(async (req, res) => {
               rating: item.rating ?? 0.0,
               reviews: item.reviews ?? 0,
               price: item.price || 0,
+              categoryId: item.categoryId || null,
               stock: item.stock || "Unlimited",
               discount: item.discount || null,
               originalPrice: item.originalPrice || null,

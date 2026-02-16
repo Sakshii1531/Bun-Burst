@@ -93,7 +93,7 @@ export default function AdminSettings() {
       console.error("Error changing password:", error);
       const errorMessage =
         error?.response?.data?.message || "Failed to change password";
-      
+
       // Set specific error for current password
       if (errorMessage.includes("current password") || errorMessage.includes("incorrect")) {
         setErrors({ currentPassword: errorMessage });
@@ -141,9 +141,8 @@ export default function AdminSettings() {
                     handlePasswordChange("currentPassword", e.target.value)
                   }
                   placeholder="Enter your current password"
-                  className={`h-11 pr-12 ${
-                    errors.currentPassword ? "border-red-500" : ""
-                  }`}
+                  className={`h-11 pr-12 ${errors.currentPassword ? "border-red-500" : ""
+                    }`}
                   disabled={saving}
                   required
                 />
@@ -179,9 +178,8 @@ export default function AdminSettings() {
                     handlePasswordChange("newPassword", e.target.value)
                   }
                   placeholder="Enter your new password"
-                  className={`h-11 pr-12 ${
-                    errors.newPassword ? "border-red-500" : ""
-                  }`}
+                  className={`h-11 pr-12 ${errors.newPassword ? "border-red-500" : ""
+                    }`}
                   disabled={saving}
                   required
                 />
@@ -220,9 +218,8 @@ export default function AdminSettings() {
                     handlePasswordChange("confirmPassword", e.target.value)
                   }
                   placeholder="Confirm your new password"
-                  className={`h-11 pr-12 ${
-                    errors.confirmPassword ? "border-red-500" : ""
-                  }`}
+                  className={`h-11 pr-12 ${errors.confirmPassword ? "border-red-500" : ""
+                    }`}
                   disabled={saving}
                   required
                 />

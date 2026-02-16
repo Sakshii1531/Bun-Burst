@@ -37,7 +37,7 @@ export default function AdminProfile() {
       setLoading(true);
       const response = await adminAPI.getAdminProfile();
       const adminData = response?.data?.data?.admin || response?.data?.admin;
-      
+
       if (adminData) {
         setProfile(adminData);
         setFormData({
@@ -101,7 +101,7 @@ export default function AdminProfile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       setSaving(true);
       let profileImageUrl = formData.profileImage;
@@ -114,7 +114,7 @@ export default function AdminProfile() {
             folder: 'admin-profiles'
           });
           profileImageUrl = uploadResponse?.data?.data?.url || uploadResponse?.data?.url;
-          
+
           if (!profileImageUrl) {
             throw new Error("Failed to get uploaded image URL");
           }
@@ -139,7 +139,7 @@ export default function AdminProfile() {
       });
 
       const updatedAdmin = response?.data?.data?.admin || response?.data?.admin;
-      
+
       if (updatedAdmin) {
         setProfile(updatedAdmin);
         setFormData((prev) => ({

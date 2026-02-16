@@ -17,6 +17,11 @@ import { initRazorpayPayment } from "@/lib/utils/razorpay"
 import { toast } from "sonner"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
 
+const getImageUrl = (path) => {
+  if (!path) return null
+  if (path.startsWith('http')) return path
+  return `${API_BASE_URL.replace('/api', '')}${path}`
+}
 
 // Removed hardcoded suggested items - now fetching approved addons from backend
 // Coupons will be fetched from backend based on items in cart
@@ -427,111 +432,65 @@ export default function Cart() {
     fetchRestaurantData()
   }, [cart.length, cart[0]?.restaurantId, cart[0]?.restaurant])
 
-  // Fetch approved addons for the restaurant
+  // Fetch global approved addons based on categories of items in cart
   useEffect(() => {
-    const fetchAddonsWithId = async (idToUse) => {
+    const fetchGlobalAddonsForCart = async () => {
+      if (cart.length === 0) {
+        setAddons([])
+        return
+      }
 
-      console.log("🔍 Addons fetch - Using ID:", {
-        restaurantData: restaurantData ? {
-          _id: restaurantData._id,
-          restaurantId: restaurantData.restaurantId,
-          name: restaurantData.name
-        } : 'Not loaded',
-        cartRestaurantId: restaurantId,
-        idToUse: idToUse
-      })
+      // Extract unique categoryIds from all items in cart
+      const cartCategoryIds = [...new Set(cart.map(item => item.categoryId).filter(Boolean))]
 
-      // Convert to string for validation
-      const idString = String(idToUse)
-      console.log("🔍 Restaurant ID string:", idString, "Type:", typeof idString, "Length:", idString.length)
-
-      // Validate ID format (should be ObjectId or restaurantId format)
-      const isValidIdFormat = /^[a-zA-Z0-9\-_]+$/.test(idString) && idString.length >= 3
-
-      if (!isValidIdFormat) {
-        console.warn("⚠️ Restaurant ID format invalid:", idString)
+      if (cartCategoryIds.length === 0) {
+        console.log("ℹ️ No categoryIds found in cart items for suggestion fetch")
+        // Optionally fetch a default set of popular addons or just return empty
         setAddons([])
         return
       }
 
       try {
         setLoadingAddons(true)
-        console.log("🚀 Fetching addons for restaurant ID:", idString)
-        const response = await restaurantAPI.getAddonsByRestaurantId(idString)
-        console.log("✅ Addons API response received:", response?.data)
-        console.log("📦 Response structure:", {
-          success: response?.data?.success,
-          data: response?.data?.data,
-          addons: response?.data?.data?.addons,
-          directAddons: response?.data?.addons
+        console.log("🚀 Fetching global addons for categories:", cartCategoryIds)
+
+        // Fetch addons for each category in parallel
+        const addonPromises = cartCategoryIds.map(catId =>
+          adminAPI.getAddonsByCategory(catId)
+            .then(res => res.data?.success ? (res.data.data?.addons || []) : [])
+            .catch(err => {
+              console.error(`Error fetching addons for category ${catId}:`, err)
+              return []
+            })
+        )
+
+        const results = await Promise.all(addonPromises)
+
+        // Flatten, de-duplicate by ID, and filter for active ones
+        const allAddons = results.flat()
+        const uniqueAddons = []
+        const addonIds = new Set()
+
+        allAddons.forEach(addon => {
+          const id = addon.id || addon._id
+          if (id && !addonIds.has(id)) {
+            addonIds.add(id)
+            uniqueAddons.push(addon)
+          }
         })
 
-        const data = response?.data?.data?.addons || response?.data?.addons || []
-        console.log("📊 Fetched addons count:", data.length)
-        console.log("📋 Fetched addons data:", JSON.stringify(data, null, 2))
-
-        if (data.length === 0) {
-          console.warn("⚠️ No addons returned from API. Response:", response?.data)
-        } else {
-          console.log("✅ Successfully fetched", data.length, "addons:", data.map(a => a.name))
-        }
-
-        setAddons(data)
+        console.log(`✅ Successfully fetched ${uniqueAddons.length} global suggests based on cart categories`)
+        setAddons(uniqueAddons)
       } catch (error) {
-        // Log error for debugging
-        console.error("❌ Addons fetch error:", {
-          code: error.code,
-          status: error.response?.status,
-          message: error.message,
-          url: error.config?.url,
-          data: error.response?.data
-        })
-        // Silently handle network errors and 404 errors
-        // Network errors (ERR_NETWORK) happen when backend is not running - this is OK for development
-        // 404 errors mean restaurant might not have addons or restaurant not found - also OK
-        if (error.code !== 'ERR_NETWORK' && error.response?.status !== 404) {
-          console.error("Error fetching addons:", error)
-        }
-        // Continue with cart even if addons fetch fails
+        console.error("❌ Global addons fetch error:", error)
         setAddons([])
       } finally {
         setLoadingAddons(false)
       }
     }
 
-    const fetchAddons = async () => {
-      if (cart.length === 0) {
-        setAddons([])
-        return
-      }
-
-      // Wait for restaurantData to be loaded (including fallback search)
-      if (loadingRestaurant) {
-        console.log("⏳ Waiting for restaurantData to load (including fallback search)...")
-        return
-      }
-
-      // Must have restaurantData to fetch addons
-      if (!restaurantData) {
-        console.warn("⚠️ No restaurantData available for addons fetch")
-        setAddons([])
-        return
-      }
-
-      // Use restaurantData ID (most reliable)
-      const idToUse = restaurantData._id || restaurantData.restaurantId
-      if (!idToUse) {
-        console.warn("⚠️ No valid restaurant ID in restaurantData")
-        setAddons([])
-        return
-      }
-
-      console.log("✅ Using restaurantData ID for addons:", idToUse)
-      fetchAddonsWithId(idToUse)
-    }
-
-    fetchAddons()
-  }, [restaurantData, cart.length, loadingRestaurant])
+    fetchGlobalAddonsForCart()
+  }, [cart])
 
   // Fetch coupons for items in cart
   useEffect(() => {
@@ -1483,7 +1442,7 @@ export default function Cart() {
                         <div key={addon.id} className="flex-shrink-0 w-28 md:w-36">
                           <div className="relative bg-muted rounded-lg md:rounded-xl overflow-hidden">
                             <img
-                              src={addon.image || (addon.images && addon.images[0]) || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&h=200&fit=crop"}
+                              src={getImageUrl(addon.image) || (addon.images && getImageUrl(addon.images[0])) || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&h=200&fit=crop"}
                               alt={addon.name}
                               className="w-full h-28 md:h-36 object-cover rounded-lg md:rounded-xl"
                               onError={(e) => {

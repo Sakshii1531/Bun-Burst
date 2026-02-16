@@ -15,7 +15,7 @@ export default function Coupons() {
         setLoading(true)
         setError(null)
         const response = await adminAPI.getAllOffers({})
-        
+
         if (response?.data?.success) {
           setOffers(response.data.data.offers || [])
         } else {
@@ -37,7 +37,7 @@ export default function Coupons() {
     if (!searchQuery.trim()) {
       return offers
     }
-    
+
     const query = searchQuery.toLowerCase().trim()
     return offers.filter(offer =>
       offer.restaurantName?.toLowerCase().includes(query) ||
@@ -52,7 +52,7 @@ export default function Coupons() {
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
           <h1 className="text-2xl font-bold text-slate-900 mb-4">Restaurant Offers & Coupons</h1>
-          
+
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -128,7 +128,7 @@ export default function Coupons() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-slate-700">
-                          {offer.discountType === 'flat-price' 
+                          {offer.discountType === 'flat-price'
                             ? `₹${offer.originalPrice - offer.discountedPrice} OFF`
                             : `${offer.discountPercentage}% OFF`}
                         </span>
@@ -140,13 +140,12 @@ export default function Coupons() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          offer.status === 'active' 
-                            ? 'bg-green-100 text-green-700' 
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${offer.status === 'active'
+                            ? 'bg-green-100 text-green-700'
                             : offer.status === 'paused'
-                            ? 'bg-orange-100 text-orange-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
+                              ? 'bg-orange-100 text-orange-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}>
                           {offer.status || 'Inactive'}
                         </span>
                       </td>

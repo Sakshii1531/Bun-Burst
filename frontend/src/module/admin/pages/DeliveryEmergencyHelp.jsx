@@ -23,7 +23,7 @@ export default function DeliveryEmergencyHelp() {
     try {
       setLoading(true)
       const response = await adminAPI.getEmergencyHelp()
-      
+
       if (response?.data?.success && response?.data?.data) {
         const data = response.data.data
         setFormData({
@@ -79,7 +79,7 @@ export default function DeliveryEmergencyHelp() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (!validateForm()) {
       toast.error("Please fix the errors in the form")
       return
@@ -176,7 +176,7 @@ export default function DeliveryEmergencyHelp() {
               <div className="text-sm text-blue-800">
                 <p className="font-semibold mb-1">Important Information</p>
                 <p>
-                  These phone numbers will be displayed to delivery partners in the emergency help section. 
+                  These phone numbers will be displayed to delivery partners in the emergency help section.
                   When a delivery partner clicks on any emergency option, it will automatically dial the corresponding number.
                 </p>
               </div>
@@ -198,11 +198,10 @@ export default function DeliveryEmergencyHelp() {
                     value={formData[field.id]}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
                     placeholder={field.placeholder}
-                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      formErrors[field.id]
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors[field.id]
                         ? "border-red-300 focus:ring-red-500"
                         : "border-slate-300"
-                    }`}
+                      }`}
                   />
                   {formErrors[field.id] && (
                     <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
