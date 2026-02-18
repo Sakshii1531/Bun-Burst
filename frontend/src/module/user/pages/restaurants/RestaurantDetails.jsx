@@ -468,11 +468,32 @@ export default function RestaurantDetails() {
               const menuResponse = await restaurantAPI.getMenuByRestaurantId(restaurantIdForMenu)
               if (menuResponse.data && menuResponse.data.success && menuResponse.data.data && menuResponse.data.data.menu) {
                 const menuSections = menuResponse.data.data.menu.sections || []
+                const normalizedMenuSections = menuSections.map((section) => ({
+                  ...section,
+                  items: (section.items || []).map((item) => ({
+                    ...item,
+                    sectionName: section.name || item.sectionName || null,
+                    categoryName: item.categoryName || section.name || item.category || null,
+                  })),
+                  subsections: (section.subsections || []).map((subsection) => ({
+                    ...subsection,
+                    items: (subsection.items || []).map((item) => ({
+                      ...item,
+                      sectionName: subsection.name || section.name || item.sectionName || null,
+                      categoryName:
+                        item.categoryName ||
+                        subsection.name ||
+                        section.name ||
+                        item.category ||
+                        null,
+                    })),
+                  })),
+                }))
 
                 // Collect all recommended items from all sections
                 // Only include items that are both recommended (isRecommended === true) AND available (isAvailable !== false)
                 const recommendedItems = []
-                menuSections.forEach(section => {
+                normalizedMenuSections.forEach(section => {
                   // Check direct items - only include if isRecommended is explicitly true (strict check) AND item is available
                   if (section.items && Array.isArray(section.items)) {
                     section.items.forEach(item => {
@@ -517,7 +538,7 @@ export default function RestaurantDetails() {
                 })))
 
                 // Always create recommended section (even if empty) - will show "No dish Yet" if empty
-                const finalMenuSections = [{ name: "Recommended for you", items: recommendedItems, subsections: [] }, ...menuSections]
+                const finalMenuSections = [{ name: "Recommended for you", items: recommendedItems, subsections: [] }, ...normalizedMenuSections]
 
                 setRestaurant(prev => ({
                   ...prev,
@@ -783,6 +804,9 @@ export default function RestaurantDetails() {
       restaurant: restaurant.name,
       restaurantId: validRestaurantId,
       categoryId: item.categoryId || null,
+      category: item.category || item.categoryName || item.sectionName || null,
+      categoryName: item.categoryName || item.category || item.sectionName || null,
+      sectionName: item.sectionName || null,
       description: item.description,
       originalPrice: item.originalPrice ? (item.originalPrice + addonsPrice) : null,
       isVeg: item.isVeg !== false

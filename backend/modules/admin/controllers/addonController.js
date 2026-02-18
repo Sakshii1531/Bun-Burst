@@ -34,23 +34,15 @@ export const getAddonById = asyncHandler(async (req, res) => {
 // @route   POST /api/admin/addons
 // @access  Private/Admin
 export const createAddon = asyncHandler(async (req, res) => {
-    const { name, price, categoryId, isActive, description } = req.body;
-
-    // Handle image upload
-    let image = '';
-    if (req.file) {
-        image = `/uploads/${req.file.filename}`;
-    } else if (req.body.image) {
-        image = req.body.image;
-    }
+    const { name, price, categoryId, isActive, description, image } = req.body;
 
     const addon = await Addon.create({
         name,
         price,
         categoryId,
-        isActive: isActive === 'true' || isActive === true,
+        isActive,
         description,
-        image
+        image: image || '',
     });
 
     return successResponse(res, 201, 'Addon created successfully', { addon });
@@ -66,24 +58,30 @@ export const updateAddon = asyncHandler(async (req, res) => {
         return errorResponse(res, 404, 'Addon not found');
     }
 
-    const updateData = { ...req.body };
+    const {
+        name,
+        price,
+        categoryId,
+        isActive,
+        description,
+        image,
+    } = req.body;
 
-    // Handle image upload
-    if (req.file) {
-        updateData.image = `/uploads/${req.file.filename}`;
-    }
+    const updatePayload = {
+        ...(name !== undefined ? { name } : {}),
+        ...(price !== undefined ? { price } : {}),
+        ...(categoryId !== undefined ? { categoryId } : {}),
+        ...(isActive !== undefined ? { isActive } : {}),
+        ...(description !== undefined ? { description } : {}),
+        ...(image !== undefined ? { image } : {}),
+    };
 
-    // Convert string boolean back to actual boolean if coming from FormData
-    if (updateData.isActive !== undefined) {
-        updateData.isActive = updateData.isActive === 'true' || updateData.isActive === true;
-    }
-
-    const updatedAddon = await Addon.findByIdAndUpdate(req.params.id, updateData, {
+    addon = await Addon.findByIdAndUpdate(req.params.id, updatePayload, {
         new: true,
         runValidators: true,
     });
 
-    return successResponse(res, 200, 'Addon updated successfully', { addon: updatedAddon });
+    return successResponse(res, 200, 'Addon updated successfully', { addon });
 });
 
 // @desc    Delete addon
@@ -130,7 +128,7 @@ export const getAddonsByCategory = asyncHandler(async (req, res) => {
     const addons = await Addon.find({
         categoryId,
         isActive: true
-    }).select('name price categoryId isActive description image');
+    }).select('name price categoryId isActive image description');
 
     return successResponse(res, 200, 'Addons retrieved successfully', { addons });
 });

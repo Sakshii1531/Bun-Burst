@@ -632,11 +632,12 @@ export default function MenuAdd() {
                             <div className="space-y-2">
                                 {menu.sections.map((section) => (
                                     <div key={section.id} className="border border-gray-200 rounded-lg">
-                                        <button
-                                            onClick={() => toggleSection(section.id)}
-                                            className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                                        >
-                                            <div className="flex items-center gap-3">
+                                        <div className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleSection(section.id)}
+                                                className="flex items-center gap-3 text-left"
+                                            >
                                                 {expandedSections[section.id] ? (
                                                     <ChevronDown className="w-5 h-5 text-gray-600" />
                                                 ) : (
@@ -647,18 +648,16 @@ export default function MenuAdd() {
                                                 <span className="text-sm text-gray-500">
                                                     ({section.items?.length || 0} items)
                                                 </span>
-                                            </div>
+                                            </button>
                                             <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    handleAddDish(section)
-                                                }}
+                                                type="button"
+                                                onClick={() => handleAddDish(section)}
                                                 className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-1"
                                             >
                                                 <Plus className="w-4 h-4" />
                                                 Add Dish
                                             </button>
-                                        </button>
+                                        </div>
 
                                         {expandedSections[section.id] && (
                                             <div className="px-4 pb-4 border-t border-gray-200">

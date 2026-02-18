@@ -1194,6 +1194,31 @@ export const getRestaurants = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Get Restaurant By ID
+ * GET /api/admin/restaurants/:id
+ */
+export const getRestaurantById = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const restaurant = await Restaurant.findById(id).select("-password").lean();
+
+    if (!restaurant) {
+      return errorResponse(res, 404, "Restaurant not found");
+    }
+
+    return successResponse(res, 200, "Restaurant retrieved successfully", {
+      restaurant,
+    });
+  } catch (error) {
+    logger.error(`Error fetching restaurant by id: ${error.message}`, {
+      error: error.stack,
+    });
+    return errorResponse(res, 500, "Failed to fetch restaurant");
+  }
+});
+
+/**
  * Update Restaurant Status (Active/Inactive/Ban)
  * PUT /api/admin/restaurants/:id/status
  */
@@ -1835,7 +1860,29 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     if (ownerEmail) restaurant.ownerEmail = ownerEmail;
     if (ownerPhone) restaurant.ownerPhone = normalizePhoneNumber(ownerPhone) || restaurant.ownerPhone;
     if (primaryContactNumber) restaurant.primaryContactNumber = normalizePhoneNumber(primaryContactNumber) || restaurant.primaryContactNumber;
-    if (location) restaurant.location = { ...restaurant.location, ...location };
+    if (location) {
+      const normalizedLocation = { ...restaurant.location, ...location };
+      const latNum = Number(normalizedLocation.latitude);
+      const lngNum = Number(normalizedLocation.longitude);
+
+      if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+        normalizedLocation.latitude = latNum;
+        normalizedLocation.longitude = lngNum;
+        normalizedLocation.coordinates = [lngNum, latNum];
+      } else if (
+        Array.isArray(normalizedLocation.coordinates) &&
+        normalizedLocation.coordinates.length >= 2
+      ) {
+        const [coordLng, coordLat] = normalizedLocation.coordinates;
+        if (Number.isFinite(Number(coordLat)) && Number.isFinite(Number(coordLng))) {
+          normalizedLocation.latitude = Number(coordLat);
+          normalizedLocation.longitude = Number(coordLng);
+          normalizedLocation.coordinates = [Number(coordLng), Number(coordLat)];
+        }
+      }
+
+      restaurant.location = normalizedLocation;
+    }
     if (cuisines) restaurant.cuisines = cuisines;
 
     // Update Delivery Timings
@@ -3225,5 +3272,49 @@ export const getCustomerWalletReport = asyncHandler(async (req, res) => {
       500,
       error.message || "Failed to fetch customer wallet report",
     );
+  }
+});
+
+/**
+ * Update Restaurant Zone
+ * PUT /api/admin/restaurants/:id/zone
+ */
+export const updateRestaurantZone = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { zoneId } = req.body;
+
+    // Restaurant is already imported at the top of file
+
+    const restaurant = await Restaurant.findById(id);
+
+    if (!restaurant) {
+      return errorResponse(res, 404, "Restaurant not found");
+    }
+
+    if (!restaurant.location) {
+      restaurant.location = {};
+    }
+
+    // Update location.zoneId
+    restaurant.location.zoneId = zoneId;
+    await restaurant.save();
+
+    logger.info(`Restaurant zone updated: ${id} -> ${zoneId}`, {
+      updatedBy: req.user._id,
+    });
+
+    return successResponse(res, 200, "Restaurant zone updated successfully", {
+      restaurant: {
+        id: restaurant._id,
+        name: restaurant.name,
+        zoneId: restaurant.location.zoneId,
+      },
+    });
+  } catch (error) {
+    logger.error(`Error updating restaurant zone: ${error.message}`, {
+      error: error.stack,
+    });
+    return errorResponse(res, 500, "Failed to update restaurant zone");
   }
 });

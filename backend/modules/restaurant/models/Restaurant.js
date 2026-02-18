@@ -14,6 +14,11 @@ const locationSchema = new mongoose.Schema({
   formattedAddress: String,
   // Stored address fields
   address: String, // Full address string
+  zoneId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Zone",
+    default: null,
+  },
   addressLine1: String,
   addressLine2: String,
   area: String,

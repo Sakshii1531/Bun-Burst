@@ -18,6 +18,7 @@ import {
   getUserById,
   updateUserStatus,
   getRestaurants,
+  getRestaurantById,
   createRestaurant,
   updateRestaurant,
   updateRestaurantStatus,
@@ -27,6 +28,7 @@ import {
   reverifyRestaurant,
   deleteRestaurant,
   updateRestaurantDiningSettings,
+  updateRestaurantZone,
   getAllOffers,
   getRestaurantAnalytics,
   getCustomerWalletReport,
@@ -297,7 +299,12 @@ router.put("/users/:id/status", updateUserStatus);
 router.get("/customer-wallet-report", getCustomerWalletReport);
 
 // Restaurant Management
+router.put("/restaurants/:id/zone", (req, res, next) => {
+  console.log("✅ ZONE UPDATE ROUTE HIT! ID:", req.params.id);
+  next();
+}, updateRestaurantZone);
 router.get("/restaurants", getRestaurants);
+router.get("/restaurants/:id", getRestaurantById);
 router.post("/restaurants", createRestaurant);
 router.put("/restaurants/:id", updateRestaurant);
 // router.get("/restaurants/requests", getRestaurantJoinRequests);
@@ -307,6 +314,7 @@ router.get("/restaurant-analytics/:restaurantId", getRestaurantAnalytics);
 // router.post("/restaurants/:id/reverify", reverifyRestaurant);
 router.put("/restaurants/:id/status", updateRestaurantStatus);
 router.put("/restaurants/:id/dining-settings", updateRestaurantDiningSettings);
+
 
 router.get("/restaurants/:id/menu", getMenuByAdmin);
 router.put("/restaurants/:id/menu", updateMenuByAdmin);

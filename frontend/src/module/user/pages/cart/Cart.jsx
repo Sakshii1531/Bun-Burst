@@ -17,11 +17,6 @@ import { initRazorpayPayment } from "@/lib/utils/razorpay"
 import { toast } from "sonner"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
 
-const getImageUrl = (path) => {
-  if (!path) return null
-  if (path.startsWith('http')) return path
-  return `${API_BASE_URL.replace('/api', '')}${path}`
-}
 
 // Removed hardcoded suggested items - now fetching approved addons from backend
 // Coupons will be fetched from backend based on items in cart
@@ -97,11 +92,134 @@ export default function Cart() {
   const [loadingCategoryAddons, setLoadingCategoryAddons] = useState(false)
   const [showAddonModal, setShowAddonModal] = useState(false)
   const [selectedAddonsMap, setSelectedAddonsMap] = useState({})
+  const [publicCategories, setPublicCategories] = useState([])
+
+  const normalizeCategoryKey = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, " ")
+
+  const singularize = (text) => {
+    if (!text) return text
+    if (text.endsWith("ies") && text.length > 4) return `${text.slice(0, -3)}y`
+    if (text.endsWith("es") && text.length > 3) return text.slice(0, -2)
+    if (text.endsWith("s") && text.length > 2) return text.slice(0, -1)
+    return text
+  }
+
+  const isFuzzyCategoryMatch = (hint, target) => {
+    const a = normalizeCategoryKey(hint)
+    const b = normalizeCategoryKey(target)
+    if (!a || !b) return false
+    if (a === b) return true
+    if (singularize(a) === singularize(b)) return true
+    if (a.length >= 4 && b.includes(a)) return true
+    if (b.length >= 4 && a.includes(b)) return true
+    return false
+  }
+
+  const categoryLookup = useMemo(() => {
+    const byId = new Map()
+    const byName = new Map()
+    const bySlug = new Map()
+    const entries = []
+
+    ;(publicCategories || []).forEach((category) => {
+      const resolvedId = category?._id || category?.id
+      if (!resolvedId) return
+      const normalizedId = String(resolvedId)
+      byId.set(normalizedId, normalizedId)
+
+      if (category?.name) {
+        byName.set(normalizeCategoryKey(category.name), normalizedId)
+      }
+      if (category?.slug) {
+        bySlug.set(normalizeCategoryKey(category.slug), normalizedId)
+      }
+      entries.push({
+        id: normalizedId,
+        name: category?.name || "",
+        slug: category?.slug || "",
+      })
+    })
+
+    return { byId, byName, bySlug, entries }
+  }, [publicCategories])
+
+  const resolveCategoryIdForItem = (item) => {
+    const directCandidates = [
+      item?.categoryId,
+      item?.category?._id,
+      item?.category?.id,
+    ]
+
+    for (const candidate of directCandidates) {
+      if (!candidate) continue
+      const normalizedCandidate = String(candidate).trim()
+      if (!normalizedCandidate) continue
+
+      if (categoryLookup.byId.has(normalizedCandidate)) {
+        return categoryLookup.byId.get(normalizedCandidate)
+      }
+
+      const byNameOrSlug =
+        categoryLookup.bySlug.get(normalizeCategoryKey(normalizedCandidate)) ||
+        categoryLookup.byName.get(normalizeCategoryKey(normalizedCandidate))
+      if (byNameOrSlug) return byNameOrSlug
+
+      // If it's already an ObjectId-like value, use as-is.
+      if (/^[a-fA-F0-9]{24}$/.test(normalizedCandidate)) return normalizedCandidate
+    }
+
+    const nameCandidates = [
+      item?.category,
+      item?.category?.name,
+      item?.categoryName,
+      item?.sectionName,
+      item?.section,
+      item?.name,
+    ]
+
+    for (const nameCandidate of nameCandidates) {
+      if (!nameCandidate) continue
+      const normalizedName = normalizeCategoryKey(nameCandidate)
+      if (!normalizedName) continue
+
+      const mappedId =
+        categoryLookup.byName.get(normalizedName) ||
+        categoryLookup.bySlug.get(normalizedName)
+      if (mappedId) return mappedId
+
+      const fuzzyMatched = categoryLookup.entries.find((entry) =>
+        isFuzzyCategoryMatch(normalizedName, entry.name) ||
+        isFuzzyCategoryMatch(normalizedName, entry.slug),
+      )
+      if (fuzzyMatched?.id) return fuzzyMatched.id
+    }
+
+    return null
+  }
+
+  useEffect(() => {
+    const fetchPublicCategories = async () => {
+      try {
+        const response = await adminAPI.getPublicCategories()
+        const categories = response?.data?.data?.categories || []
+        setPublicCategories(categories)
+      } catch (error) {
+        console.error("Error fetching public categories for addons:", error)
+      }
+    }
+
+    fetchPublicCategories()
+  }, [])
 
   // Addon Customization Handlers
-  const handleOpenAddons = async (item) => {
+  const handleOpenAddons = async (item, preResolvedCategoryId = null) => {
     setSelectedItemForAddons(item)
-    const categoryId = item.categoryId
+    const categoryId = preResolvedCategoryId || resolveCategoryIdForItem(item)
 
     if (!categoryId) {
       toast.error("This item doesn't support addon customization")
@@ -240,16 +358,15 @@ export default function Cart() {
     ? (restaurantData?._id || restaurantData?.restaurantId || cart[0]?.restaurantId || null)
     : null
 
-  // Stable restaurant ID for addons fetch (memoized to prevent dependency array issues)
-  // Prefer restaurantData IDs (more reliable) over slug from cart
-  const restaurantIdForAddons = useMemo(() => {
-    // Only use restaurantData if it's loaded, otherwise wait
-    if (restaurantData) {
-      return restaurantData._id || restaurantData.restaurantId || null
-    }
-    // If restaurantData is not loaded yet, return null to wait
-    return null
-  }, [restaurantData])
+  // Extract unique category IDs from cart items to fetch matching global addons.
+  const cartCategoryIds = useMemo(() => {
+    const unique = new Set()
+    cart.forEach((item) => {
+      const resolvedCategoryId = resolveCategoryIdForItem(item)
+      if (resolvedCategoryId) unique.add(String(resolvedCategoryId))
+    })
+    return Array.from(unique)
+  }, [cart, categoryLookup])
 
 
 
@@ -432,65 +549,58 @@ export default function Cart() {
     fetchRestaurantData()
   }, [cart.length, cart[0]?.restaurantId, cart[0]?.restaurant])
 
-  // Fetch global approved addons based on categories of items in cart
+  // Fetch global admin addons that match cart item categories.
   useEffect(() => {
-    const fetchGlobalAddonsForCart = async () => {
-      if (cart.length === 0) {
-        setAddons([])
-        return
-      }
-
-      // Extract unique categoryIds from all items in cart
-      const cartCategoryIds = [...new Set(cart.map(item => item.categoryId).filter(Boolean))]
-
+    const fetchCategoryMatchedAddons = async () => {
       if (cartCategoryIds.length === 0) {
-        console.log("ℹ️ No categoryIds found in cart items for suggestion fetch")
-        // Optionally fetch a default set of popular addons or just return empty
         setAddons([])
         return
       }
 
       try {
         setLoadingAddons(true)
-        console.log("🚀 Fetching global addons for categories:", cartCategoryIds)
-
-        // Fetch addons for each category in parallel
-        const addonPromises = cartCategoryIds.map(catId =>
-          adminAPI.getAddonsByCategory(catId)
-            .then(res => res.data?.success ? (res.data.data?.addons || []) : [])
-            .catch(err => {
-              console.error(`Error fetching addons for category ${catId}:`, err)
-              return []
-            })
+        const responses = await Promise.all(
+          cartCategoryIds.map((categoryId) =>
+            adminAPI.getAddonsByCategory(categoryId).catch(() => null),
+          ),
         )
 
-        const results = await Promise.all(addonPromises)
-
-        // Flatten, de-duplicate by ID, and filter for active ones
-        const allAddons = results.flat()
-        const uniqueAddons = []
-        const addonIds = new Set()
-
-        allAddons.forEach(addon => {
-          const id = addon.id || addon._id
-          if (id && !addonIds.has(id)) {
-            addonIds.add(id)
-            uniqueAddons.push(addon)
-          }
+        const merged = new Map()
+        responses.forEach((response, index) => {
+          const categoryId = cartCategoryIds[index]
+          const list = response?.data?.data?.addons || []
+          list.forEach((addon) => {
+            const addonId = String(addon.id || addon._id || "")
+            if (!addonId) return
+            if (!merged.has(addonId)) {
+              merged.set(addonId, {
+                ...addon,
+                id: addon.id || addon._id,
+                matchedCategoryIds: [categoryId],
+              })
+              return
+            }
+            const existing = merged.get(addonId)
+            merged.set(addonId, {
+              ...existing,
+              matchedCategoryIds: Array.from(
+                new Set([...(existing.matchedCategoryIds || []), categoryId]),
+              ),
+            })
+          })
         })
 
-        console.log(`✅ Successfully fetched ${uniqueAddons.length} global suggests based on cart categories`)
-        setAddons(uniqueAddons)
+        setAddons(Array.from(merged.values()))
       } catch (error) {
-        console.error("❌ Global addons fetch error:", error)
+        console.error("Error fetching category-matched addons:", error)
         setAddons([])
       } finally {
         setLoadingAddons(false)
       }
     }
 
-    fetchGlobalAddonsForCart()
-  }, [cart])
+    fetchCategoryMatchedAddons()
+  }, [cartCategoryIds])
 
   // Fetch coupons for items in cart
   useEffect(() => {
@@ -1319,7 +1429,9 @@ export default function Cart() {
               {/* Cart Items */}
               <div className="bg-card px-4 md:px-6 py-3 md:py-4 rounded-lg md:rounded-xl">
                 <div className="space-y-3 md:space-y-4">
-                  {cart.map((item) => (
+                  {cart.map((item) => {
+                    const resolvedCategoryId = resolveCategoryIdForItem(item)
+                    return (
                     <div key={item.id} className="flex items-start gap-3 md:gap-4">
                       {/* Veg/Non-veg indicator */}
                       <div className={`w-4 h-4 md:w-5 md:h-5 border-2 ${item.isVeg !== false ? 'border-green-600' : 'border-red-600'} flex items-center justify-center mt-1 flex-shrink-0`}>
@@ -1333,9 +1445,9 @@ export default function Cart() {
                             {(item.selectedAddons || item.addons).map(a => a.name).join(", ")}
                           </p>
                         )}
-                        {item.categoryId ? (
+                        {resolvedCategoryId ? (
                           <button
-                            onClick={() => handleOpenAddons(item)}
+                            onClick={() => handleOpenAddons(item, resolvedCategoryId)}
                             className="text-[10px] md:text-xs text-orange-600 font-bold flex items-center gap-1 mt-1.5 hover:text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 transition-all active:scale-95"
                           >
                             <Sparkles className="h-3 w-3" />
@@ -1373,7 +1485,7 @@ export default function Cart() {
                         </p>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
 
                 {/* Add more items */}
@@ -1439,10 +1551,10 @@ export default function Cart() {
                   ) : (
                     <div className="flex gap-3 md:gap-4 overflow-x-auto pb-2 -mx-4 md:-mx-6 px-4 md:px-6 scrollbar-hide">
                       {addons.map((addon) => (
-                        <div key={addon.id} className="flex-shrink-0 w-28 md:w-36">
+                        <div key={addon.id || addon._id} className="flex-shrink-0 w-28 md:w-36">
                           <div className="relative bg-muted rounded-lg md:rounded-xl overflow-hidden">
                             <img
-                              src={getImageUrl(addon.image) || (addon.images && getImageUrl(addon.images[0])) || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&h=200&fit=crop"}
+                              src={addon.image || (addon.images && addon.images[0]) || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&h=200&fit=crop"}
                               alt={addon.name}
                               className="w-full h-28 md:h-36 object-cover rounded-lg md:rounded-xl"
                               onError={(e) => {
@@ -1475,7 +1587,7 @@ export default function Cart() {
                                 }
 
                                 addToCart({
-                                  id: addon.id,
+                                  id: addon.id || addon._id,
                                   name: addon.name,
                                   price: addon.price,
                                   image: addon.image || (addon.images && addon.images[0]) || "",

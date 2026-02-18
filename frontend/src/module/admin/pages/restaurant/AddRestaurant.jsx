@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { Building2, Info, Tag, Upload, Calendar, FileText, MapPin, X, Image as ImageIcon, Clock, Loader2 } from "lucide-react"
+import { Loader } from "@googlemaps/js-api-loader"
 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { adminAPI, uploadAPI } from "@/lib/api"
+import { getGoogleMapsApiKey } from "@/lib/utils/googleMapsApiKey"
 import { toast } from "sonner"
 
 const cuisinesOptions = [
@@ -25,9 +27,18 @@ export default function AddRestaurant() {
   const { id } = useParams()
   const isEditMode = !!id
   const [loadingConfig, setLoadingConfig] = useState(false)
+  const [loadingZones, setLoadingZones] = useState(false)
+  const [zones, setZones] = useState([])
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState("")
+  const [mapLoading, setMapLoading] = useState(true)
+  const [mapError, setMapError] = useState("")
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formErrors, setFormErrors] = useState({})
+  const mapRef = useRef(null)
+  const mapInstanceRef = useRef(null)
+  const markerRef = useRef(null)
+  const zonePolygonRef = useRef(null)
 
   // Step 1: Basic Info
   const [step1, setStep1] = useState({
@@ -44,8 +55,13 @@ export default function AddRestaurant() {
       state: "",
       pincode: "",
       landmark: "",
+      latitude: "",
+      longitude: "",
+      formattedAddress: "",
+      zoneId: "",
     },
   })
+  const step1Ref = useRef(step1)
 
   // Step 2: Images & Operational
   const [step2, setStep2] = useState({
@@ -131,6 +147,10 @@ export default function AddRestaurant() {
                 state: data.location?.state || "",
                 pincode: data.location?.pincode || "",
                 landmark: data.location?.landmark || "",
+                latitude: data.location?.latitude ?? "",
+                longitude: data.location?.longitude ?? "",
+                formattedAddress: data.location?.formattedAddress || "",
+                zoneId: data.location?.zoneId || "",
               },
             })
 
@@ -195,6 +215,260 @@ export default function AddRestaurant() {
       fetchRestaurant()
     }
   }, [isEditMode, id])
+
+  useEffect(() => {
+    const fetchZones = async () => {
+      try {
+        setLoadingZones(true)
+        const response = await adminAPI.getZones({ limit: 1000 })
+        if (response.data?.success && response.data?.data?.zones) {
+          setZones(response.data.data.zones)
+        }
+      } catch (error) {
+        console.error("Error fetching zones:", error)
+      } finally {
+        setLoadingZones(false)
+      }
+    }
+    fetchZones()
+  }, [])
+
+  useEffect(() => {
+    const loadMapsApiKey = async () => {
+      try {
+        const key = await getGoogleMapsApiKey()
+        setGoogleMapsApiKey(key || "")
+      } catch (error) {
+        console.error("Error loading Google Maps API key:", error)
+      }
+    }
+    loadMapsApiKey()
+  }, [])
+
+  useEffect(() => {
+    step1Ref.current = step1
+  }, [step1])
+
+  const getZonePath = (google, zone) => {
+    if (!zone?.coordinates || zone.coordinates.length < 3) return []
+    return zone.coordinates
+      .map((coord) => {
+        const rawLat = coord?.latitude ?? coord?.lat
+        const rawLng = coord?.longitude ?? coord?.lng
+        const lat = Number(rawLat)
+        const lng = Number(rawLng)
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+        return new google.maps.LatLng(lat, lng)
+      })
+      .filter(Boolean)
+  }
+
+  const isPointInsideZone = (lat, lng, zone) => {
+    if (!zone?.coordinates || zone.coordinates.length < 3) return false
+    let inside = false
+    for (let i = 0, j = zone.coordinates.length - 1; i < zone.coordinates.length; j = i++) {
+      const p1 = zone.coordinates[i]
+      const p2 = zone.coordinates[j]
+      const x1 = Number(p1?.latitude ?? p1?.lat)
+      const y1 = Number(p1?.longitude ?? p1?.lng)
+      const x2 = Number(p2?.latitude ?? p2?.lat)
+      const y2 = Number(p2?.longitude ?? p2?.lng)
+      if (![x1, y1, x2, y2].every((v) => Number.isFinite(v))) continue
+      const intersect = ((y1 > lng) !== (y2 > lng)) && (lat < ((x2 - x1) * (lng - y1)) / (y2 - y1) + x1)
+      if (intersect) inside = !inside
+    }
+    return inside
+  }
+
+  useEffect(() => {
+    if (!zones.length) return
+    if (step1.location?.zoneId) return
+    const latNum = Number(step1.location?.latitude)
+    const lngNum = Number(step1.location?.longitude)
+    if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) return
+
+    const detectedZone = zones.find((zone) => isPointInsideZone(latNum, lngNum, zone))
+    if (!detectedZone) return
+
+    setStep1((prev) => ({
+      ...prev,
+      location: {
+        ...prev.location,
+        zoneId: String(detectedZone._id || detectedZone.id || ""),
+      },
+    }))
+  }, [zones, step1.location?.zoneId, step1.location?.latitude, step1.location?.longitude])
+
+  const setMarker = (google, map, lat, lng) => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+    const position = new google.maps.LatLng(lat, lng)
+    if (!markerRef.current) {
+      markerRef.current = new google.maps.Marker({
+        position,
+        map,
+        draggable: true,
+        title: "Restaurant location",
+      })
+
+      markerRef.current.addListener("dragend", (event) => {
+        const nextLat = event.latLng.lat()
+        const nextLng = event.latLng.lng()
+        setStep1((prev) => ({
+          ...prev,
+          location: {
+            ...prev.location,
+            latitude: Number(nextLat.toFixed(6)),
+            longitude: Number(nextLng.toFixed(6)),
+          },
+        }))
+      })
+      return
+    }
+    markerRef.current.setPosition(position)
+    markerRef.current.setMap(map)
+  }
+
+  useEffect(() => {
+    if (loadingConfig) return
+    if (step !== 1) return
+    if (!mapRef.current || mapInstanceRef.current) return
+
+    let cancelled = false
+
+    const mountMap = (google) => {
+      if (cancelled || !mapRef.current) return
+      const defaultLat = Number(step1Ref.current?.location?.latitude) || 22.7196
+      const defaultLng = Number(step1Ref.current?.location?.longitude) || 75.8577
+
+      const map = new google.maps.Map(mapRef.current, {
+        center: { lat: defaultLat, lng: defaultLng },
+        zoom: 13,
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true,
+        gestureHandling: "greedy",
+      })
+
+      mapInstanceRef.current = map
+      setMarker(google, map, defaultLat, defaultLng)
+      // Fix intermittent blank tiles when map is mounted during layout transitions.
+      setTimeout(() => {
+        if (cancelled || !mapInstanceRef.current) return
+        google.maps.event.trigger(map, "resize")
+        map.setCenter({ lat: defaultLat, lng: defaultLng })
+      }, 120)
+
+      map.addListener("click", (event) => {
+        if (!event.latLng) return
+        const clickPoint = event.latLng
+        if (
+          step1Ref.current?.location?.zoneId &&
+          zonePolygonRef.current &&
+          google.maps.geometry?.poly?.containsLocation &&
+          !google.maps.geometry.poly.containsLocation(clickPoint, zonePolygonRef.current)
+        ) {
+          toast.error("Please pinpoint inside the selected zone.")
+          return
+        }
+
+        const nextLat = clickPoint.lat()
+        const nextLng = clickPoint.lng()
+        setStep1((prev) => ({
+          ...prev,
+          location: {
+            ...prev.location,
+            latitude: Number(nextLat.toFixed(6)),
+            longitude: Number(nextLng.toFixed(6)),
+          },
+        }))
+      })
+    }
+
+    const waitForGoogleMaps = async (timeoutMs = 6000) => {
+      const started = Date.now()
+      while (Date.now() - started < timeoutMs) {
+        if (window.google?.maps) return window.google
+        await new Promise((resolve) => setTimeout(resolve, 120))
+      }
+      return null
+    }
+
+    const initializeMap = async () => {
+      try {
+        setMapLoading(true)
+        setMapError("")
+
+        const googleFromGlobal = await waitForGoogleMaps(7000)
+        if (googleFromGlobal) {
+          mountMap(googleFromGlobal)
+          return
+        }
+
+        if (!googleMapsApiKey) {
+          setMapError("Google Maps API key is missing.")
+          return
+        }
+
+        const loader = new Loader({
+          apiKey: googleMapsApiKey,
+          version: "weekly",
+          libraries: ["geometry", "marker"],
+        })
+        const google = await loader.load()
+        mountMap(google)
+      } catch (error) {
+        console.error("Error initializing map:", error)
+        setMapError(error?.message || "Failed to load Google Map.")
+      } finally {
+        if (!cancelled) setMapLoading(false)
+      }
+    }
+
+    initializeMap()
+
+    return () => {
+      cancelled = true
+    }
+  }, [googleMapsApiKey, step, loadingConfig])
+
+  useEffect(() => {
+    if (step !== 1) return
+    if (!mapInstanceRef.current || !window.google?.maps) return
+
+    const google = window.google
+    const map = mapInstanceRef.current
+    const latNum = Number(step1.location?.latitude)
+    const lngNum = Number(step1.location?.longitude)
+    if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+      setMarker(google, map, latNum, lngNum)
+    }
+
+    if (zonePolygonRef.current) {
+      zonePolygonRef.current.setMap(null)
+      zonePolygonRef.current = null
+    }
+
+    const selectedZone = zones.find((z) => String(z._id || z.id) === String(step1.location?.zoneId || ""))
+    if (!selectedZone) return
+
+    const path = getZonePath(google, selectedZone)
+    if (path.length < 3) return
+
+    zonePolygonRef.current = new google.maps.Polygon({
+      paths: path,
+      strokeColor: "#2563eb",
+      strokeOpacity: 1,
+      strokeWeight: 2,
+      fillColor: "#3b82f6",
+      fillOpacity: 0.12,
+      clickable: false,
+    })
+    zonePolygonRef.current.setMap(map)
+
+    const bounds = new google.maps.LatLngBounds()
+    path.forEach((point) => bounds.extend(point))
+    map.fitBounds(bounds, 40)
+  }, [step, zones, step1.location?.zoneId, step1.location?.latitude, step1.location?.longitude])
 
   if (loadingConfig) {
     return (
@@ -360,6 +634,24 @@ export default function AddRestaurant() {
         fssaiImageData = step3.fssaiImage
       }
 
+      // Normalize location: always send GeoJSON coordinates when lat/lng are available
+      const normalizedLocation = { ...(step1.location || {}) }
+      const latNum = Number(normalizedLocation.latitude)
+      const lngNum = Number(normalizedLocation.longitude)
+
+      if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+        normalizedLocation.latitude = latNum
+        normalizedLocation.longitude = lngNum
+        normalizedLocation.coordinates = [lngNum, latNum]
+      } else if (Array.isArray(normalizedLocation.coordinates) && normalizedLocation.coordinates.length >= 2) {
+        const [coordLng, coordLat] = normalizedLocation.coordinates
+        if (Number.isFinite(Number(coordLat)) && Number.isFinite(Number(coordLng))) {
+          normalizedLocation.latitude = Number(coordLat)
+          normalizedLocation.longitude = Number(coordLng)
+          normalizedLocation.coordinates = [Number(coordLng), Number(coordLat)]
+        }
+      }
+
       // Prepare payload
       const payload = {
         // Step 1
@@ -368,7 +660,7 @@ export default function AddRestaurant() {
         ownerEmail: step1.ownerEmail,
         ownerPhone: step1.ownerPhone,
         primaryContactNumber: step1.primaryContactNumber,
-        location: step1.location,
+        location: normalizedLocation,
         // Step 2
         menuImages: menuImagesData,
         profileImage: profileImageData,
@@ -535,6 +827,60 @@ export default function AddRestaurant() {
             onChange={(e) => setStep1({ ...step1, location: { ...step1.location, landmark: e.target.value } })}
             className="bg-white text-sm"
             placeholder="Nearby landmark (optional)"
+          />
+          <div className="space-y-1">
+            <Label className="text-xs text-gray-700">Delivery Zone</Label>
+            <select
+              value={step1.location?.zoneId || ""}
+              onChange={(e) => setStep1({ ...step1, location: { ...step1.location, zoneId: e.target.value } })}
+              className="w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+              disabled={loadingZones}
+            >
+              <option value="">Select zone</option>
+              {zones.map((zone) => (
+                <option key={zone._id || zone.id} value={zone._id || zone.id}>
+                  {zone.name || zone.zoneName}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="rounded-md border border-slate-200 overflow-hidden bg-slate-50">
+            <div className="px-3 py-2 text-xs text-slate-600 border-b border-slate-200">
+              Click on map to pin restaurant location. Drag marker for fine adjustment.
+            </div>
+            <div ref={mapRef} className="h-72 w-full" />
+            {mapLoading && (
+              <div className="px-3 py-2 text-xs text-slate-500 border-t border-slate-200">
+                Loading map...
+              </div>
+            )}
+            {!mapLoading && mapError && (
+              <div className="px-3 py-2 text-xs text-red-700 border-t border-slate-200 bg-red-50">
+                {mapError}
+              </div>
+            )}
+          </div>
+          <Input
+            type="number"
+            step="any"
+            value={step1.location?.latitude ?? ""}
+            onChange={(e) => setStep1({ ...step1, location: { ...step1.location, latitude: e.target.value } })}
+            className="bg-white text-sm"
+            placeholder="Latitude (for map pin)"
+          />
+          <Input
+            type="number"
+            step="any"
+            value={step1.location?.longitude ?? ""}
+            onChange={(e) => setStep1({ ...step1, location: { ...step1.location, longitude: e.target.value } })}
+            className="bg-white text-sm"
+            placeholder="Longitude (for map pin)"
+          />
+          <Input
+            value={step1.location?.formattedAddress || ""}
+            onChange={(e) => setStep1({ ...step1, location: { ...step1.location, formattedAddress: e.target.value } })}
+            className="bg-white text-sm"
+            placeholder="Formatted address (optional)"
           />
         </div>
       </section>
@@ -846,7 +1192,7 @@ export default function AddRestaurant() {
                 type="number"
                 min="1"
                 max="50"
-                value={step4.diningSettings?.maxGuests || 6}
+                value={String(step4.diningSettings?.maxGuests ?? 6)}
                 onChange={(e) => setStep4({ ...step4, diningSettings: { ...step4.diningSettings, maxGuests: parseInt(e.target.value) || 1 } })}
                 className="mt-1 bg-white text-sm"
               />
@@ -855,7 +1201,7 @@ export default function AddRestaurant() {
               <Label className="text-xs text-gray-700">Dining Type</Label>
               <select
                 className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 mt-1"
-                value={step4.diningSettings?.diningType || "family-dining"}
+                value={String(step4.diningSettings?.diningType ?? "family-dining")}
                 onChange={(e) => setStep4({ ...step4, diningSettings: { ...step4.diningSettings, diningType: e.target.value } })}
               >
                 <option value="family-dining">Family Dining</option>

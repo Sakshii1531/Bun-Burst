@@ -1112,6 +1112,11 @@ export const adminAPI = {
     });
   },
 
+  // Update restaurant zone
+  updateRestaurantZone: (id, zoneId) => {
+    return apiClient.put(`/admin/restaurants/${id}/zone`, { zoneId });
+  },
+
   // Get dining categories
   getDiningCategories: () => {
     return apiClient.get("/admin/dining/categories");

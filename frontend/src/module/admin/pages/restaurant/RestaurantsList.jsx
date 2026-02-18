@@ -24,6 +24,12 @@ export default function RestaurantsList() {
   const [deleteConfirmDialog, setDeleteConfirmDialog] = useState(null) // { restaurant }
   const [deleting, setDeleting] = useState(false)
 
+  // Zone Management State
+  const [zoneDialog, setZoneDialog] = useState(null) // { restaurant }
+  const [zones, setZones] = useState([])
+  const [loadingZones, setLoadingZones] = useState(false)
+  const [updatingZone, setUpdatingZone] = useState(false)
+
   // Format Restaurant ID to REST format (e.g., REST422829)
   const formatRestaurantId = (id) => {
     if (!id) return "REST000000"
@@ -73,9 +79,15 @@ export default function RestaurantsList() {
         setError(null)
 
         let response
+        let zonesResponse = null
         try {
           // Try admin API first
-          response = await adminAPI.getRestaurants()
+          const [restaurantsRes, zonesRes] = await Promise.all([
+            adminAPI.getRestaurants(),
+            adminAPI.getZones({ limit: 1000 }).catch(() => null),
+          ])
+          response = restaurantsRes
+          zonesResponse = zonesRes
         } catch (adminErr) {
           // Fallback to regular restaurant API if admin endpoint doesn't exist
           console.log("Admin restaurants endpoint not available, using fallback")
@@ -85,6 +97,12 @@ export default function RestaurantsList() {
         if (response.data && response.data.success && response.data.data) {
           // Map backend data to frontend format
           const restaurantsData = response.data.data.restaurants || response.data.data || []
+          const zonesData = zonesResponse?.data?.success
+            ? (zonesResponse.data.data?.zones || [])
+            : []
+          const zoneNameById = new Map(
+            zonesData.map((z) => [String(z._id || z.id), z.name || z.zoneName || "N/A"])
+          )
 
           const mappedRestaurants = restaurantsData.map((restaurant, index) => ({
             id: restaurant._id || restaurant.id || index + 1,
@@ -92,7 +110,15 @@ export default function RestaurantsList() {
             name: restaurant.name || "N/A",
             ownerName: restaurant.ownerName || "N/A",
             ownerPhone: restaurant.ownerPhone || restaurant.phone || "N/A",
-            zone: restaurant.location?.area || restaurant.location?.city || restaurant.zone || "N/A",
+            zoneId: restaurant.location?.zoneId ? String(restaurant.location.zoneId) : null,
+            zone:
+              (restaurant.location?.zoneId
+                ? zoneNameById.get(String(restaurant.location.zoneId))
+                : null) ||
+              restaurant.location?.area ||
+              restaurant.location?.city ||
+              restaurant.zone ||
+              "N/A",
             cuisine: Array.isArray(restaurant.cuisines) && restaurant.cuisines.length > 0
               ? restaurant.cuisines[0]
               : (restaurant.cuisine || "N/A"),
@@ -388,6 +414,58 @@ export default function RestaurantsList() {
     setDeleteConfirmDialog(null)
   }
 
+  // Zone Management Functions
+  const fetchZones = async () => {
+    try {
+      setLoadingZones(true)
+      const response = await adminAPI.getZones()
+      if (response.data?.success && response.data.data?.zones) {
+        setZones(response.data.data.zones)
+      }
+    } catch (error) {
+      console.error("Error fetching zones:", error)
+    } finally {
+      setLoadingZones(false)
+    }
+  }
+
+  const handleSetZone = (restaurant) => {
+    setZoneDialog({ restaurant })
+    if (zones.length === 0) {
+      fetchZones()
+    }
+  }
+
+  const confirmUpdateZone = async (zoneId) => {
+    if (!zoneDialog) return
+    const { restaurant } = zoneDialog
+    const nextZoneId = String(zoneId)
+
+    try {
+      setUpdatingZone(true)
+      const restaurantId = restaurant._id || restaurant.id
+
+      await adminAPI.updateRestaurantZone(restaurantId, nextZoneId)
+
+      // Update local state
+      const selectedZone = zones.find(z => String(z._id || z.id) === nextZoneId)
+      setRestaurants(prev => prev.map(r =>
+        (r.id === restaurant.id || r._id === restaurant._id)
+          ? { ...r, zoneId: nextZoneId, zone: selectedZone?.name || "Unknown Zone" }
+          : r
+      ))
+
+      setZoneDialog(null)
+      // Optional: Show success toast/alert
+      // alert("Restaurant zone updated successfully!")
+    } catch (error) {
+      console.error("Error updating zone:", error)
+      alert(error.response?.data?.message || "Failed to update restaurant zone.")
+    } finally {
+      setUpdatingZone(false)
+    }
+  }
+
   // Handle export functionality
   const handleExport = () => {
     const dataToExport = filteredRestaurants.length > 0 ? filteredRestaurants : restaurants
@@ -399,10 +477,10 @@ export default function RestaurantsList() {
     <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         {/* Page Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-6 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">Restaurants List</h1>
+              <h1 className="text-2xl font-bold text-[#1E1E1E]">Restaurants List</h1>
             </div>
 
           </div>
@@ -411,11 +489,11 @@ export default function RestaurantsList() {
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           {/* Total Restaurants */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 mb-1">Total restaurants</p>
-                <p className="text-2xl font-bold text-slate-900">{totalRestaurants}</p>
+                <p className="text-2xl font-bold text-[#1E1E1E]">{totalRestaurants}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
                 <img src={locationIcon} alt="Location" className="w-8 h-8" />
@@ -424,11 +502,11 @@ export default function RestaurantsList() {
           </div>
 
           {/* Active Restaurants */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 mb-1">Active restaurants</p>
-                <p className="text-2xl font-bold text-slate-900">{activeRestaurants}</p>
+                <p className="text-2xl font-bold text-[#1E1E1E]">{activeRestaurants}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
                 <img src={restaurantIcon} alt="Restaurant" className="w-8 h-8" />
@@ -437,11 +515,11 @@ export default function RestaurantsList() {
           </div>
 
           {/* Inactive Restaurants */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 mb-1">Inactive restaurants</p>
-                <p className="text-2xl font-bold text-slate-900">{inactiveRestaurants}</p>
+                <p className="text-2xl font-bold text-[#1E1E1E]">{inactiveRestaurants}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
                 <img src={inactiveIcon} alt="Inactive" className="w-8 h-8" />
@@ -451,14 +529,14 @@ export default function RestaurantsList() {
         </div>
 
         {/* Restaurants List Section */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <h2 className="text-xl font-bold text-slate-900">Restaurants List</h2>
+            <h2 className="text-xl font-bold text-[#1E1E1E]">Restaurants List</h2>
 
             <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate("/admin/restaurants/add")}
-                className="px-4 py-2.5 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 transition-all"
+                className="px-4 py-2.5 text-sm font-medium rounded-lg bg-[#e53935] hover:bg-[#d32f2f] text-white flex items-center gap-2 transition-all shadow-sm hover:shadow-md"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Restaurant</span>
@@ -469,14 +547,14 @@ export default function RestaurantsList() {
                   placeholder="Ex: search by Restaurant n"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2.5 w-full text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="pl-10 pr-4 py-2.5 w-full text-sm rounded-lg border border-[#F5F5F5] bg-white focus:outline-none focus:ring-2 focus:ring-[#e53935] focus:border-transparent shadow-sm"
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               </div>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all">
+                  <button className="px-4 py-2.5 text-sm font-medium rounded-lg border border-[#F5F5F5] bg-white hover:bg-slate-50 text-[#1E1E1E] flex items-center gap-2 transition-all shadow-sm">
                     <Download className="w-4 h-4" />
                     <span>Export</span>
                     <ChevronDown className="w-3 h-3" />
@@ -492,7 +570,7 @@ export default function RestaurantsList() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <button className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all">
+              <button className="p-2.5 rounded-lg border border-[#F5F5F5] bg-white hover:bg-slate-50 text-[#1E1E1E] transition-all">
                 <Settings className="w-4 h-4" />
               </button>
             </div>
@@ -502,7 +580,7 @@ export default function RestaurantsList() {
           <div className="overflow-x-auto">
             {loading ? (
               <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#e53935]" />
                 <span className="ml-3 text-slate-600">Loading restaurants...</span>
               </div>
             ) : error ? (
@@ -512,53 +590,53 @@ export default function RestaurantsList() {
               </div>
             ) : (
               <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-[#FAFAFA] border-b border-[#F5F5F5]">
                   <tr>
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         <span>SL</span>
                         <ArrowUpDown className="w-3 h-3 text-slate-400" />
                       </div>
                     </th>
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         <span>Restaurant Info</span>
                         <ArrowUpDown className="w-3 h-3 text-slate-400" />
                       </div>
                     </th>
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         <span>Owner Info</span>
                         <ArrowUpDown className="w-3 h-3 text-slate-400" />
                       </div>
                     </th>
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         <span>Zone</span>
                         <ArrowUpDown className="w-3 h-3 text-slate-400" />
                       </div>
                     </th>
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         <span>Cuisine</span>
                         <ArrowUpDown className="w-3 h-3 text-slate-400" />
                       </div>
                     </th>
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         <span>Status</span>
                         <ArrowUpDown className="w-3 h-3 text-slate-400" />
                       </div>
                     </th>
-                    <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-700 uppercase tracking-wider">Action</th>
+                    <th className="px-6 py-4 text-center text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-100">
+                <tbody className="bg-white divide-y divide-[#F5F5F5]">
                   {filteredRestaurants.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-20 text-center">
                         <div className="flex flex-col items-center justify-center">
-                          <p className="text-lg font-semibold text-slate-700 mb-1">No Data Found</p>
+                          <p className="text-lg font-semibold text-[#1E1E1E] mb-1">No Data Found</p>
                           <p className="text-sm text-slate-500">No restaurants match your search</p>
                         </div>
                       </td>
@@ -570,7 +648,7 @@ export default function RestaurantsList() {
                         className="hover:bg-slate-50 transition-colors"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm font-medium text-slate-700">{index + 1}</span>
+                          <span className="text-sm font-medium text-[#1E1E1E]">{index + 1}</span>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -585,7 +663,7 @@ export default function RestaurantsList() {
                               />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-sm font-medium text-slate-900">{restaurant.name}</span>
+                              <span className="text-sm font-medium text-[#1E1E1E]">{restaurant.name}</span>
                               <span className="text-xs text-slate-500">ID #{formatRestaurantId(restaurant.originalData?.restaurantId || restaurant.originalData?._id || restaurant._id || restaurant.id)}</span>
                               <span className="text-xs text-slate-500">{renderStars(restaurant.rating)}</span>
                             </div>
@@ -593,20 +671,29 @@ export default function RestaurantsList() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium text-slate-900">{restaurant.ownerName}</span>
+                            <span className="text-sm font-medium text-[#1E1E1E]">{restaurant.ownerName}</span>
                             <span className="text-xs text-slate-500">{formatPhone(restaurant.ownerPhone)}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-slate-700">{restaurant.zone}</span>
+                          {/* <span className="text-sm text-[#1E1E1E]">{restaurant.zone}</span> */}
+                          <button
+                            onClick={() => handleSetZone(restaurant)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-purple-200 bg-white hover:bg-purple-50 transition-all group"
+                          >
+                            <MapPin className="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-600" />
+                            <span className="text-sm font-medium text-slate-700 group-hover:text-purple-700">
+                              {restaurant.zone && restaurant.zone !== "N/A" ? restaurant.zone : "Set Zone"}
+                            </span>
+                          </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-slate-700">{restaurant.cuisine}</span>
+                          <span className="text-sm text-[#1E1E1E]">{restaurant.cuisine}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <button
                             onClick={() => handleToggleStatus(restaurant.id)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${restaurant.status ? "bg-blue-600" : "bg-slate-300"
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#e53935] focus:ring-offset-2 ${restaurant.status ? "bg-[#e53935]" : "bg-slate-300"
                               }`}
                           >
                             <span
@@ -672,8 +759,8 @@ export default function RestaurantsList() {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={closeDetailsModal}>
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-900">Restaurant Details</h2>
+            <div className="sticky top-0 bg-white border-b border-[#F5F5F5] px-6 py-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-[#1E1E1E]">Restaurant Details</h2>
               <button
                 onClick={closeDetailsModal}
                 className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
@@ -686,14 +773,14 @@ export default function RestaurantsList() {
             <div className="p-6">
               {loadingDetails && (
                 <div className="flex items-center justify-center py-20">
-                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                  <Loader2 className="w-8 h-8 animate-spin text-[#e53935]" />
                   <span className="ml-3 text-slate-600">Loading details...</span>
                 </div>
               )}
               {!loadingDetails && (restaurantDetails || selectedRestaurant) && (
                 <div className="space-y-6">
                   {/* Restaurant Basic Info */}
-                  <div className="flex items-start gap-6 pb-6 border-b border-slate-200">
+                  <div className="flex items-start gap-6 pb-6 border-b border-[#F5F5F5]">
                     <div className="w-24 h-24 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
                       <img
                         src={restaurantDetails?.profileImage?.url || restaurantDetails?.logo || selectedRestaurant?.logo || selectedRestaurant?.originalData?.profileImage?.url || "https://via.placeholder.com/96"}
@@ -711,8 +798,8 @@ export default function RestaurantsList() {
                       <div className="flex items-center gap-4 flex-wrap">
                         {(restaurantDetails?.ratings?.average || selectedRestaurant?.originalData?.ratings?.average) && (
                           <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                            <span className="text-sm font-medium text-slate-700">
+                            <Star className="w-4 h-4 fill-[#FFC400] text-[#FFC400]" />
+                            <span className="text-sm font-medium text-[#1E1E1E]">
                               {(restaurantDetails?.ratings?.average || selectedRestaurant?.originalData?.ratings?.average || 0).toFixed(1)} ({(restaurantDetails?.ratings?.count || selectedRestaurant?.originalData?.ratings?.count || 0)} reviews)
                             </span>
                           </div>
@@ -1261,8 +1348,8 @@ export default function RestaurantsList() {
 
                   {/* Additional Information */}
                   {(restaurantDetails?.slug || restaurantDetails?.restaurantId || restaurantDetails?.phoneVerified !== undefined || restaurantDetails?.signupMethod) && (
-                    <div className="pt-6 border-t border-slate-200">
-                      <h4 className="text-lg font-semibold text-slate-900 mb-4">Additional Information</h4>
+                    <div className="pt-6 border-t border-[#F5F5F5]">
+                      <h4 className="text-lg font-semibold text-[#1E1E1E] mb-4">Additional Information</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         {restaurantDetails?.slug && (
                           <div>
@@ -1301,7 +1388,7 @@ export default function RestaurantsList() {
               )}
               {!loadingDetails && !restaurantDetails && !selectedRestaurant && (
                 <div className="flex flex-col items-center justify-center py-20">
-                  <p className="text-lg font-semibold text-slate-700 mb-2">No Details Available</p>
+                  <p className="text-lg font-semibold text-[#1E1E1E] mb-2">No Details Available</p>
                   <p className="text-sm text-slate-500">Unable to load restaurant details</p>
                 </div>
               )}
@@ -1322,7 +1409,7 @@ export default function RestaurantsList() {
                     }`} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">
+                  <h3 className="text-lg font-bold text-[#1E1E1E]">
                     {banConfirmDialog.action === 'ban' ? 'Ban Restaurant' : 'Unban Restaurant'}
                   </h3>
                   <p className="text-sm text-slate-600">
@@ -1342,7 +1429,7 @@ export default function RestaurantsList() {
                 <button
                   onClick={cancelBanRestaurant}
                   disabled={banning}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg border border-[#F5F5F5] bg-white hover:bg-slate-50 text-[#1E1E1E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
@@ -1350,7 +1437,7 @@ export default function RestaurantsList() {
                   onClick={confirmBanRestaurant}
                   disabled={banning}
                   className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${banConfirmDialog.action === 'ban'
-                    ? 'bg-red-600 hover:bg-red-700'
+                    ? 'bg-[#e53935] hover:bg-[#d32f2f]'
                     : 'bg-green-600 hover:bg-green-700'
                     }`}
                 >
@@ -1376,10 +1463,10 @@ export default function RestaurantsList() {
             <div className="p-6">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                  <Trash2 className="w-6 h-6 text-red-600" />
+                  <Trash2 className="w-6 h-6 text-[#e53935]" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Delete Restaurant</h3>
+                  <h3 className="text-lg font-bold text-[#1E1E1E]">Delete Restaurant</h3>
                   <p className="text-sm text-slate-600">
                     {deleteConfirmDialog.restaurant.name}
                   </p>
@@ -1394,14 +1481,14 @@ export default function RestaurantsList() {
                 <button
                   onClick={cancelDeleteRestaurant}
                   disabled={deleting}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg border border-[#F5F5F5] bg-white hover:bg-slate-50 text-[#1E1E1E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDeleteRestaurant}
                   disabled={deleting}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg bg-[#e53935] hover:bg-[#d32f2f] text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {deleting ? (
                     <span className="flex items-center justify-center gap-2">
@@ -1411,6 +1498,80 @@ export default function RestaurantsList() {
                   ) : (
                     "Delete Restaurant"
                   )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Zone Selection Dialog */}
+      {zoneDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setZoneDialog(null)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-[#1E1E1E]">Set Restaurant Zone</h3>
+                  <p className="text-sm text-slate-600">{zoneDialog.restaurant.name}</p>
+                </div>
+              </div>
+
+              <div className="mb-6 max-h-[60vh] overflow-y-auto">
+                <p className="text-sm font-medium text-slate-700 mb-2">Select a Zone:</p>
+                {loadingZones ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+                  </div>
+                ) : zones.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-slate-500 mb-2">No zones available.</p>
+                    <p className="text-xs text-slate-400">Create a zone in Zone Setup first.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {zones.map(zone => (
+                      <button
+                        key={zone._id || zone.id}
+                        onClick={() => confirmUpdateZone(zone._id || zone.id)}
+                        disabled={updatingZone}
+                        className={`w-full text-left px-4 py-3 rounded-lg border transition-colors flex items-center justify-between group ${(
+                          zoneDialog.restaurant.zoneId === String(zone._id || zone.id) ||
+                          zoneDialog.restaurant.zone === zone.name
+                        )
+                          ? "border-green-200 bg-green-50"
+                          : "border-[#F5F5F5] hover:bg-purple-50 hover:border-purple-200"
+                          }`}
+                      >
+                        <div className="flex flex-col">
+                          <span className={`font-medium ${(
+                            zoneDialog.restaurant.zoneId === String(zone._id || zone.id) ||
+                            zoneDialog.restaurant.zone === zone.name
+                          ) ? "text-green-700" : "text-[#1E1E1E] group-hover:text-purple-700"
+                            }`}>{zone.name}</span>
+                          <span className="text-xs text-slate-500">{zone.serviceLocation || ""}</span>
+                        </div>
+                        {updatingZone && <Loader2 className="w-4 h-4 animate-spin text-purple-600" />}
+                        {(
+                          zoneDialog.restaurant.zoneId === String(zone._id || zone.id) ||
+                          zoneDialog.restaurant.zone === zone.name
+                        ) && !updatingZone && (
+                          <span className="text-xs font-bold text-green-600">Current</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setZoneDialog(null)}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800"
+                >
+                  Cancel
                 </button>
               </div>
             </div>
