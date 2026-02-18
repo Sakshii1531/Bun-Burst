@@ -26,6 +26,76 @@ const logger = winston.createLogger({
   ],
 });
 
+const trimText = (value) => (typeof value === "string" ? value.trim() : "");
+
+const normalizeRestaurantLocation = (incomingLocation = {}, existingLocation = {}) => {
+  const normalizedLocation = { ...existingLocation, ...incomingLocation };
+
+  const latNum = Number(normalizedLocation.latitude);
+  const lngNum = Number(normalizedLocation.longitude);
+
+  if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+    normalizedLocation.latitude = latNum;
+    normalizedLocation.longitude = lngNum;
+    normalizedLocation.coordinates = [lngNum, latNum];
+  } else if (
+    Array.isArray(normalizedLocation.coordinates) &&
+    normalizedLocation.coordinates.length >= 2
+  ) {
+    const [coordLng, coordLat] = normalizedLocation.coordinates;
+    if (Number.isFinite(Number(coordLat)) && Number.isFinite(Number(coordLng))) {
+      normalizedLocation.latitude = Number(coordLat);
+      normalizedLocation.longitude = Number(coordLng);
+      normalizedLocation.coordinates = [Number(coordLng), Number(coordLat)];
+    }
+  }
+
+  const addressParts = [
+    trimText(normalizedLocation.addressLine1),
+    trimText(normalizedLocation.addressLine2),
+    trimText(normalizedLocation.area),
+    trimText(normalizedLocation.city),
+    trimText(normalizedLocation.state),
+    trimText(
+      normalizedLocation.pincode ||
+        normalizedLocation.zipCode ||
+        normalizedLocation.postalCode,
+    ),
+  ].filter(Boolean);
+
+  const composedAddress = addressParts.join(", ");
+  const formattedAddress = trimText(normalizedLocation.formattedAddress);
+  const address = trimText(normalizedLocation.address);
+
+  if (!formattedAddress && composedAddress) {
+    normalizedLocation.formattedAddress = composedAddress;
+  }
+
+  if (!address && (composedAddress || formattedAddress)) {
+    normalizedLocation.address = composedAddress || formattedAddress;
+  }
+
+  if (!normalizedLocation.formattedAddress && normalizedLocation.address) {
+    normalizedLocation.formattedAddress = normalizedLocation.address;
+  }
+
+  // Prevent ObjectId cast errors when zone is not selected from form controls.
+  if (
+    normalizedLocation.zoneId === "" ||
+    normalizedLocation.zoneId === "null" ||
+    normalizedLocation.zoneId === "undefined"
+  ) {
+    normalizedLocation.zoneId = null;
+  } else if (
+    normalizedLocation.zoneId != null &&
+    !mongoose.Types.ObjectId.isValid(String(normalizedLocation.zoneId))
+  ) {
+    normalizedLocation.zoneId = existingLocation?.zoneId ?? null;
+  }
+
+  return normalizedLocation;
+};
+
 /**
  * Get Admin Dashboard Statistics
  * GET /api/admin/dashboard/stats
@@ -1826,9 +1896,10 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
           url: result.secure_url,
           publicId: result.public_id,
         };
+      } else if (typeof profileImage === "string" && profileImage.startsWith("http")) {
+        restaurant.profileImage = { url: profileImage };
       } else if (profileImage.url) {
-        // Keeping existing or already uploaded
-        // restaurant.profileImage = profileImage; // No change needed usually
+        restaurant.profileImage = profileImage;
       }
     }
 
@@ -1847,11 +1918,67 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
             url: result.secure_url,
             publicId: result.public_id,
           });
-        } else {
+        } else if (typeof img === "string" && img.startsWith("http")) {
+          newMenuImages.push({ url: img });
+        } else if (img?.url) {
           newMenuImages.push(img);
         }
       }
       restaurant.menuImages = newMenuImages;
+    }
+
+    // Handle PAN Image Update
+    let panImageData = restaurant.onboarding?.step3?.pan?.image || null;
+    if (panImage) {
+      if (typeof panImage === "string" && panImage.startsWith("data:")) {
+        const base64Data = panImage.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(base64Data, "base64");
+        const result = await uploadToCloudinary(buffer, {
+          folder: "appzeto/restaurant/pan",
+          resource_type: "image",
+        });
+        panImageData = { url: result.secure_url, publicId: result.public_id };
+      } else if (typeof panImage === "string" && panImage.startsWith("http")) {
+        panImageData = { url: panImage };
+      } else if (panImage?.url) {
+        panImageData = panImage;
+      }
+    }
+
+    // Handle GST Image Update
+    let gstImageData = restaurant.onboarding?.step3?.gst?.image || null;
+    if (gstRegistered && gstImage) {
+      if (typeof gstImage === "string" && gstImage.startsWith("data:")) {
+        const base64Data = gstImage.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(base64Data, "base64");
+        const result = await uploadToCloudinary(buffer, {
+          folder: "appzeto/restaurant/gst",
+          resource_type: "image",
+        });
+        gstImageData = { url: result.secure_url, publicId: result.public_id };
+      } else if (typeof gstImage === "string" && gstImage.startsWith("http")) {
+        gstImageData = { url: gstImage };
+      } else if (gstImage?.url) {
+        gstImageData = gstImage;
+      }
+    }
+
+    // Handle FSSAI Image Update
+    let fssaiImageData = restaurant.onboarding?.step3?.fssai?.image || null;
+    if (fssaiImage) {
+      if (typeof fssaiImage === "string" && fssaiImage.startsWith("data:")) {
+        const base64Data = fssaiImage.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(base64Data, "base64");
+        const result = await uploadToCloudinary(buffer, {
+          folder: "appzeto/restaurant/fssai",
+          resource_type: "image",
+        });
+        fssaiImageData = { url: result.secure_url, publicId: result.public_id };
+      } else if (typeof fssaiImage === "string" && fssaiImage.startsWith("http")) {
+        fssaiImageData = { url: fssaiImage };
+      } else if (fssaiImage?.url) {
+        fssaiImageData = fssaiImage;
+      }
     }
 
     // Update Basic Fields
@@ -1861,27 +1988,7 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     if (ownerPhone) restaurant.ownerPhone = normalizePhoneNumber(ownerPhone) || restaurant.ownerPhone;
     if (primaryContactNumber) restaurant.primaryContactNumber = normalizePhoneNumber(primaryContactNumber) || restaurant.primaryContactNumber;
     if (location) {
-      const normalizedLocation = { ...restaurant.location, ...location };
-      const latNum = Number(normalizedLocation.latitude);
-      const lngNum = Number(normalizedLocation.longitude);
-
-      if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
-        normalizedLocation.latitude = latNum;
-        normalizedLocation.longitude = lngNum;
-        normalizedLocation.coordinates = [lngNum, latNum];
-      } else if (
-        Array.isArray(normalizedLocation.coordinates) &&
-        normalizedLocation.coordinates.length >= 2
-      ) {
-        const [coordLng, coordLat] = normalizedLocation.coordinates;
-        if (Number.isFinite(Number(coordLat)) && Number.isFinite(Number(coordLng))) {
-          normalizedLocation.latitude = Number(coordLat);
-          normalizedLocation.longitude = Number(coordLng);
-          normalizedLocation.coordinates = [Number(coordLng), Number(coordLat)];
-        }
-      }
-
-      restaurant.location = normalizedLocation;
+      restaurant.location = normalizeRestaurantLocation(location, restaurant.location || {});
     }
     if (cuisines) restaurant.cuisines = cuisines;
 
@@ -1913,11 +2020,57 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     // Update Onboarding Data (to keep sync)
     if (!restaurant.onboarding) restaurant.onboarding = { step1: {}, step2: {}, step3: {}, step4: {} };
     if (!restaurant.onboarding.step1) restaurant.onboarding.step1 = {};
+    if (!restaurant.onboarding.step2) restaurant.onboarding.step2 = {};
+    if (!restaurant.onboarding.step3) restaurant.onboarding.step3 = {};
+    if (!restaurant.onboarding.step4) restaurant.onboarding.step4 = {};
 
     restaurant.onboarding.step1.restaurantName = restaurant.name;
     restaurant.onboarding.step1.ownerName = restaurant.ownerName;
     restaurant.onboarding.step1.ownerEmail = restaurant.ownerEmail;
     restaurant.onboarding.step1.ownerPhone = restaurant.ownerPhone;
+    restaurant.onboarding.step1.primaryContactNumber = restaurant.primaryContactNumber;
+    restaurant.onboarding.step1.location = restaurant.location || {};
+
+    restaurant.onboarding.step2.menuImageUrls = restaurant.menuImages || [];
+    restaurant.onboarding.step2.profileImageUrl = restaurant.profileImage || null;
+    restaurant.onboarding.step2.cuisines = restaurant.cuisines || [];
+    restaurant.onboarding.step2.deliveryTimings = restaurant.deliveryTimings || {};
+    restaurant.onboarding.step2.openDays = restaurant.openDays || [];
+
+    restaurant.onboarding.step3.pan = {
+      panNumber: panNumber || restaurant.onboarding.step3.pan?.panNumber || "",
+      nameOnPan: nameOnPan || restaurant.onboarding.step3.pan?.nameOnPan || "",
+      image: panImageData,
+    };
+
+    restaurant.onboarding.step3.gst = {
+      isRegistered: gstRegistered ?? restaurant.onboarding.step3.gst?.isRegistered ?? false,
+      gstNumber: gstNumber || restaurant.onboarding.step3.gst?.gstNumber || "",
+      legalName: gstLegalName || restaurant.onboarding.step3.gst?.legalName || "",
+      address: gstAddress || restaurant.onboarding.step3.gst?.address || "",
+      image: gstImageData,
+    };
+
+    restaurant.onboarding.step3.fssai = {
+      registrationNumber:
+        fssaiNumber || restaurant.onboarding.step3.fssai?.registrationNumber || "",
+      expiryDate: fssaiExpiry || restaurant.onboarding.step3.fssai?.expiryDate || null,
+      image: fssaiImageData,
+    };
+
+    restaurant.onboarding.step3.bank = {
+      accountNumber:
+        accountNumber || restaurant.onboarding.step3.bank?.accountNumber || "",
+      ifscCode: ifscCode || restaurant.onboarding.step3.bank?.ifscCode || "",
+      accountHolderName:
+        accountHolderName || restaurant.onboarding.step3.bank?.accountHolderName || "",
+      accountType: accountType || restaurant.onboarding.step3.bank?.accountType || "",
+    };
+
+    restaurant.onboarding.step4.estimatedDeliveryTime = restaurant.estimatedDeliveryTime || "";
+    restaurant.onboarding.step4.featuredDish = restaurant.featuredDish || "";
+    restaurant.onboarding.step4.featuredPrice = restaurant.featuredPrice || 0;
+    restaurant.onboarding.step4.offer = restaurant.offer || "";
 
     // Save
     await restaurant.save();
@@ -2167,7 +2320,7 @@ export const createRestaurant = asyncHandler(async (req, res) => {
       primaryContactNumber: primaryContactNumber
         ? normalizePhoneNumber(primaryContactNumber) || normalizedPhone
         : normalizedPhone,
-      location: location || {},
+      location: normalizeRestaurantLocation(location || {}, {}),
       profileImage: profileImageData,
       menuImages: menuImagesData,
       cuisines: cuisines || [],
@@ -2211,7 +2364,7 @@ export const createRestaurant = asyncHandler(async (req, res) => {
         primaryContactNumber: primaryContactNumber
           ? normalizePhoneNumber(primaryContactNumber) || normalizedPhone
           : normalizedPhone,
-        location: location || {},
+        location: normalizeRestaurantLocation(location || {}, {}),
       },
       step2: {
         menuImageUrls: menuImagesData,

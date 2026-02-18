@@ -302,6 +302,39 @@ function animateMarkerSmoothly(marker, newPosition, duration = 1500, animationRe
   if (animationRef) animationRef.current = requestAnimationFrame(animate)
 }
 
+function toFiniteCoordinate(value) {
+  if (value === null || value === undefined || value === '') return null
+  const numericValue = typeof value === 'string' ? Number(value.trim()) : Number(value)
+  return Number.isFinite(numericValue) ? numericValue : null
+}
+
+function extractLatLng(location) {
+  if (!location || typeof location !== 'object') {
+    return { lat: null, lng: null }
+  }
+
+  if (Array.isArray(location.coordinates) && location.coordinates.length >= 2) {
+    const lngFromCoords = toFiniteCoordinate(location.coordinates[0])
+    const latFromCoords = toFiniteCoordinate(location.coordinates[1])
+    if (latFromCoords !== null && lngFromCoords !== null) {
+      return { lat: latFromCoords, lng: lngFromCoords }
+    }
+  }
+
+  const lat = toFiniteCoordinate(location.latitude ?? location.lat)
+  const lng = toFiniteCoordinate(location.longitude ?? location.lng)
+
+  if (lat !== null && lng !== null) {
+    return { lat, lng }
+  }
+
+  return { lat: null, lng: null }
+}
+
+function hasValidCoordinates(lat, lng) {
+  return toFiniteCoordinate(lat) !== null && toFiniteCoordinate(lng) !== null
+}
+
 export default function DeliveryHome() {
   const companyName = useCompanyName()
   const navigate = useNavigate()
@@ -2209,10 +2242,16 @@ export default function DeliveryHome() {
             // Update selectedRestaurant with correct data from backend
             let restaurantInfo = null;
             if (order) {
-              // Extract restaurant location (GeoJSON format: [longitude, latitude])
-              const restaurantCoords = order.restaurantId?.location?.coordinates || []
-              const restaurantLat = restaurantCoords[1] // Latitude is second element
-              const restaurantLng = restaurantCoords[0] // Longitude is first element
+              // Extract restaurant location with robust fallbacks
+              const restaurantCoords = extractLatLng(
+                order.restaurantId?.location || order.restaurantLocation || order.location
+              )
+              const restaurantLat = restaurantCoords.lat ??
+                toFiniteCoordinate(order.restaurantLat) ??
+                toFiniteCoordinate(selectedRestaurant?.lat)
+              const restaurantLng = restaurantCoords.lng ??
+                toFiniteCoordinate(order.restaurantLng) ??
+                toFiniteCoordinate(selectedRestaurant?.lng)
 
               // Format restaurant address - check multiple possible locations
               let restaurantAddress = 'Restaurant Address'
@@ -2290,7 +2329,7 @@ export default function DeliveryHome() {
                 console.log('✅ Using order.restaurantAddress:', restaurantAddress)
               }
               // Priority 8: Use coordinates if address not available
-              else if (restaurantLat && restaurantLng) {
+              else if (hasValidCoordinates(restaurantLat, restaurantLng)) {
                 restaurantAddress = `${restaurantLat}, ${restaurantLng}`
                 console.log('⚠️ Using coordinates as address:', restaurantAddress)
               } else {
@@ -2401,8 +2440,8 @@ export default function DeliveryHome() {
                 orderId: order.orderId, // Correct order ID from backend
                 name: restaurantName, // Restaurant name from backend (priority: restaurantName > restaurantId.name)
                 address: restaurantAddress, // Restaurant address from backend
-                lat: restaurantLat || selectedRestaurant?.lat,
-                lng: restaurantLng || selectedRestaurant?.lng,
+                lat: restaurantLat,
+                lng: restaurantLng,
                 distance: selectedRestaurant?.distance || '0 km',
                 timeAway: selectedRestaurant?.timeAway || '0 mins',
                 dropDistance: selectedRestaurant?.dropDistance || '0 km',
@@ -2454,7 +2493,7 @@ export default function DeliveryHome() {
             // Calculate route using Google Maps Directions API (Zomato-style road-based routing)
             // Use LIVE location from delivery boy to restaurant
             // Use restaurantInfo directly (not selectedRestaurant) since state update is async
-            if (restaurantInfo && restaurantInfo.lat && restaurantInfo.lng && currentLocation) {
+            if (restaurantInfo && hasValidCoordinates(restaurantInfo?.lat, restaurantInfo?.lng) && currentLocation) {
               console.log('🗺️ Calculating route with Google Maps Directions API...');
               console.log('📍 From (Delivery Boy Live Location):', currentLocation);
               console.log('📍 To (Restaurant):', { lat: restaurantInfo.lat, lng: restaurantInfo.lng });
@@ -4167,6 +4206,7 @@ export default function DeliveryHome() {
 
       // Use calculated earnings if available, otherwise fallback to deliveryFee
       const effectiveEarnings = earnedValue > 0 ? earned : (deliveryFee > 0 ? deliveryFee : 0);
+      const newOrderRestaurantCoords = extractLatLng(newOrder.restaurantLocation || newOrder.restaurant?.location)
 
       console.log('💰 Earnings from notification:', {
         earned,
@@ -4181,12 +4221,11 @@ export default function DeliveryHome() {
       if (!pickupDistance || pickupDistance === '0 km') {
         // Try to calculate from driver's current location to restaurant
         const currentLocation = riderLocation || lastLocationRef.current;
-        const restaurantLat = newOrder.restaurantLocation?.latitude;
-        const restaurantLng = newOrder.restaurantLocation?.longitude;
+        const restaurantLat = newOrderRestaurantCoords.lat;
+        const restaurantLng = newOrderRestaurantCoords.lng;
 
         if (currentLocation && currentLocation.length === 2 &&
-          restaurantLat && restaurantLng &&
-          !isNaN(restaurantLat) && !isNaN(restaurantLng)) {
+          hasValidCoordinates(restaurantLat, restaurantLng)) {
           // Calculate distance in meters, then convert to km
           const distanceInMeters = calculateDistance(
             currentLocation[0],
@@ -4210,8 +4249,8 @@ export default function DeliveryHome() {
         orderId: newOrder.orderId,
         name: newOrder.restaurantName,
         address: restaurantAddress,
-        lat: newOrder.restaurantLocation?.latitude,
-        lng: newOrder.restaurantLocation?.longitude,
+        lat: newOrderRestaurantCoords.lat,
+        lng: newOrderRestaurantCoords.lng,
         distance: pickupDistance,
         timeAway: pickupDistance !== 'Calculating...' ? calculateTimeAway(pickupDistance) : 'Calculating...',
         dropDistance: newOrder.deliveryDistance || 'Calculating...',
@@ -4248,8 +4287,7 @@ export default function DeliveryHome() {
     const restaurantLng = selectedRestaurant.lng
 
     if (currentLocation && currentLocation.length === 2 &&
-      restaurantLat && restaurantLng &&
-      !isNaN(restaurantLat) && !isNaN(restaurantLng)) {
+      hasValidCoordinates(restaurantLat, restaurantLng)) {
       // Calculate distance in meters, then convert to km
       const distanceInMeters = calculateDistance(
         currentLocation[0],
@@ -7698,6 +7736,24 @@ export default function DeliveryHome() {
 
   // Bike marker update removed (Ola Maps removed)
 
+  const sliderRestaurantAddress = useMemo(() => {
+    const selectedAddress = selectedRestaurant?.address
+    if (selectedAddress && selectedAddress !== 'Restaurant Address' && selectedAddress !== 'Restaurant address') {
+      return selectedAddress
+    }
+
+    const fallbackAddress =
+      newOrder?.restaurantLocation?.formattedAddress ||
+      newOrder?.restaurantLocation?.address ||
+      newOrder?.restaurantAddress
+
+    if (fallbackAddress && fallbackAddress !== 'Restaurant Address' && fallbackAddress !== 'Restaurant address') {
+      return fallbackAddress
+    }
+
+    return null
+  }, [selectedRestaurant?.address, newOrder?.restaurantLocation?.formattedAddress, newOrder?.restaurantLocation?.address, newOrder?.restaurantAddress])
+
   // Carousel slides data - filter based on bank details status
   const carouselSlides = useMemo(() => [
     ...(bankDetailsFilled ? [] : [{
@@ -8262,6 +8318,11 @@ export default function DeliveryHome() {
                     <p className={`${slide.bgColor === "bg-gray-700" ? "text-white/90" : "text-black/80"} text-xs`}>
                       {slide.subtitle}
                     </p>
+                    {sliderRestaurantAddress && (
+                      <p className={`${slide.bgColor === "bg-gray-700" ? "text-white/80" : "text-black/70"} text-[11px] mt-0.5 truncate`}>
+                        {sliderRestaurantAddress}
+                      </p>
+                    )}
                   </div>
 
                   {/* Button */}

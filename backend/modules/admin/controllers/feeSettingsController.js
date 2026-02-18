@@ -13,6 +13,92 @@ const logger = winston.createLogger({
   ]
 });
 
+const toNumber = (value) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+};
+
+const sanitizeDistanceConfig = (distanceConfig = {}) => {
+  const maxDeliveryDistance = toNumber(distanceConfig?.maxDeliveryDistance);
+  const rawSlabs = Array.isArray(distanceConfig?.slabs) ? distanceConfig.slabs : [];
+
+  const slabs = rawSlabs
+    .map((slab) => ({
+      minKm: toNumber(slab?.minKm),
+      maxKm: toNumber(slab?.maxKm),
+      fee: toNumber(slab?.fee),
+    }))
+    .filter((slab) => slab.minKm !== null || slab.maxKm !== null || slab.fee !== null);
+
+  return {
+    maxDeliveryDistance: maxDeliveryDistance ?? 20,
+    slabs,
+  };
+};
+
+const sanitizeAmountConfig = (amountConfig = {}) => {
+  const rawRules = Array.isArray(amountConfig?.rules) ? amountConfig.rules : [];
+  const rules = rawRules
+    .map((rule) => ({
+      minAmount: toNumber(rule?.minAmount),
+      maxAmount: toNumber(rule?.maxAmount),
+      deliveryFee: toNumber(rule?.deliveryFee),
+    }))
+    .filter(
+      (rule) =>
+        rule.minAmount !== null ||
+        rule.maxAmount !== null ||
+        rule.deliveryFee !== null,
+    );
+
+  return { rules };
+};
+
+const validateDistanceConfig = (distanceConfig) => {
+  if (!distanceConfig) return null;
+  if (!Number.isFinite(distanceConfig.maxDeliveryDistance) || distanceConfig.maxDeliveryDistance < 0) {
+    return 'Max delivery distance must be a positive number';
+  }
+
+  for (const slab of distanceConfig.slabs || []) {
+    if (
+      !Number.isFinite(slab.minKm) ||
+      !Number.isFinite(slab.maxKm) ||
+      !Number.isFinite(slab.fee)
+    ) {
+      return 'Each distance slab must have valid Min Km, Max Km and Fee';
+    }
+    if (slab.minKm < 0 || slab.maxKm < 0 || slab.fee < 0) {
+      return 'Distance slab values must be >= 0';
+    }
+    if (slab.minKm >= slab.maxKm) {
+      return 'Distance slab Min Km must be less than Max Km';
+    }
+  }
+
+  return null;
+};
+
+const validateAmountConfig = (amountConfig) => {
+  if (!amountConfig) return null;
+  for (const rule of amountConfig.rules || []) {
+    if (
+      !Number.isFinite(rule.minAmount) ||
+      !Number.isFinite(rule.maxAmount) ||
+      !Number.isFinite(rule.deliveryFee)
+    ) {
+      return 'Each amount rule must have valid Min Order, Max Order and Delivery Fee';
+    }
+    if (rule.minAmount < 0 || rule.maxAmount < 0 || rule.deliveryFee < 0) {
+      return 'Amount rule values must be >= 0';
+    }
+    if (rule.minAmount >= rule.maxAmount) {
+      return 'Amount rule Min Order must be less than Max Order';
+    }
+  }
+  return null;
+};
+
 /**
  * Get current fee settings
  * GET /api/admin/fee-settings
@@ -55,14 +141,34 @@ export const getFeeSettings = asyncHandler(async (req, res) => {
 export const createOrUpdateFeeSettings = asyncHandler(async (req, res) => {
   try {
     const { deliveryFee, deliveryFeeRanges, freeDeliveryThreshold, platformFee, gstRate, isActive, distanceConfig, amountConfig } = req.body;
+    const parsedDeliveryFee = toNumber(deliveryFee);
+    const parsedPlatformFee = toNumber(platformFee);
+    const parsedGstRate = toNumber(gstRate);
+    const parsedFreeDeliveryThreshold = toNumber(freeDeliveryThreshold);
+    const normalizedDistanceConfig = sanitizeDistanceConfig(distanceConfig);
+    const normalizedAmountConfig = sanitizeAmountConfig(amountConfig);
 
     // Validate platform fee
-    if (platformFee === undefined || platformFee < 0) {
+    if (parsedPlatformFee === null || parsedPlatformFee < 0) {
       return errorResponse(res, 400, 'Platform fee must be a positive number');
     }
 
-    if (gstRate === undefined || gstRate < 0 || gstRate > 100) {
+    if (parsedGstRate === null || parsedGstRate < 0 || parsedGstRate > 100) {
       return errorResponse(res, 400, 'GST rate must be between 0 and 100');
+    }
+
+    if (parsedDeliveryFee === null || parsedDeliveryFee < 0) {
+      return errorResponse(res, 400, 'Delivery fee must be a positive number');
+    }
+
+    const distanceConfigError = validateDistanceConfig(normalizedDistanceConfig);
+    if (distanceConfigError) {
+      return errorResponse(res, 400, distanceConfigError);
+    }
+
+    const amountConfigError = validateAmountConfig(normalizedAmountConfig);
+    if (amountConfigError) {
+      return errorResponse(res, 400, amountConfigError);
     }
 
     // Validate delivery fee ranges if provided
@@ -93,15 +199,15 @@ export const createOrUpdateFeeSettings = asyncHandler(async (req, res) => {
 
     // Create new fee settings
     const feeSettingsData = {
-      deliveryFee: deliveryFee !== undefined ? Number(deliveryFee) : 25,
-      freeDeliveryThreshold: freeDeliveryThreshold ? Number(freeDeliveryThreshold) : 149,
-      platformFee: Number(platformFee),
-      gstRate: Number(gstRate),
+      deliveryFee: parsedDeliveryFee,
+      freeDeliveryThreshold: parsedFreeDeliveryThreshold ?? 149,
+      platformFee: parsedPlatformFee,
+      gstRate: parsedGstRate,
       isActive: isActive !== false,
       createdBy: req.admin?._id || null,
       updatedBy: req.admin?._id || null,
-      distanceConfig,
-      amountConfig
+      distanceConfig: normalizedDistanceConfig,
+      amountConfig: normalizedAmountConfig
     };
 
     // Add delivery fee ranges if provided
@@ -122,7 +228,11 @@ export const createOrUpdateFeeSettings = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     logger.error(`Error creating fee settings: ${error.message}`);
-    return errorResponse(res, 500, 'Failed to create fee settings');
+    const message = error?.message || 'Failed to create fee settings';
+    if (error?.name === 'ValidationError' || error?.name === 'CastError') {
+      return errorResponse(res, 400, message);
+    }
+    return errorResponse(res, 500, message);
   }
 });
 

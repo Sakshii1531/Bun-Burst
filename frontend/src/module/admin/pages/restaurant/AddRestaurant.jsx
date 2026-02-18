@@ -140,56 +140,166 @@ export default function AddRestaurant() {
               ownerPhone: data.ownerPhone || "",
               primaryContactNumber: data.primaryContactNumber || "",
               location: {
-                addressLine1: data.location?.addressLine1 || "",
-                addressLine2: data.location?.addressLine2 || "",
-                area: data.location?.area || "",
-                city: data.location?.city || "",
-                state: data.location?.state || "",
-                pincode: data.location?.pincode || "",
-                landmark: data.location?.landmark || "",
-                latitude: data.location?.latitude ?? "",
-                longitude: data.location?.longitude ?? "",
-                formattedAddress: data.location?.formattedAddress || "",
-                zoneId: data.location?.zoneId || "",
+                addressLine1:
+                  data.location?.addressLine1 ||
+                  data.onboarding?.step1?.location?.addressLine1 ||
+                  data.location?.address ||
+                  data.location?.formattedAddress ||
+                  "",
+                addressLine2:
+                  data.location?.addressLine2 ||
+                  data.onboarding?.step1?.location?.addressLine2 ||
+                  "",
+                area:
+                  data.location?.area ||
+                  data.onboarding?.step1?.location?.area ||
+                  "",
+                city:
+                  data.location?.city ||
+                  data.onboarding?.step1?.location?.city ||
+                  "",
+                state:
+                  data.location?.state ||
+                  data.onboarding?.step1?.location?.state ||
+                  "",
+                pincode:
+                  data.location?.pincode ||
+                  data.onboarding?.step1?.location?.pincode ||
+                  data.location?.zipCode ||
+                  data.location?.postalCode ||
+                  "",
+                landmark:
+                  data.location?.landmark ||
+                  data.onboarding?.step1?.location?.landmark ||
+                  "",
+                latitude:
+                  data.location?.latitude ??
+                  data.onboarding?.step1?.location?.latitude ??
+                  "",
+                longitude:
+                  data.location?.longitude ??
+                  data.onboarding?.step1?.location?.longitude ??
+                  "",
+                formattedAddress:
+                  data.location?.formattedAddress ||
+                  data.onboarding?.step1?.location?.formattedAddress ||
+                  data.location?.address ||
+                  "",
+                zoneId:
+                  data.location?.zoneId ||
+                  data.onboarding?.step1?.location?.zoneId ||
+                  "",
               },
             })
 
             // Populate Step 2
             setStep2({
-              menuImages: data.menuImages || [],
-              profileImage: data.profileImage || null,
-              cuisines: data.cuisines || [],
-              openingTime: data.deliveryTimings?.openingTime || "09:00",
-              closingTime: data.deliveryTimings?.closingTime || "22:00",
-              openDays: data.openDays || [],
+              menuImages: data.menuImages || data.onboarding?.step2?.menuImageUrls || [],
+              profileImage: data.profileImage || data.onboarding?.step2?.profileImageUrl || null,
+              cuisines: data.cuisines || data.onboarding?.step2?.cuisines || [],
+              openingTime:
+                data.deliveryTimings?.openingTime ||
+                data.onboarding?.step2?.deliveryTimings?.openingTime ||
+                "09:00",
+              closingTime:
+                data.deliveryTimings?.closingTime ||
+                data.onboarding?.step2?.deliveryTimings?.closingTime ||
+                "22:00",
+              openDays: data.openDays || data.onboarding?.step2?.openDays || [],
             })
 
             // Populate Step 3
             setStep3({
-              panNumber: data.documents?.panNumber || data.panNumber || "",
-              nameOnPan: data.documents?.nameOnPan || data.nameOnPan || "",
-              panImage: data.documents?.panImage || data.panImage || null,
-              gstRegistered: data.documents?.gstRegistered || !!data.gstNumber,
-              gstNumber: data.documents?.gstNumber || data.gstNumber || "",
-              gstLegalName: data.documents?.gstLegalName || data.gstLegalName || "",
-              gstAddress: data.documents?.gstAddress || data.gstAddress || "",
-              gstImage: data.documents?.gstImage || data.gstImage || null,
-              fssaiNumber: data.documents?.fssaiNumber || data.fssaiNumber || "",
-              fssaiExpiry: data.documents?.fssaiExpiry ? new Date(data.documents.fssaiExpiry).toISOString().split('T')[0] : "",
-              fssaiImage: data.documents?.fssaiImage || data.fssaiImage || null,
-              accountNumber: data.bankDetails?.accountNumber || data.accountNumber || "",
-              confirmAccountNumber: data.bankDetails?.accountNumber || data.accountNumber || "",
-              ifscCode: data.bankDetails?.ifscCode || data.ifscCode || "",
-              accountHolderName: data.bankDetails?.accountHolderName || data.accountHolderName || "",
-              accountType: data.bankDetails?.accountType || data.accountType || "",
+              panNumber:
+                data.documents?.panNumber ||
+                data.panNumber ||
+                data.onboarding?.step3?.pan?.panNumber ||
+                "",
+              nameOnPan:
+                data.documents?.nameOnPan ||
+                data.nameOnPan ||
+                data.onboarding?.step3?.pan?.nameOnPan ||
+                "",
+              panImage:
+                data.documents?.panImage ||
+                data.panImage ||
+                data.onboarding?.step3?.pan?.image ||
+                null,
+              gstRegistered:
+                data.documents?.gstRegistered ??
+                data.onboarding?.step3?.gst?.isRegistered ??
+                !!data.gstNumber,
+              gstNumber:
+                data.documents?.gstNumber ||
+                data.gstNumber ||
+                data.onboarding?.step3?.gst?.gstNumber ||
+                "",
+              gstLegalName:
+                data.documents?.gstLegalName ||
+                data.gstLegalName ||
+                data.onboarding?.step3?.gst?.legalName ||
+                "",
+              gstAddress:
+                data.documents?.gstAddress ||
+                data.gstAddress ||
+                data.onboarding?.step3?.gst?.address ||
+                "",
+              gstImage:
+                data.documents?.gstImage ||
+                data.gstImage ||
+                data.onboarding?.step3?.gst?.image ||
+                null,
+              fssaiNumber:
+                data.documents?.fssaiNumber ||
+                data.fssaiNumber ||
+                data.onboarding?.step3?.fssai?.registrationNumber ||
+                "",
+              fssaiExpiry: data.documents?.fssaiExpiry
+                ? new Date(data.documents.fssaiExpiry).toISOString().split('T')[0]
+                : data.onboarding?.step3?.fssai?.expiryDate
+                  ? new Date(data.onboarding.step3.fssai.expiryDate).toISOString().split('T')[0]
+                  : "",
+              fssaiImage:
+                data.documents?.fssaiImage ||
+                data.fssaiImage ||
+                data.onboarding?.step3?.fssai?.image ||
+                null,
+              accountNumber:
+                data.bankDetails?.accountNumber ||
+                data.accountNumber ||
+                data.onboarding?.step3?.bank?.accountNumber ||
+                "",
+              confirmAccountNumber:
+                data.bankDetails?.accountNumber ||
+                data.accountNumber ||
+                data.onboarding?.step3?.bank?.accountNumber ||
+                "",
+              ifscCode:
+                data.bankDetails?.ifscCode ||
+                data.ifscCode ||
+                data.onboarding?.step3?.bank?.ifscCode ||
+                "",
+              accountHolderName:
+                data.bankDetails?.accountHolderName ||
+                data.accountHolderName ||
+                data.onboarding?.step3?.bank?.accountHolderName ||
+                "",
+              accountType:
+                data.bankDetails?.accountType ||
+                data.accountType ||
+                data.onboarding?.step3?.bank?.accountType ||
+                "",
             })
 
             // Populate Step 4
             setStep4({
-              estimatedDeliveryTime: data.estimatedDeliveryTime || "25-30 mins",
-              featuredDish: data.featuredDish || "",
-              featuredPrice: data.featuredPrice || "249",
-              offer: data.offer || "",
+              estimatedDeliveryTime:
+                data.estimatedDeliveryTime ||
+                data.onboarding?.step4?.estimatedDeliveryTime ||
+                "25-30 mins",
+              featuredDish: data.featuredDish || data.onboarding?.step4?.featuredDish || "",
+              featuredPrice: data.featuredPrice || data.onboarding?.step4?.featuredPrice || "249",
+              offer: data.offer || data.onboarding?.step4?.offer || "",
               diningSettings: data.diningSettings || {
                 isEnabled: false,
                 maxGuests: 6,
@@ -608,7 +718,13 @@ export default function AddRestaurant() {
         const uploaded = await handleUpload(file, "appzeto/restaurant/menu")
         menuImagesData.push(uploaded)
       }
-      const existingMenuUrls = step2.menuImages.filter(img => !(img instanceof File) && (img?.url || (typeof img === 'string' && img.startsWith('http'))))
+      const existingMenuUrls = step2.menuImages
+        .filter(
+          (img) =>
+            !(img instanceof File) &&
+            (img?.url || (typeof img === "string" && img.startsWith("http"))),
+        )
+        .map((img) => (typeof img === "string" ? { url: img } : img))
       menuImagesData = [...existingMenuUrls, ...menuImagesData]
 
       let panImageData = null

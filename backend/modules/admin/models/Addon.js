@@ -15,7 +15,14 @@ const addonSchema = new mongoose.Schema(
         categoryId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'AdminCategoryManagement',
-            required: [true, 'Category is required'],
+            default: null,
+        },
+        categoryIds: {
+            type: [{
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'AdminCategoryManagement',
+            }],
+            default: [],
         },
         isActive: {
             type: Boolean,
@@ -39,6 +46,7 @@ const addonSchema = new mongoose.Schema(
 // Indexes
 addonSchema.index({ name: 1 });
 addonSchema.index({ categoryId: 1 });
+addonSchema.index({ categoryIds: 1 });
 addonSchema.index({ isActive: 1 });
 
 const Addon = mongoose.model('Addon', addonSchema);

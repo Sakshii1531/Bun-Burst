@@ -9,10 +9,17 @@ export const getAddons = asyncHandler(async (req, res) => {
     const { categoryId, isActive } = req.query;
     const filter = {};
 
-    if (categoryId) filter.categoryId = categoryId;
+    if (categoryId) {
+        filter.$or = [
+            { categoryId },
+            { categoryIds: categoryId },
+        ];
+    }
     if (isActive !== undefined) filter.isActive = isActive === 'true';
 
-    const addons = await Addon.find(filter).populate('categoryId', 'name');
+    const addons = await Addon.find(filter)
+        .populate('categoryId', 'name')
+        .populate('categoryIds', 'name');
 
     return successResponse(res, 200, 'Addons retrieved successfully', { addons });
 });
@@ -21,7 +28,9 @@ export const getAddons = asyncHandler(async (req, res) => {
 // @route   GET /api/admin/addons/:id
 // @access  Private/Admin
 export const getAddonById = asyncHandler(async (req, res) => {
-    const addon = await Addon.findById(req.params.id).populate('categoryId', 'name');
+    const addon = await Addon.findById(req.params.id)
+        .populate('categoryId', 'name')
+        .populate('categoryIds', 'name');
 
     if (!addon) {
         return errorResponse(res, 404, 'Addon not found');
@@ -34,12 +43,20 @@ export const getAddonById = asyncHandler(async (req, res) => {
 // @route   POST /api/admin/addons
 // @access  Private/Admin
 export const createAddon = asyncHandler(async (req, res) => {
-    const { name, price, categoryId, isActive, description, image } = req.body;
+    const { name, price, categoryId, categoryIds, isActive, description, image } = req.body;
+    const normalizedCategoryIds = Array.isArray(categoryIds)
+        ? categoryIds.filter(Boolean)
+        : (categoryId ? [categoryId] : []);
+
+    if (normalizedCategoryIds.length === 0) {
+        return errorResponse(res, 400, 'At least one category is required');
+    }
 
     const addon = await Addon.create({
         name,
         price,
-        categoryId,
+        categoryId: normalizedCategoryIds[0],
+        categoryIds: normalizedCategoryIds,
         isActive,
         description,
         image: image || '',
@@ -62,15 +79,26 @@ export const updateAddon = asyncHandler(async (req, res) => {
         name,
         price,
         categoryId,
+        categoryIds,
         isActive,
         description,
         image,
     } = req.body;
 
+    const normalizedCategoryIds = categoryIds !== undefined
+        ? (Array.isArray(categoryIds) ? categoryIds.filter(Boolean) : [])
+        : (categoryId !== undefined ? (categoryId ? [categoryId] : []) : undefined);
+
+    if (normalizedCategoryIds !== undefined && normalizedCategoryIds.length === 0) {
+        return errorResponse(res, 400, 'At least one category is required');
+    }
+
     const updatePayload = {
         ...(name !== undefined ? { name } : {}),
         ...(price !== undefined ? { price } : {}),
-        ...(categoryId !== undefined ? { categoryId } : {}),
+        ...(normalizedCategoryIds !== undefined
+            ? { categoryIds: normalizedCategoryIds, categoryId: normalizedCategoryIds[0] }
+            : {}),
         ...(isActive !== undefined ? { isActive } : {}),
         ...(description !== undefined ? { description } : {}),
         ...(image !== undefined ? { image } : {}),
@@ -126,9 +154,12 @@ export const getAddonsByCategory = asyncHandler(async (req, res) => {
     }
 
     const addons = await Addon.find({
-        categoryId,
+        $or: [
+            { categoryId },
+            { categoryIds: categoryId },
+        ],
         isActive: true
-    }).select('name price categoryId isActive image description');
+    }).select('name price categoryId categoryIds isActive image description');
 
     return successResponse(res, 200, 'Addons retrieved successfully', { addons });
 });

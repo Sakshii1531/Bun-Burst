@@ -65,6 +65,16 @@
   --chart-3: #1E1E1E;
   --chart-4: #F5F5F5;
   --chart-5: #e53935;
+
+  /* Sidebar (light) */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1E1E1E;
+  --sidebar-primary: #e53935;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #FFC400;
+  --sidebar-accent-foreground: #1E1E1E;
+  --sidebar-border: #F5F5F5;
+  --sidebar-ring: #e53935;
 }
 
 /* ======================================================
@@ -106,7 +116,12 @@
 
   --sidebar: #121212;
   --sidebar-foreground: #ffffff;
+  --sidebar-primary: #e53935;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #FFC400;
+  --sidebar-accent-foreground: #1E1E1E;
   --sidebar-border: #2C2C2C;
+  --sidebar-ring: #e53935;
 }
 
 /* ======================================================
@@ -174,6 +189,41 @@
 
   body {
     @apply bg-background text-foreground m-0 min-h-screen;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: var(--foreground);
+  }
+
+  hr {
+    border-color: var(--border);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--highlight) 70%, white 30%);
+    color: var(--highlight-foreground);
+  }
+
+  /* Global polish for interactive controls */
+  [data-slot="button"] {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  [data-slot="card"] {
+    border-color: var(--border);
+  }
+
+  [data-slot="input"],
+  [data-slot="textarea"],
+  [data-slot="select-trigger"] {
+    border-color: var(--input);
+    background: var(--card);
   }
 }
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -14,13 +15,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 
 export default function AddonsList() {
@@ -38,7 +32,7 @@ export default function AddonsList() {
   const [formData, setFormData] = useState({
     name: "",
     price: "",
-    categoryId: "",
+    categoryIds: [],
     isActive: true,
     description: "",
     image: "",
@@ -75,10 +69,18 @@ export default function AddonsList() {
   const handleOpenModal = (addon = null) => {
     if (addon) {
       setEditingAddon(addon)
+      const mappedCategoryIds = Array.isArray(addon.categoryIds) && addon.categoryIds.length > 0
+        ? addon.categoryIds.map((cat) => (cat?._id || cat?.id || cat)?.toString()).filter(Boolean)
+        : [
+          addon.categoryId?._id?.toString() ||
+          addon.categoryId?.id?.toString() ||
+          (typeof addon.categoryId === "string" ? addon.categoryId : "")
+        ].filter(Boolean)
+
       setFormData({
         name: addon.name,
         price: addon.price,
-        categoryId: addon.categoryId?._id?.toString() || addon.categoryId?.id?.toString() || (typeof addon.categoryId === 'string' ? addon.categoryId : ""),
+        categoryIds: mappedCategoryIds,
         isActive: addon.isActive,
         description: addon.description || "",
         image: addon.image || "",
@@ -88,7 +90,7 @@ export default function AddonsList() {
       setFormData({
         name: "",
         price: "",
-        categoryId: "",
+        categoryIds: [],
         isActive: true,
         description: "",
         image: "",
@@ -119,7 +121,7 @@ export default function AddonsList() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.name || !formData.price || !formData.categoryId) {
+    if (!formData.name || !formData.price || !Array.isArray(formData.categoryIds) || formData.categoryIds.length === 0) {
       toast.error("Please fill in all required fields")
       return
     }
@@ -182,27 +184,44 @@ export default function AddonsList() {
   const filteredAddons = useMemo(() => {
     return addons.filter(addon =>
       addon.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (Array.isArray(addon.categoryIds) && addon.categoryIds.some((cat) =>
+        cat?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+      )) ||
       addon.categoryId?.name?.toLowerCase().includes(searchQuery.toLowerCase())
     )
   }, [addons, searchQuery])
 
+  const getAddonCategoryNames = (addon) => {
+    if (Array.isArray(addon.categoryIds) && addon.categoryIds.length > 0) {
+      return addon.categoryIds
+        .map((cat) => cat?.name || "")
+        .filter(Boolean)
+    }
+
+    if (addon.categoryId?.name) {
+      return [addon.categoryId.name]
+    }
+
+    return []
+  }
+
   return (
-    <div className="p-4 lg:p-8 bg-slate-50/50 min-h-screen">
+    <div className="p-4 lg:p-8 bg-white min-h-screen text-[#1E1E1E]">
       {/* Header Section */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-3xl shadow-sm border border-slate-200/60 p-8 mb-8"
+        className="bg-white rounded-3xl shadow-sm border border-[#F5F5F5] p-8 mb-8"
       >
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-200 ring-4 ring-orange-50">
-              <Sparkles className="text-white w-7 h-7" />
+            <div className="w-14 h-14 rounded-2xl bg-[#FFC400] flex items-center justify-center shadow-sm ring-4 ring-[#FFF8E1]">
+              <Sparkles className="text-[#1E1E1E] w-7 h-7" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Manage Addons</h1>
-              <p className="text-slate-500 font-medium flex items-center gap-2 mt-1">
-                <Tag className="w-4 h-4 text-orange-500" />
+              <h1 className="text-3xl font-bold text-[#1E1E1E] tracking-tight">Manage Addons</h1>
+              <p className="text-[#1E1E1E]/70 font-medium flex items-center gap-2 mt-1">
+                <Tag className="w-4 h-4 text-[#FFC400]" />
                 Customize your menu extras and options
               </p>
             </div>
@@ -214,13 +233,13 @@ export default function AddonsList() {
                 placeholder="Search addons..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-11 pr-4 py-6 w-full lg:w-[320px] rounded-2xl border-slate-200 bg-slate-50/50 group-hover:bg-white group-focus:bg-white transition-all shadow-none focus:ring-orange-500/20"
+                className="pl-11 pr-4 py-6 w-full lg:w-[320px] rounded-2xl border-[#F5F5F5] bg-white group-hover:bg-white group-focus:bg-white transition-all shadow-none focus:ring-[#FFC400]/20 focus:border-[#FFC400]"
               />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-hover:text-orange-500 transition-colors" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1E1E1E]/50 group-hover:text-[#1E1E1E] transition-colors" />
             </div>
             <Button
               onClick={() => handleOpenModal()}
-              className="bg-orange-600 hover:bg-orange-700 text-white py-6 px-8 rounded-2xl shadow-xl shadow-orange-200 font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="bg-[#e53935] hover:bg-[#d32f2f] text-white py-6 px-8 rounded-2xl shadow-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <Plus className="w-5 h-5 mr-2 stroke-[3px]" />
               New Addon
@@ -234,27 +253,27 @@ export default function AddonsList() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden"
+        className="bg-white rounded-3xl shadow-sm border border-[#F5F5F5] overflow-hidden"
       >
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">SL</th>
-                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Name</th>
-                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Category</th>
-                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Price</th>
-                <th className="px-8 py-5 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Status</th>
-                <th className="px-8 py-5 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Action</th>
+              <tr className="bg-white border-b border-[#F5F5F5]">
+                <th className="px-8 py-5 text-left text-xs font-bold text-[#1E1E1E]/60 uppercase tracking-widest">SL</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-[#1E1E1E]/60 uppercase tracking-widest">Name</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-[#1E1E1E]/60 uppercase tracking-widest">Categories</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-[#1E1E1E]/60 uppercase tracking-widest">Price</th>
+                <th className="px-8 py-5 text-center text-xs font-bold text-[#1E1E1E]/60 uppercase tracking-widest">Status</th>
+                <th className="px-8 py-5 text-center text-xs font-bold text-[#1E1E1E]/60 uppercase tracking-widest">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-[#F5F5F5]">
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-8 py-32 text-center">
                     <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin" />
-                      <p className="text-slate-500 font-medium animate-pulse">Fetching your addons...</p>
+                      <div className="w-12 h-12 border-4 border-[#F5F5F5] border-t-[#e53935] rounded-full animate-spin" />
+                      <p className="text-[#1E1E1E]/60 font-medium animate-pulse">Fetching your addons...</p>
                     </div>
                   </td>
                 </tr>
@@ -262,11 +281,11 @@ export default function AddonsList() {
                 <tr>
                   <td colSpan={6} className="px-8 py-32 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-2">
-                        <Search className="w-8 h-8 text-slate-300" />
+                      <div className="w-16 h-16 bg-[#FFF8E1] rounded-full flex items-center justify-center mb-2">
+                        <Search className="w-8 h-8 text-[#1E1E1E]/30" />
                       </div>
-                      <p className="text-slate-900 font-bold text-lg">No addons found</p>
-                      <p className="text-slate-500">Try adjusting your search or add a new one</p>
+                      <p className="text-[#1E1E1E] font-bold text-lg">No addons found</p>
+                      <p className="text-[#1E1E1E]/60">Try adjusting your search or add a new one</p>
                     </div>
                   </td>
                 </tr>
@@ -279,20 +298,34 @@ export default function AddonsList() {
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       key={addon._id}
-                      className="hover:bg-slate-50/80 transition-all group"
+                      className="hover:bg-[#FFFDF5] transition-all group"
                     >
-                      <td className="px-8 py-5 whitespace-nowrap text-sm font-semibold text-slate-400">{index + 1}</td>
+                      <td className="px-8 py-5 whitespace-nowrap text-sm font-semibold text-[#1E1E1E]/50">{index + 1}</td>
                       <td className="px-8 py-5 whitespace-nowrap">
-                        <span className="font-bold text-slate-900 group-hover:text-orange-600 transition-colors">{addon.name}</span>
+                        <span className="font-bold text-[#1E1E1E] group-hover:text-[#e53935] transition-colors">{addon.name}</span>
                       </td>
                       <td className="px-8 py-5 whitespace-nowrap">
-                        <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none px-3 py-1 rounded-lg font-semibold hover:bg-orange-50 hover:text-orange-600 transition-all">
-                          {addon.categoryId?.name || "Uncategorized"}
-                        </Badge>
+                        <div className="flex flex-wrap gap-2">
+                          {getAddonCategoryNames(addon).length > 0 ? (
+                            getAddonCategoryNames(addon).map((name) => (
+                              <Badge
+                                key={`${addon._id}-${name}`}
+                                variant="secondary"
+                                className="bg-[#FFF8E1] text-[#1E1E1E] border border-[#F5F5F5] px-3 py-1 rounded-lg font-semibold transition-all"
+                              >
+                                {name}
+                              </Badge>
+                            ))
+                          ) : (
+                            <Badge variant="secondary" className="bg-[#FFF8E1] text-[#1E1E1E] border border-[#F5F5F5] px-3 py-1 rounded-lg font-semibold">
+                              Uncategorized
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="px-8 py-5 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5 font-bold text-slate-900">
-                          <span className="text-orange-600 text-xs">₹</span>
+                        <div className="flex items-center gap-1.5 font-bold text-[#1E1E1E]">
+                          <span className="text-[#FFC400] text-xs">Rs</span>
                           <span>{addon.price.toFixed(2)}</span>
                         </div>
                       </td>
@@ -301,7 +334,7 @@ export default function AddonsList() {
                           <Switch
                             checked={addon.isActive}
                             onCheckedChange={() => handleToggleStatus(addon._id)}
-                            className="data-[state=checked]:bg-green-500"
+                            className="data-[state=checked]:bg-[#e53935]"
                           />
                         </div>
                       </td>
@@ -311,7 +344,7 @@ export default function AddonsList() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleOpenModal(addon)}
-                            className="w-10 h-10 rounded-xl text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all"
+                            className="w-10 h-10 rounded-xl text-[#1E1E1E]/70 hover:bg-[#FFF8E1] hover:text-[#1E1E1E] transition-all"
                           >
                             <Edit2 className="w-4 h-4" />
                           </Button>
@@ -320,10 +353,10 @@ export default function AddonsList() {
                             size="icon"
                             onClick={() => handleDelete(addon._id)}
                             disabled={deletingId === addon._id}
-                            className="w-10 h-10 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-all"
+                            className="w-10 h-10 rounded-xl text-[#e53935] hover:bg-[#FDECEC] hover:text-[#d32f2f] transition-all"
                           >
                             {deletingId === addon._id ? (
-                              <Loader2 className="w-4 h-4 animate-spin text-red-400" />
+                              <Loader2 className="w-4 h-4 animate-spin text-[#e53935]" />
                             ) : (
                               <Trash2 className="w-4 h-4" />
                             )}
@@ -342,8 +375,8 @@ export default function AddonsList() {
       {/* Add/Edit Modal */}
       <AnimatePresence>
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none shadow-2xl rounded-2xl">
-            <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 text-white relative">
+          <DialogContent className="sm:max-w-[500px] max-h-[88vh] p-0 overflow-hidden border-none shadow-2xl rounded-2xl">
+            <div className="bg-[#e53935] p-4 text-white relative">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
                   <Plus className="w-5 h-5 text-white" />
@@ -353,7 +386,7 @@ export default function AddonsList() {
                     <DialogTitle className="text-xl font-bold text-white leading-tight">
                       {editingAddon ? 'Update Addon' : 'Create New Addon'}
                     </DialogTitle>
-                    <p className="text-orange-100 text-sm mt-0.5">
+                    <p className="text-white/80 text-sm mt-0.5">
                       {editingAddon ? 'Modify existing addon details' : 'Add a new extra item to your menu'}
                     </p>
                   </DialogHeader>
@@ -361,16 +394,16 @@ export default function AddonsList() {
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="absolute top-6 right-6 p-1 rounded-full hover:bg-white/10 transition-colors"
+                className="absolute top-4 right-4 p-1 rounded-full hover:bg-white/10 transition-colors"
               >
                 <X className="w-5 h-5 text-white/80" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 bg-white space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleSubmit} className="p-5 bg-white space-y-4 overflow-y-auto max-h-[calc(88vh-72px)]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="name" className="text-sm font-semibold text-slate-700">Addon Name *</Label>
+                  <Label htmlFor="name" className="text-sm font-semibold text-[#1E1E1E]">Addon Name *</Label>
                   <div className="relative">
                     <Input
                       id="name"
@@ -378,47 +411,50 @@ export default function AddonsList() {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Ex: Extra Cheese, Peri Peri..."
                       required
-                      className="pl-4 h-11 bg-slate-50 border-slate-200 focus:bg-white focus:ring-orange-500/20 focus:border-orange-500 transition-all rounded-xl"
+                      className="pl-4 h-10 bg-white border-[#F5F5F5] focus:bg-white focus:ring-[#FFC400]/20 focus:border-[#FFC400] transition-all rounded-xl"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="categoryId" className="text-sm font-semibold text-slate-700">Category *</Label>
-                  <Select
-                    value={formData.categoryId}
-                    onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
-                  >
-                    <SelectTrigger className="h-11 bg-slate-50 border-slate-200 focus:ring-orange-500/20 focus:border-orange-500 transition-all rounded-xl">
-                      <SelectValue placeholder="Select Category" />
-                    </SelectTrigger>
-                    <SelectContent className="z-[101] rounded-xl min-w-[200px] shadow-2xl border-slate-200">
-                      {categories && categories.length > 0 ? (
-                        categories.map((cat) => {
-                          const catId = (cat.id || cat._id || cat).toString();
-                          return (
-                            <SelectItem
-                              key={catId}
-                              value={catId}
-                              className="rounded-lg cursor-pointer"
-                            >
-                              {cat.name || "Unnamed Category"}
-                            </SelectItem>
-                          );
-                        })
-                      ) : (
-                        <div className="p-3 text-center text-xs text-slate-500 italic">
-                          No categories found
-                        </div>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="categoryIds" className="text-sm font-semibold text-[#1E1E1E]">Categories *</Label>
+                  <div className="max-h-36 overflow-y-auto rounded-xl border border-[#F5F5F5] bg-white p-2.5 space-y-1.5">
+                    {categories && categories.length > 0 ? (
+                      categories.map((cat) => {
+                        const catId = (cat.id || cat._id || cat).toString()
+                        const isChecked = formData.categoryIds.includes(catId)
+                        return (
+                          <label
+                            key={catId}
+                            className="flex items-center gap-2 text-sm text-[#1E1E1E] cursor-pointer py-0.5"
+                          >
+                            <Checkbox
+                              checked={isChecked}
+                              onCheckedChange={(checked) => {
+                                setFormData((prev) => {
+                                  const next = new Set(prev.categoryIds)
+                                  if (checked) next.add(catId)
+                                  else next.delete(catId)
+                                  return { ...prev, categoryIds: Array.from(next) }
+                                })
+                              }}
+                            />
+                            <span>{cat.name || "Unnamed Category"}</span>
+                          </label>
+                        )
+                      })
+                    ) : (
+                      <div className="p-1 text-center text-xs text-[#1E1E1E]/60 italic">
+                        No categories found
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="price" className="text-sm font-semibold text-slate-700">Price * (₹)</Label>
+                  <Label htmlFor="price" className="text-sm font-semibold text-[#1E1E1E]">Price * (Rs)</Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#FFC400] font-bold">Rs</span>
                     <Input
                       id="price"
                       type="number"
@@ -428,26 +464,26 @@ export default function AddonsList() {
                       onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                       placeholder="0.00"
                       required
-                      className="pl-8 h-11 bg-slate-50 border-slate-200 focus:bg-white focus:ring-orange-500/20 focus:border-orange-500 transition-all rounded-xl"
+                      className="pl-11 h-10 bg-white border-[#F5F5F5] focus:bg-white focus:ring-[#FFC400]/20 focus:border-[#FFC400] transition-all rounded-xl"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="description" className="text-sm font-semibold text-slate-700">Description (Optional)</Label>
+                  <Label htmlFor="description" className="text-sm font-semibold text-[#1E1E1E]">Description (Optional)</Label>
                   <Input
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Brief description of the addon..."
-                    className="h-11 bg-slate-50 border-slate-200 focus:bg-white focus:ring-orange-500/20 focus:border-orange-500 transition-all rounded-xl"
+                    className="h-10 bg-white border-[#F5F5F5] focus:bg-white focus:ring-[#FFC400]/20 focus:border-[#FFC400] transition-all rounded-xl"
                   />
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <Label className="text-sm font-semibold text-slate-700">Addon Image (Optional)</Label>
+                  <Label className="text-sm font-semibold text-[#1E1E1E]">Addon Image (Optional)</Label>
                   <div className="flex items-center gap-3">
-                    <label className="inline-flex items-center gap-2 px-4 h-11 rounded-xl bg-slate-50 border border-slate-200 hover:bg-white cursor-pointer transition-all text-sm font-medium text-slate-700">
+                    <label className="inline-flex items-center gap-2 px-4 h-10 rounded-xl bg-white border border-[#F5F5F5] hover:bg-[#FFFDF5] cursor-pointer transition-all text-sm font-medium text-[#1E1E1E]">
                       {uploadingImage ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
@@ -466,23 +502,23 @@ export default function AddonsList() {
                       <img
                         src={formData.image}
                         alt="Addon preview"
-                        className="w-12 h-12 rounded-lg object-cover border border-slate-200"
+                        className="w-12 h-12 rounded-lg object-cover border border-[#F5F5F5]"
                       />
                     ) : null}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all hover:bg-slate-100/50">
+              <div className="flex items-center justify-between p-3 bg-white rounded-2xl border border-[#F5F5F5] transition-all hover:bg-[#FFFDF5]">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg transition-colors ${formData.isActive ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-500'}`}>
+                  <div className={`p-2 rounded-lg transition-colors ${formData.isActive ? 'bg-[#FFF8E1] text-[#FFC400]' : 'bg-[#F5F5F5] text-[#1E1E1E]/50'}`}>
                     <Check className={`w-4 h-4 transition-transform ${formData.isActive ? 'scale-110' : 'scale-90'}`} />
                   </div>
                   <div>
-                    <Label htmlFor="isActive" className="text-sm font-bold text-slate-800 cursor-pointer block">
+                    <Label htmlFor="isActive" className="text-sm font-bold text-[#1E1E1E] cursor-pointer block">
                       Active Status
                     </Label>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-[#1E1E1E]/60">
                       {formData.isActive ? 'Addon will be visible in menu' : 'Addon will be hidden from menu'}
                     </p>
                   </div>
@@ -491,24 +527,24 @@ export default function AddonsList() {
                   id="isActive"
                   checked={formData.isActive}
                   onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                  className="data-[state=checked]:bg-green-500"
+                  className="data-[state=checked]:bg-[#e53935]"
                 />
               </div>
 
-              <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4 pt-2">
+              <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={() => setIsModalOpen(false)}
                   disabled={submitting}
-                  className="flex-1 h-12 rounded-xl text-slate-600 hover:bg-slate-100 font-medium"
+                  className="flex-1 h-10 rounded-xl text-[#1E1E1E]/70 hover:bg-[#FFFDF5] font-medium"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={submitting}
-                  className="flex-[2] h-12 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-lg shadow-orange-200 transition-all active:scale-[0.98]"
+                  className="flex-[2] h-10 bg-[#e53935] hover:bg-[#d32f2f] text-white font-bold rounded-xl shadow-sm transition-all active:scale-[0.98]"
                 >
                   {submitting ? (
                     <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -523,3 +559,4 @@ export default function AddonsList() {
     </div>
   )
 }
+
