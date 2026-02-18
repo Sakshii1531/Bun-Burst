@@ -637,24 +637,30 @@ export const getMenuByRestaurantId = async (req, res) => {
     });
 
     // Filter menu for user side: only show enabled sections and available items
+    const toPlainObject = (doc) => (
+      doc && typeof doc.toObject === 'function' ? doc.toObject() : doc
+    );
+
     const filteredSections = (menu.sections || [])
       .filter(section => {
+        const sectionData = toPlainObject(section);
         // Only show sections where isEnabled is not explicitly false
         // If isEnabled is undefined/null, treat as enabled (default true)
-        const isEnabled = section.isEnabled !== false;
+        const isEnabled = sectionData.isEnabled !== false;
         if (!isEnabled) {
-          console.log(`[USER MENU] Filtering out disabled section: "${section.name}"`);
+          console.log(`[USER MENU] Filtering out disabled section: "${sectionData.name}"`);
         }
         return isEnabled;
       })
       .map(section => {
+        const sectionData = toPlainObject(section);
         // Find if this section matches a global category
-        const sectionCategoryId = categoryNameMap.get(section.name.toLowerCase().trim());
+        const sectionCategoryId = categoryNameMap.get((sectionData.name || '').toLowerCase().trim());
 
-        console.log(`[USER MENU] Processing section: "${section.name}", items: ${section.items?.length || 0}`);
+        console.log(`[USER MENU] Processing section: "${sectionData.name}", items: ${sectionData.items?.length || 0}`);
         // Filter direct items - only show available AND approved items
         // Items where isAvailable is not explicitly false AND approvalStatus is 'approved' should be shown
-        const availableItems = (section.items || []).filter(item => {
+        const availableItems = (sectionData.items || []).filter(item => {
           const isAvailable = item.isAvailable !== false;
           const isApproved = item.approvalStatus === 'approved' || !item.approvalStatus; // Include approved or legacy items without approvalStatus
           const shouldShow = isAvailable && isApproved;
@@ -667,18 +673,20 @@ export const getMenuByRestaurantId = async (req, res) => {
           return shouldShow;
         }).map(item => {
           // ENSURE categoryId is present - either from item itself, or from section name match
-          const itemCategoryId = item.categoryId || sectionCategoryId || (item.category ? categoryNameMap.get(item.category.toLowerCase().trim()) : null);
+          const itemData = toPlainObject(item);
+          const itemCategoryId = itemData.categoryId || sectionCategoryId || (itemData.category ? categoryNameMap.get(itemData.category.toLowerCase().trim()) : null);
 
           return {
-            ...item,
+            ...itemData,
             categoryId: itemCategoryId
           };
         });
 
         // Filter subsections and their items
-        const availableSubsections = (section.subsections || [])
+        const availableSubsections = (sectionData.subsections || [])
           .map(subsection => {
-            const availableSubsectionItems = (subsection.items || []).filter(item => {
+            const subsectionData = toPlainObject(subsection);
+            const availableSubsectionItems = (subsectionData.items || []).filter(item => {
               const isAvailable = item.isAvailable !== false;
               const isApproved = item.approvalStatus === 'approved' || !item.approvalStatus; // Include approved or legacy items without approvalStatus
               const shouldShow = isAvailable && isApproved;
@@ -686,10 +694,11 @@ export const getMenuByRestaurantId = async (req, res) => {
               return shouldShow;
             }).map(item => {
               // ENSURE categoryId is present
-              const itemCategoryId = item.categoryId || sectionCategoryId || (item.category ? categoryNameMap.get(item.category.toLowerCase().trim()) : null);
+              const itemData = toPlainObject(item);
+              const itemCategoryId = itemData.categoryId || sectionCategoryId || (itemData.category ? categoryNameMap.get(itemData.category.toLowerCase().trim()) : null);
 
               return {
-                ...item,
+                ...itemData,
                 categoryId: itemCategoryId
               };
             });
@@ -697,7 +706,7 @@ export const getMenuByRestaurantId = async (req, res) => {
             // Only include subsection if it has available items
             if (availableSubsectionItems.length > 0) {
               return {
-                ...subsection,
+                ...subsectionData,
                 items: availableSubsectionItems,
               };
             }
@@ -708,16 +717,16 @@ export const getMenuByRestaurantId = async (req, res) => {
         // Include section if it has at least one available item OR at least one subsection with available items
         // This ensures category remains visible even if some items are unavailable
         if (availableItems.length > 0 || availableSubsections.length > 0) {
-          console.log(`[USER MENU] Section "${section.name}" included with ${availableItems.length} items and ${availableSubsections.length} subsections`);
+          console.log(`[USER MENU] Section "${sectionData.name}" included with ${availableItems.length} items and ${availableSubsections.length} subsections`);
           return {
-            ...section,
-            name: section.name || "Unnamed Section", // Ensure name is always present
+            ...sectionData,
+            name: sectionData.name || "Unnamed Section", // Ensure name is always present
             items: availableItems,
             subsections: availableSubsections,
           };
         }
         // Return null only if section has no available items AND no subsections with available items
-        console.log(`[USER MENU] Section "${section.name}" excluded - no available/approved items`);
+        console.log(`[USER MENU] Section "${sectionData.name}" excluded - no available/approved items`);
         return null;
       })
       .filter(section => section !== null); // Remove null sections (sections with no available items)

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Search, Trash2, Loader2, Plus, Edit2, Check, X, Sparkles, Tag, Upload } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { adminAPI, uploadAPI } from "@/lib/api"
