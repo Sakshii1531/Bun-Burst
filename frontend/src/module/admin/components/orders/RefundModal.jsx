@@ -69,22 +69,22 @@ export default function RefundModal({ isOpen, onOpenChange, order, onConfirm, is
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900">
-            <Wallet className="w-5 h-5 text-purple-600" />
+          <DialogTitle className="flex items-center gap-2 text-xl font-bold text-[#1E1E1E]">
+            <Wallet className="w-5 h-5 text-[#e53935]" />
             Wallet Refund
           </DialogTitle>
-          <DialogDescription className="text-slate-600">
+          <DialogDescription className="text-[#1E1E1E]">
             Order ID: <span className="font-semibold">{order.orderId}</span>
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">
+            <label className="text-sm font-medium text-[#1E1E1E]">
               Refund Amount (₹)
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1E1E1E] font-medium">
                 ₹
               </span>
               <input
@@ -96,26 +96,26 @@ export default function RefundModal({ isOpen, onOpenChange, order, onConfirm, is
                 className={`w-full pl-8 pr-4 py-2.5 border-2 rounded-lg focus:outline-none focus:ring-2 transition-colors ${
                   error
                     ? "border-red-300 focus:border-red-500 focus:ring-red-200"
-                    : "border-slate-300 focus:border-purple-500 focus:ring-purple-200"
-                } ${isProcessing ? "bg-slate-100 cursor-not-allowed" : "bg-white"}`}
+                    : "border-[#F5F5F5] focus:border-[#FFC400] focus:ring-[#FFF8E1]"
+                } ${isProcessing ? "bg-[#F5F5F5] cursor-not-allowed" : "bg-white"}`}
               />
             </div>
             {error && (
               <p className="text-sm text-red-600 mt-1">{error}</p>
             )}
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[#1E1E1E]">
               Maximum refundable amount: ₹{maxAmount.toFixed(2)}
             </p>
           </div>
 
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-            <p className="text-sm text-purple-800">
+          <div className="bg-[#FFF8E1] border border-[#FFC400] rounded-lg p-3">
+            <p className="text-sm text-[#1E1E1E]">
               <span className="font-semibold">Note:</span> यह राशि customer के wallet में credit हो जाएगी और order की status "Refunded" हो जाएगी।
             </p>
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#F5F5F5]">
           <Button
             variant="outline"
             onClick={handleClose}
@@ -127,7 +127,7 @@ export default function RefundModal({ isOpen, onOpenChange, order, onConfirm, is
           <Button
             onClick={handleConfirm}
             disabled={isProcessing || !refundAmount || parseFloat(refundAmount) <= 0}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white"
+            className="px-4 py-2 bg-[#e53935] hover:bg-[#d32f2f] text-white"
           >
             {isProcessing ? "Processing..." : "Refund"}
           </Button>
@@ -136,3 +136,4 @@ export default function RefundModal({ isOpen, onOpenChange, order, onConfirm, is
     </Dialog>
   )
 }
+

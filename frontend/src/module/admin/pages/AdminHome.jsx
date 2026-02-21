@@ -22,7 +22,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
-import { Activity, ArrowUpRight, ShoppingBag, CreditCard, Truck, Receipt, DollarSign, Store, UserCheck, Package, UserCircle, Clock, CheckCircle, Plus } from "lucide-react"
+import { Activity, ShoppingBag, CreditCard, Truck, Receipt, DollarSign, Store, UserCheck, Package, UserCircle, Clock, CheckCircle, Plus } from "lucide-react"
 import appzetoLogo from "@/assets/appzetologo.png"
 import { adminAPI } from "@/lib/api"
 
@@ -193,13 +193,6 @@ export default function AdminHome() {
               helper="Rolling 12 months"
               icon={<ShoppingBag className="h-5 w-5 text-emerald-600" />}
               accent="bg-emerald-200/40"
-            />
-            <MetricCard
-              title="Commission earned"
-              value={`₹${commissionTotal.toLocaleString("en-IN")}`}
-              helper="Restaurant commission"
-              icon={<ArrowUpRight className="h-5 w-5 text-indigo-600" />}
-              accent="bg-indigo-200/40"
             />
             <MetricCard
               title="Orders processed"

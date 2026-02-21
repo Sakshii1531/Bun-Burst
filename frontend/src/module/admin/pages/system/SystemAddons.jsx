@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Settings, Key, Save, Loader2 } from "lucide-react"
+import { Key, Save, Loader2 } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
 
@@ -104,14 +104,14 @@ export default function SystemAddons() {
   const InputField = ({ label, fieldKey, type = "text", placeholder = "" }) => {
     return (
       <div className="space-y-1.5">
-        <label className="block text-sm font-semibold text-slate-700">{label}</label>
+        <label className="block text-sm font-semibold text-[#1E1E1E]">{label}</label>
         {type === "textarea" ? (
           <textarea
             value={envData[fieldKey] || ""}
             onChange={(e) => handleInputChange(fieldKey, e.target.value)}
             placeholder={placeholder || `Enter ${label}`}
             rows={4}
-            className="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm resize-y"
+            className="w-full px-3 py-2.5 border-2 border-[#F5F5F5] rounded-lg bg-white text-[#1E1E1E] focus:outline-none focus:border-[#e53935] focus:ring-2 focus:ring-[#e53935]/20 transition-all text-sm resize-y"
           />
         ) : (
           <input
@@ -119,7 +119,7 @@ export default function SystemAddons() {
             value={envData[fieldKey] || ""}
             onChange={(e) => handleInputChange(fieldKey, e.target.value)}
             placeholder={placeholder || `Enter ${label}`}
-            className="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
+            className="w-full px-3 py-2.5 border-2 border-[#F5F5F5] rounded-lg bg-white text-[#1E1E1E] focus:outline-none focus:border-[#e53935] focus:ring-2 focus:ring-[#e53935]/20 transition-all text-sm"
           />
         )}
       </div>
@@ -128,31 +128,31 @@ export default function SystemAddons() {
 
   if (isLoading) {
     return (
-      <div className="p-4 lg:p-6 bg-slate-50 min-h-screen flex items-center justify-center">
+      <div className="p-4 lg:p-6 bg-[#F5F5F5] min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-          <p className="text-slate-600 font-medium">Loading environment variables...</p>
+          <Loader2 className="w-8 h-8 text-[#e53935] animate-spin" />
+          <p className="text-[#1E1E1E] font-medium">Loading environment variables...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
+    <div className="p-4 lg:p-6 bg-[#F5F5F5] min-h-screen">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-6 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center">
-                <Key className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-lg bg-[#FFC400] flex items-center justify-center">
+                <Key className="w-5 h-5 text-[#1E1E1E]" />
               </div>
-              <h1 className="text-2xl font-bold text-slate-900">ENV Setup</h1>
+              <h1 className="text-2xl font-bold text-[#1E1E1E]">ENV Setup</h1>
             </div>
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2.5 bg-[#e53935] text-white rounded-lg font-medium hover:bg-[#d32f2f] transition-colors shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? (
                 <>
@@ -172,10 +172,10 @@ export default function SystemAddons() {
         {/* Main Content */}
         <div className="space-y-6">
           {/* Razorpay Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Key className="w-4 h-4 text-blue-600" />
+          <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-6">
+            <h2 className="text-xl font-bold text-[#1E1E1E] mb-4 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-[#FFF8E1] border border-[#FFC400] flex items-center justify-center">
+                <Key className="w-4 h-4 text-[#e53935]" />
               </div>
               Razorpay Configuration
             </h2>
@@ -186,10 +186,10 @@ export default function SystemAddons() {
           </div>
 
           {/* Cloudinary Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                <Key className="w-4 h-4 text-green-600" />
+          <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-6">
+            <h2 className="text-xl font-bold text-[#1E1E1E] mb-4 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-[#FFF8E1] border border-[#FFC400] flex items-center justify-center">
+                <Key className="w-4 h-4 text-[#e53935]" />
               </div>
               Cloudinary Configuration
             </h2>
@@ -201,10 +201,10 @@ export default function SystemAddons() {
           </div>
 
           {/* Firebase Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                <Key className="w-4 h-4 text-orange-600" />
+          <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-6">
+            <h2 className="text-xl font-bold text-[#1E1E1E] mb-4 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-[#FFF8E1] border border-[#FFC400] flex items-center justify-center">
+                <Key className="w-4 h-4 text-[#e53935]" />
               </div>
               Firebase Configuration
             </h2>
@@ -229,10 +229,10 @@ export default function SystemAddons() {
           </div>
 
           {/* SMTP Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                <Key className="w-4 h-4 text-purple-600" />
+          <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-6">
+            <h2 className="text-xl font-bold text-[#1E1E1E] mb-4 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-[#FFF8E1] border border-[#FFC400] flex items-center justify-center">
+                <Key className="w-4 h-4 text-[#e53935]" />
               </div>
               SMTP Configuration
             </h2>
@@ -245,10 +245,10 @@ export default function SystemAddons() {
           </div>
 
           {/* SMS Hub India Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center">
-                <Key className="w-4 h-4 text-pink-600" />
+          <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-6">
+            <h2 className="text-xl font-bold text-[#1E1E1E] mb-4 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-[#FFF8E1] border border-[#FFC400] flex items-center justify-center">
+                <Key className="w-4 h-4 text-[#e53935]" />
               </div>
               SMS Hub India Configuration
             </h2>
@@ -259,10 +259,10 @@ export default function SystemAddons() {
           </div>
 
           {/* Google Maps Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                <Key className="w-4 h-4 text-red-600" />
+          <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-6">
+            <h2 className="text-xl font-bold text-[#1E1E1E] mb-4 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-[#FFF8E1] border border-[#FFC400] flex items-center justify-center">
+                <Key className="w-4 h-4 text-[#e53935]" />
               </div>
               Google Maps Configuration
             </h2>

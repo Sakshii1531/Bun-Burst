@@ -54,6 +54,12 @@ const formatFullAddress = (address) => {
   return ""
 }
 
+const formatAmount = (value) => {
+  const amount = Number(value)
+  if (!Number.isFinite(amount)) return "0.00"
+  return amount.toFixed(2)
+}
+
 export default function Cart() {
   const navigate = useNavigate()
 
@@ -149,6 +155,34 @@ export default function Cart() {
   }, [publicCategories])
 
   const resolveCategoryIdForItem = (item) => {
+    // Prefer explicit category names first (category/categoryName/sectionName),
+    // because item.categoryId can be stale or restaurant-side and may not map
+    // to the intended global admin category for addons.
+    const primaryNameCandidates = [
+      item?.category,
+      item?.category?.name,
+      item?.categoryName,
+      item?.sectionName,
+      item?.section,
+    ]
+
+    for (const nameCandidate of primaryNameCandidates) {
+      if (!nameCandidate) continue
+      const normalizedName = normalizeCategoryKey(nameCandidate)
+      if (!normalizedName) continue
+
+      const mappedId =
+        categoryLookup.byName.get(normalizedName) ||
+        categoryLookup.bySlug.get(normalizeCategoryKey(String(nameCandidate)))
+      if (mappedId) return mappedId
+
+      const fuzzyMatched = categoryLookup.entries.find((entry) =>
+        isFuzzyCategoryMatch(normalizedName, entry.name) ||
+        isFuzzyCategoryMatch(normalizedName, entry.slug),
+      )
+      if (fuzzyMatched?.id) return fuzzyMatched.id
+    }
+
     const directCandidates = [
       item?.categoryId,
       item?.category?._id,
@@ -169,18 +203,20 @@ export default function Cart() {
         categoryLookup.byName.get(normalizeCategoryKey(normalizedCandidate))
       if (byNameOrSlug) return byNameOrSlug
 
-      // If it's already an ObjectId-like value, use as-is.
-      if (/^[a-fA-F0-9]{24}$/.test(normalizedCandidate)) return normalizedCandidate
+      // IMPORTANT:
+      // Cart items may carry restaurant/menu-side category ObjectIds which are
+      // different from admin global category ids used by addons.
+      // So only trust raw ObjectId fallback when we don't have public category
+      // mappings loaded yet.
+      if (
+        /^[a-fA-F0-9]{24}$/.test(normalizedCandidate) &&
+        categoryLookup.entries.length === 0
+      ) {
+        return normalizedCandidate
+      }
     }
 
-    const nameCandidates = [
-      item?.category,
-      item?.category?.name,
-      item?.categoryName,
-      item?.sectionName,
-      item?.section,
-      item?.name,
-    ]
+    const nameCandidates = [item?.name]
 
     for (const nameCandidate of nameCandidates) {
       if (!nameCandidate) continue
@@ -641,7 +677,7 @@ export default function Cart() {
                   discount: coupon.originalPrice - coupon.discountedPrice,
                   discountPercentage: coupon.discountPercentage,
                   minOrder: coupon.minOrderValue || 0,
-                  description: `Save ₹${coupon.originalPrice - coupon.discountedPrice} with '${coupon.couponCode}'`,
+                  description: `Save ₹${formatAmount(coupon.originalPrice - coupon.discountedPrice)} with '${coupon.couponCode}'`,
                   originalPrice: coupon.originalPrice,
                   discountedPrice: coupon.discountedPrice,
                   itemId: cartItem.id,
@@ -1142,7 +1178,7 @@ export default function Cart() {
 
       // Check wallet balance if wallet payment selected
       if (selectedPaymentMethod === "wallet" && walletBalance < total) {
-        toast.error(`Insufficient wallet balance. Required: ₹${total.toFixed(0)}, Available: ₹${walletBalance.toFixed(0)}`)
+        toast.error(`Insufficient wallet balance. Required: ₹${formatAmount(total)}, Available: ₹${formatAmount(walletBalance)}`)
         setIsPlacingOrder(false)
         return
       }
@@ -1416,7 +1452,7 @@ export default function Cart() {
           <div className="bg-primary/10 px-4 md:px-6 py-2 md:py-3 flex-shrink-0">
             <div className="max-w-7xl mx-auto">
               <p className="text-sm md:text-base font-medium text-primary">
-                🎉 You saved ₹{savings} on this order
+                🎉 You saved ₹{formatAmount(savings)} on this order
               </p>
             </div>
           </div>
@@ -1481,7 +1517,7 @@ export default function Cart() {
                         </div>
 
                         <p className="text-sm md:text-base font-medium text-foreground min-w-[50px] md:min-w-[70px] text-right">
-                          ₹{((item.price || 0) * (item.quantity || 1)).toFixed(0)}
+                          ₹{formatAmount((item.price || 0) * (item.quantity || 1))}
                         </p>
                       </div>
                     </div>
@@ -1606,7 +1642,7 @@ export default function Cart() {
                           {addon.description && (
                             <p className="text-xs md:text-sm text-muted-foreground mt-0.5 line-clamp-1">{addon.description}</p>
                           )}
-                          <p className="text-xs md:text-sm text-foreground font-semibold mt-0.5">₹{addon.price}</p>
+                          <p className="text-xs md:text-sm text-foreground font-semibold mt-0.5">₹{formatAmount(addon.price)}</p>
                         </div>
                       ))}
                     </div>
@@ -1622,7 +1658,7 @@ export default function Cart() {
                       <Tag className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                       <div>
                         <p className="text-sm md:text-base font-medium text-primary">'{appliedCoupon.code}' applied</p>
-                        <p className="text-xs md:text-sm text-primary/80">You saved ₹{discount}</p>
+                        <p className="text-xs md:text-sm text-primary/80">You saved ₹{formatAmount(discount)}</p>
                       </div>
                     </div>
                     <button onClick={handleRemoveCoupon} className="text-muted-foreground text-xs md:text-sm font-medium">Remove</button>
@@ -1639,7 +1675,7 @@ export default function Cart() {
                         <Percent className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
                         <div>
                           <p className="text-sm md:text-base font-medium text-foreground">
-                            Save ₹{availableCoupons[0].discount} with '{availableCoupons[0].code}'
+                            Save ₹{formatAmount(availableCoupons[0].discount)} with '{availableCoupons[0].code}'
                           </p>
                           {availableCoupons.length > 1 && (
                             <button onClick={() => setShowCoupons(!showCoupons)} className="text-xs md:text-sm text-primary font-medium">
@@ -1655,7 +1691,7 @@ export default function Cart() {
                         onClick={() => handleApplyCoupon(availableCoupons[0])}
                         disabled={subtotal < availableCoupons[0].minOrder}
                       >
-                        {subtotal < availableCoupons[0].minOrder ? `Min ₹${availableCoupons[0].minOrder}` : 'APPLY'}
+                        {subtotal < availableCoupons[0].minOrder ? `Min ₹${formatAmount(availableCoupons[0].minOrder)}` : 'APPLY'}
                       </Button>
                     </div>
                   </div>
@@ -1682,7 +1718,7 @@ export default function Cart() {
                           onClick={() => handleApplyCoupon(coupon)}
                           disabled={subtotal < coupon.minOrder}
                         >
-                          {subtotal < coupon.minOrder ? `Min ₹${coupon.minOrder}` : 'APPLY'}
+                          {subtotal < coupon.minOrder ? `Min ₹${formatAmount(coupon.minOrder)}` : 'APPLY'}
                         </Button>
                       </div>
                     ))}
@@ -1808,10 +1844,10 @@ export default function Cart() {
                     <div className="text-left">
                       <div className="flex items-center gap-2 md:gap-3 flex-wrap">
                         <span className="text-sm md:text-base text-foreground">Total Bill</span>
-                        <span className="text-sm md:text-base text-muted-foreground line-through">₹{totalBeforeDiscount.toFixed(0)}</span>
-                        <span className="text-sm md:text-base font-semibold text-foreground">₹{total.toFixed(0)}</span>
+                        <span className="text-sm md:text-base text-muted-foreground line-through">₹{formatAmount(totalBeforeDiscount)}</span>
+                        <span className="text-sm md:text-base font-semibold text-foreground">₹{formatAmount(total)}</span>
                         {savings > 0 && (
-                          <span className="text-xs md:text-sm bg-primary/10 text-primary px-1.5 md:px-2 py-0.5 rounded font-medium">You saved ₹{savings}</span>
+                          <span className="text-xs md:text-sm bg-primary/10 text-primary px-1.5 md:px-2 py-0.5 rounded font-medium">You saved ₹{formatAmount(savings)}</span>
                         )}
                       </div>
                       <p className="text-xs md:text-sm text-muted-foreground">Incl. taxes and charges</p>
@@ -1824,31 +1860,31 @@ export default function Cart() {
                   <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-dashed border-border space-y-2 md:space-y-3">
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-muted-foreground">Item Total</span>
-                      <span className="text-foreground">₹{subtotal.toFixed(0)}</span>
+                      <span className="text-foreground">₹{formatAmount(subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-muted-foreground">Delivery Fee</span>
                       <span className={deliveryFee === 0 ? "text-primary font-bold" : "text-foreground"}>
-                        {deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}
+                        {deliveryFee === 0 ? "FREE" : `₹${formatAmount(deliveryFee)}`}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-muted-foreground">Platform Fee</span>
-                      <span className="text-foreground">₹{platformFee}</span>
+                      <span className="text-foreground">₹{formatAmount(platformFee)}</span>
                     </div>
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-muted-foreground">GST and Restaurant Charges</span>
-                      <span className="text-foreground">₹{gstCharges}</span>
+                      <span className="text-foreground">₹{formatAmount(gstCharges)}</span>
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-sm md:text-base text-primary">
                         <span>Coupon Discount</span>
-                        <span>-₹{discount}</span>
+                        <span>-₹{formatAmount(discount)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm md:text-base font-semibold pt-2 md:pt-3 border-t border-border">
                       <span>To Pay</span>
-                      <span>₹{total.toFixed(0)}</span>
+                      <span>₹{formatAmount(total)}</span>
                     </div>
                   </div>
                 )}
@@ -1865,31 +1901,31 @@ export default function Cart() {
                   <div className="space-y-2 md:space-y-3">
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-muted-foreground">Item Total</span>
-                      <span className="text-foreground">₹{subtotal.toFixed(0)}</span>
+                      <span className="text-foreground">₹{formatAmount(subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-muted-foreground">Delivery Fee</span>
                       <span className={deliveryFee === 0 ? "text-primary font-bold" : "text-foreground"}>
-                        {deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}
+                        {deliveryFee === 0 ? "FREE" : `₹${formatAmount(deliveryFee)}`}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-muted-foreground">Platform Fee</span>
-                      <span className="text-foreground">₹{platformFee}</span>
+                      <span className="text-foreground">₹{formatAmount(platformFee)}</span>
                     </div>
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-muted-foreground">GST</span>
-                      <span className="text-foreground">₹{gstCharges}</span>
+                      <span className="text-foreground">₹{formatAmount(gstCharges)}</span>
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-sm md:text-base text-primary">
                         <span>Discount</span>
-                        <span>-₹{discount}</span>
+                        <span>-₹{formatAmount(discount)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-base md:text-lg font-bold pt-3 md:pt-4 border-t border-border">
                       <span>Total</span>
-                      <span className="text-primary">₹{total.toFixed(0)}</span>
+                      <span className="text-primary">₹{formatAmount(total)}</span>
                     </div>
                   </div>
                 </div>
@@ -1929,7 +1965,7 @@ export default function Cart() {
                     className="appearance-none bg-muted border border-border text-foreground rounded-lg px-3 py-2 pr-9 text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-primary/40"
                   >
                     <option value="razorpay">Razorpay</option>
-                    <option value="wallet">Wallet {walletBalance > 0 ? `(₹${walletBalance.toFixed(0)})` : ''}</option>
+                    <option value="wallet">Wallet {walletBalance > 0 ? `(₹${formatAmount(walletBalance)})` : ''}</option>
                     <option value="cash">COD</option>
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -1944,7 +1980,7 @@ export default function Cart() {
               >
                 {(selectedPaymentMethod === "razorpay" || selectedPaymentMethod === "wallet") && (
                   <div className="text-left mr-3 md:mr-4">
-                    <p className="text-sm md:text-base opacity-90">₹{total.toFixed(0)}</p>
+                    <p className="text-sm md:text-base opacity-90">₹{formatAmount(total)}</p>
                     <p className="text-xs md:text-sm opacity-75">TOTAL</p>
                   </div>
                 )}
@@ -2223,7 +2259,7 @@ export default function Cart() {
                           </div>
                           <div>
                             <p className="font-semibold text-foreground text-base">{addon.name}</p>
-                            <p className="text-sm text-primary font-bold mt-0.5">₹{addon.price}</p>
+                            <p className="text-sm text-primary font-bold mt-0.5">₹{formatAmount(addon.price)}</p>
                           </div>
                         </div>
                       </div>
@@ -2244,11 +2280,11 @@ export default function Cart() {
                 <div className="flex items-center justify-between mb-4 px-1">
                   <div className="flex flex-col">
                     <span className="text-sm text-muted-foreground">Total Addons Price</span>
-                    <span className="text-xl font-bold text-foreground">₹{currentAddonsTotal}</span>
+                    <span className="text-xl font-bold text-foreground">₹{formatAmount(currentAddonsTotal)}</span>
                   </div>
                   <div className="text-right">
                     <span className="text-sm text-muted-foreground">Final Item Price</span>
-                    <span className="text-xl font-bold text-primary block">₹{(selectedItemForAddons?.basePrice || selectedItemForAddons?.price || 0) + currentAddonsTotal}</span>
+                    <span className="text-xl font-bold text-primary block">₹{formatAmount((selectedItemForAddons?.basePrice || selectedItemForAddons?.price || 0) + currentAddonsTotal)}</span>
                   </div>
                 </div>
                 <Button

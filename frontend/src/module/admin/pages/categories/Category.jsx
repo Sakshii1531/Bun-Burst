@@ -492,22 +492,22 @@ export default function Category() {
   }
 
   return (
-    <div className="p-4 lg:p-8 bg-slate-50/50 min-h-screen">
+    <div className="p-4 lg:p-8 bg-white min-h-screen">
       {/* Header Section */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-3xl shadow-sm border border-slate-200/60 p-8 mb-8"
+        className="bg-white rounded-3xl shadow-sm border border-[#F5F5F5] p-8 mb-8"
       >
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-200 ring-4 ring-blue-50">
+            <div className="w-14 h-14 rounded-2xl bg-[#e53935] flex items-center justify-center shadow-lg shadow-[#e53935]/20 ring-4 ring-[#F5F5F5]">
               <LayoutGrid className="text-white w-7 h-7" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Category Dashboard</h1>
-              <p className="text-slate-500 font-medium flex items-center gap-2 mt-1">
-                <Sparkles className="w-4 h-4 text-orange-500" />
+              <h1 className="text-3xl font-bold text-[#1E1E1E] tracking-tight">Category Dashboard</h1>
+              <p className="text-[#1E1E1E]/60 font-medium flex items-center gap-2 mt-1">
+                <Sparkles className="w-4 h-4 text-[#FFC400]" />
                 Manage and organize your menu categories
               </p>
             </div>
@@ -520,16 +520,16 @@ export default function Category() {
                 placeholder="Search categories..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-11 pr-4 py-6 w-full lg:w-[280px] rounded-2xl border-slate-200 bg-slate-50/50 group-hover:bg-white group-focus:bg-white transition-all shadow-none focus:ring-blue-500/20"
+                className="pl-11 pr-4 py-6 w-full lg:w-[280px] rounded-2xl border-[#F5F5F5] bg-white group-hover:bg-white group-focus:bg-white transition-all shadow-none focus:ring-[#e53935]/20"
               />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1E1E1E]/45 group-hover:text-[#e53935] transition-colors" />
             </div>
 
             <Button
               variant="outline"
               onClick={handleExportPDF}
               disabled={filteredCategories.length === 0}
-              className="py-6 px-6 rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold gap-2 transition-all border-2"
+              className="py-6 px-6 rounded-2xl border-[#F5F5F5] text-[#1E1E1E] hover:bg-[#fff8f7] font-semibold gap-2 transition-all border-2"
             >
               <FileText className="w-5 h-5" />
               <span>Export</span>
@@ -537,7 +537,7 @@ export default function Category() {
 
             <Button
               onClick={handleAddNew}
-              className="bg-blue-600 hover:bg-blue-700 text-white py-6 px-8 rounded-2xl shadow-xl shadow-blue-200 font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="bg-[#e53935] hover:bg-[#c62828] text-white py-6 px-8 rounded-2xl shadow-xl shadow-[#e53935]/20 font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <Plus className="w-5 h-5 mr-2 stroke-[3px]" />
               New Category
@@ -547,17 +547,17 @@ export default function Category() {
       </motion.div>
 
       {/* Filters Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 mb-6">
+      <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-3 mb-6">
         <div className="flex flex-col gap-1.5">
           {/* Row 1 */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <Button
               variant="outline"
               onClick={() => setIsFilterOpen(true)}
-              className="h-5 px-1.5 rounded-md flex items-center gap-1 whitespace-nowrap shrink-0 transition-all bg-white border border-gray-200 hover:bg-gray-50"
+              className="h-5 px-1.5 rounded-md flex items-center gap-1 whitespace-nowrap shrink-0 transition-all bg-white border border-[#F5F5F5] hover:bg-[#fff8f7]"
             >
               <SlidersHorizontal className="h-2.5 w-2.5" />
-              <span className="text-[10px] font-bold text-black">Filters</span>
+              <span className="text-[10px] font-bold text-[#1E1E1E]">Filters</span>
             </Button>
             {[
               { id: 'delivery-under-30', label: 'Under 30 mins' },
@@ -570,11 +570,11 @@ export default function Category() {
                   variant="outline"
                   onClick={() => toggleFilter(filter.id)}
                   className={`h-5 px-1.5 rounded-md flex items-center gap-1 whitespace-nowrap shrink-0 transition-all ${isActive
-                    ? 'bg-green-600 text-white border border-green-600 hover:bg-green-600/90'
-                    : 'bg-white border border-gray-200 hover:bg-gray-50'
-                    }`}
+                    ? 'bg-[#e53935] text-white border border-[#e53935] hover:bg-[#c62828]'
+                    : 'bg-white border border-[#F5F5F5] hover:bg-[#fff8f7]'
+                  }`}
                 >
-                  <span className={`text-[10px] font-bold ${isActive ? 'text-white' : 'text-black'}`}>{filter.label}</span>
+                  <span className={`text-[10px] font-bold ${isActive ? 'text-white' : 'text-[#1E1E1E]'}`}>{filter.label}</span>
                 </Button>
               )
             })}
@@ -594,12 +594,12 @@ export default function Category() {
                   variant="outline"
                   onClick={() => toggleFilter(filter.id)}
                   className={`h-5 px-1.5 rounded-md flex items-center gap-1 whitespace-nowrap shrink-0 transition-all ${isActive
-                    ? 'bg-green-600 text-white border border-green-600 hover:bg-green-600/90'
-                    : 'bg-white border border-gray-200 hover:bg-gray-50'
-                    }`}
+                    ? 'bg-[#e53935] text-white border border-[#e53935] hover:bg-[#c62828]'
+                    : 'bg-white border border-[#F5F5F5] hover:bg-[#fff8f7]'
+                  }`}
                 >
-                  {Icon && <Icon className={`h-2.5 w-2.5 ${isActive ? 'text-white' : 'text-gray-900'}`} />}
-                  <span className={`text-[10px] font-bold ${isActive ? 'text-white' : 'text-black'}`}>{filter.label}</span>
+                  {Icon && <Icon className={`h-2.5 w-2.5 ${isActive ? 'text-white' : 'text-[#1E1E1E]'}`} />}
+                  <span className={`text-[10px] font-bold ${isActive ? 'text-white' : 'text-[#1E1E1E]'}`}>{filter.label}</span>
                 </Button>
               )
             })}
@@ -612,39 +612,39 @@ export default function Category() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden"
+        className="bg-white rounded-3xl shadow-sm border border-[#F5F5F5] overflow-hidden"
       >
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">SL</th>
-                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Image</th>
-                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Title</th>
-                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">Type</th>
-                <th className="px-8 py-5 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Status</th>
-                <th className="px-8 py-5 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Action</th>
+              <tr className="bg-white border-b border-[#F5F5F5]">
+                <th className="px-8 py-5 text-left text-xs font-bold text-[#1E1E1E]/60 uppercase tracking-widest">SL</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-[#1E1E1E]/60 uppercase tracking-widest">Image</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-[#1E1E1E]/60 uppercase tracking-widest">Title</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-[#1E1E1E]/60 uppercase tracking-widest">Type</th>
+                <th className="px-8 py-5 text-center text-xs font-bold text-[#1E1E1E]/60 uppercase tracking-widest">Status</th>
+                <th className="px-8 py-5 text-center text-xs font-bold text-[#1E1E1E]/60 uppercase tracking-widest">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-[#F5F5F5]">
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-8 py-32 text-center">
                     <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-                      <p className="text-slate-500 font-medium animate-pulse">Fetching categories...</p>
+                      <div className="w-12 h-12 border-4 border-[#F5F5F5] border-t-[#e53935] rounded-full animate-spin" />
+                      <p className="text-[#1E1E1E]/60 font-medium animate-pulse">Fetching categories...</p>
                     </div>
                   </td>
                 </tr>
               ) : filteredCategories.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-8 py-32 text-center text-slate-500">
+                  <td colSpan={6} className="px-8 py-32 text-center text-[#1E1E1E]/60">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-2">
-                        <Search className="w-8 h-8 text-slate-300" />
+                      <div className="w-16 h-16 bg-[#FFF9E0] rounded-full flex items-center justify-center mb-2">
+                        <Search className="w-8 h-8 text-[#FFC400]" />
                       </div>
-                      <p className="text-slate-900 font-bold text-lg">No categories found</p>
-                      <p className="text-slate-500">Try adjusting your search or add a new one</p>
+                      <p className="text-[#1E1E1E] font-bold text-lg">No categories found</p>
+                      <p className="text-[#1E1E1E]/60">Try adjusting your search or add a new one</p>
                     </div>
                   </td>
                 </tr>
@@ -657,13 +657,13 @@ export default function Category() {
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       key={category.id}
-                      className="hover:bg-slate-50/80 transition-all group"
+                      className="hover:bg-[#fff8f7] transition-all group"
                     >
-                      <td className="px-8 py-5 whitespace-nowrap text-sm font-semibold text-slate-400">
+                      <td className="px-8 py-5 whitespace-nowrap text-sm font-semibold text-[#1E1E1E]/45">
                         {category.sl || index + 1}
                       </td>
                       <td className="px-8 py-5 whitespace-nowrap">
-                        <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 ring-2 ring-slate-100 group-hover:ring-blue-100 transition-all">
+                        <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white ring-2 ring-[#F5F5F5] group-hover:ring-[#F5F5F5] transition-all">
                           <img
                             src={category.image}
                             alt={category.name}
@@ -675,12 +675,12 @@ export default function Category() {
                         </div>
                       </td>
                       <td className="px-8 py-5 whitespace-nowrap">
-                        <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">
+                        <span className="font-bold text-[#1E1E1E] group-hover:text-[#e53935] transition-colors uppercase tracking-tight">
                           {category.name}
                         </span>
                       </td>
                       <td className="px-8 py-5 whitespace-nowrap">
-                        <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-none px-3 py-1 rounded-lg font-semibold">
+                        <Badge variant="secondary" className="bg-[#FFF9E0] text-[#FFC400] border-none px-3 py-1 rounded-lg font-semibold">
                           {category.type || 'N/A'}
                         </Badge>
                       </td>
@@ -689,7 +689,7 @@ export default function Category() {
                           <Switch
                             checked={category.status}
                             onCheckedChange={() => handleToggleStatus(category.id)}
-                            className="data-[state=checked]:bg-blue-600"
+                            className="data-[state=checked]:bg-[#e53935]"
                           />
                         </div>
                       </td>
@@ -699,7 +699,7 @@ export default function Category() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleEdit(category)}
-                            className="w-10 h-10 rounded-xl text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all"
+                            className="w-10 h-10 rounded-xl text-[#e53935] hover:bg-[#fff8f7] hover:text-[#c62828] transition-all"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -707,7 +707,7 @@ export default function Category() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDelete(category.id)}
-                            className="w-10 h-10 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-all"
+                            className="w-10 h-10 rounded-xl text-[#e53935] hover:bg-[#fff8f7] hover:text-[#c62828] transition-all"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -738,14 +738,14 @@ export default function Category() {
                 <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] flex flex-col animate-[slideUp_0.3s_ease-out]">
                   {/* Header */}
                   <div className="flex items-center justify-between px-4 py-4 border-b">
-                    <h2 className="text-lg font-bold text-gray-900">Filters and sorting</h2>
+                    <h2 className="text-lg font-bold text-[#1E1E1E]">Filters and sorting</h2>
                     <button
                       onClick={() => {
                         setActiveFilters(new Set())
                         setSortBy(null)
                         setSelectedCuisine(null)
                       }}
-                      className="text-green-600 font-medium text-sm"
+                      className="text-[#e53935] font-medium text-sm"
                     >
                       Clear all
                     </button>
@@ -754,7 +754,7 @@ export default function Category() {
                   {/* Body */}
                   <div className="flex flex-1 overflow-hidden">
                     {/* Left Sidebar - Tabs */}
-                    <div className="w-24 sm:w-28 bg-gray-50 border-r flex flex-col">
+                    <div className="w-24 sm:w-28 bg-white border-r flex flex-col">
                       {[
                         { id: 'sort', label: 'Sort By', icon: ArrowDownUp },
                         { id: 'time', label: 'Time', icon: Timer },
@@ -777,11 +777,11 @@ export default function Category() {
                                 section.scrollIntoView({ behavior: 'smooth', block: 'start' })
                               }
                             }}
-                            className={`flex flex-col items-center gap-1 py-4 px-2 text-center relative transition-colors ${isActive ? 'bg-white text-green-600' : 'text-gray-500 hover:bg-gray-100'
+                            className={`flex flex-col items-center gap-1 py-4 px-2 text-center relative transition-colors ${isActive ? 'bg-white text-[#e53935]' : 'text-[#1E1E1E]/60 hover:bg-[#fff8f7]'
                               }`}
                           >
                             {isActive && (
-                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-600 rounded-r" />
+                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#e53935] rounded-r" />
                             )}
                             <Icon className="h-5 w-5" strokeWidth={1.5} />
                             <span className="text-xs font-medium leading-tight">{tab.label}</span>
@@ -798,7 +798,7 @@ export default function Category() {
                         data-section-id="sort"
                         className="space-y-4 mb-8"
                       >
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Sort by</h3>
+                        <h3 className="text-lg font-semibold text-[#1E1E1E] mb-4">Sort by</h3>
                         <div className="flex flex-col gap-3">
                           {[
                             { id: null, label: 'Relevance' },
@@ -811,11 +811,11 @@ export default function Category() {
                               key={option.id || 'relevance'}
                               onClick={() => setSortBy(option.id)}
                               className={`px-4 py-3 rounded-xl border text-left transition-colors ${sortBy === option.id
-                                ? 'border-green-600 bg-green-50'
-                                : 'border-gray-200 hover:border-green-600'
+                                ? 'border-[#e53935] bg-[#fff8f7]'
+                                : 'border-[#F5F5F5] hover:border-[#e53935]'
                                 }`}
                             >
-                              <span className={`text-sm font-medium ${sortBy === option.id ? 'text-green-600' : 'text-gray-700'}`}>
+                              <span className={`text-sm font-medium ${sortBy === option.id ? 'text-[#e53935]' : 'text-[#1E1E1E]'}`}>
                                 {option.label}
                               </span>
                             </button>
@@ -829,27 +829,27 @@ export default function Category() {
                         data-section-id="time"
                         className="space-y-4 mb-8"
                       >
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Delivery Time</h3>
+                        <h3 className="text-lg font-semibold text-[#1E1E1E] mb-4">Delivery Time</h3>
                         <div className="grid grid-cols-2 gap-3">
                           <button
                             onClick={() => toggleFilter('delivery-under-30')}
                             className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('delivery-under-30')
-                              ? 'border-green-600 bg-green-50'
-                              : 'border-gray-200 hover:border-green-600'
+                              ? 'border-[#e53935] bg-[#fff8f7]'
+                              : 'border-[#F5F5F5] hover:border-[#e53935]'
                               }`}
                           >
-                            <Timer className={`h-6 w-6 ${activeFilters.has('delivery-under-30') ? 'text-green-600' : 'text-gray-600'}`} strokeWidth={1.5} />
-                            <span className={`text-sm font-medium ${activeFilters.has('delivery-under-30') ? 'text-green-600' : 'text-gray-700'}`}>Under 30 mins</span>
+                            <Timer className={`h-6 w-6 ${activeFilters.has('delivery-under-30') ? 'text-[#e53935]' : 'text-[#1E1E1E]/70'}`} strokeWidth={1.5} />
+                            <span className={`text-sm font-medium ${activeFilters.has('delivery-under-30') ? 'text-[#e53935]' : 'text-[#1E1E1E]'}`}>Under 30 mins</span>
                           </button>
                           <button
                             onClick={() => toggleFilter('delivery-under-45')}
                             className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('delivery-under-45')
-                              ? 'border-green-600 bg-green-50'
-                              : 'border-gray-200 hover:border-green-600'
+                              ? 'border-[#e53935] bg-[#fff8f7]'
+                              : 'border-[#F5F5F5] hover:border-[#e53935]'
                               }`}
                           >
-                            <Timer className={`h-6 w-6 ${activeFilters.has('delivery-under-45') ? 'text-green-600' : 'text-gray-600'}`} strokeWidth={1.5} />
-                            <span className={`text-sm font-medium ${activeFilters.has('delivery-under-45') ? 'text-green-600' : 'text-gray-700'}`}>Under 45 mins</span>
+                            <Timer className={`h-6 w-6 ${activeFilters.has('delivery-under-45') ? 'text-[#e53935]' : 'text-[#1E1E1E]/70'}`} strokeWidth={1.5} />
+                            <span className={`text-sm font-medium ${activeFilters.has('delivery-under-45') ? 'text-[#e53935]' : 'text-[#1E1E1E]'}`}>Under 45 mins</span>
                           </button>
                         </div>
                       </div>
@@ -860,37 +860,37 @@ export default function Category() {
                         data-section-id="rating"
                         className="space-y-4 mb-8"
                       >
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Restaurant Rating</h3>
+                        <h3 className="text-lg font-semibold text-[#1E1E1E] mb-4">Restaurant Rating</h3>
                         <div className="grid grid-cols-2 gap-3">
                           <button
                             onClick={() => toggleFilter('rating-35-plus')}
                             className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('rating-35-plus')
-                              ? 'border-green-600 bg-green-50'
-                              : 'border-gray-200 hover:border-green-600'
+                              ? 'border-[#e53935] bg-[#fff8f7]'
+                              : 'border-[#F5F5F5] hover:border-[#e53935]'
                               }`}
                           >
-                            <Star className={`h-6 w-6 ${activeFilters.has('rating-35-plus') ? 'text-green-600 fill-green-600' : 'text-gray-400'}`} />
-                            <span className={`text-sm font-medium ${activeFilters.has('rating-35-plus') ? 'text-green-600' : 'text-gray-700'}`}>Rated 3.5+</span>
+                            <Star className={`h-6 w-6 ${activeFilters.has('rating-35-plus') ? 'text-[#e53935] fill-[#FFC400]' : 'text-[#1E1E1E]/45'}`} />
+                            <span className={`text-sm font-medium ${activeFilters.has('rating-35-plus') ? 'text-[#e53935]' : 'text-[#1E1E1E]'}`}>Rated 3.5+</span>
                           </button>
                           <button
                             onClick={() => toggleFilter('rating-4-plus')}
                             className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('rating-4-plus')
-                              ? 'border-green-600 bg-green-50'
-                              : 'border-gray-200 hover:border-green-600'
+                              ? 'border-[#e53935] bg-[#fff8f7]'
+                              : 'border-[#F5F5F5] hover:border-[#e53935]'
                               }`}
                           >
-                            <Star className={`h-6 w-6 ${activeFilters.has('rating-4-plus') ? 'text-green-600 fill-green-600' : 'text-gray-400'}`} />
-                            <span className={`text-sm font-medium ${activeFilters.has('rating-4-plus') ? 'text-green-600' : 'text-gray-700'}`}>Rated 4.0+</span>
+                            <Star className={`h-6 w-6 ${activeFilters.has('rating-4-plus') ? 'text-[#e53935] fill-[#FFC400]' : 'text-[#1E1E1E]/45'}`} />
+                            <span className={`text-sm font-medium ${activeFilters.has('rating-4-plus') ? 'text-[#e53935]' : 'text-[#1E1E1E]'}`}>Rated 4.0+</span>
                           </button>
                           <button
                             onClick={() => toggleFilter('rating-45-plus')}
                             className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('rating-45-plus')
-                              ? 'border-green-600 bg-green-50'
-                              : 'border-gray-200 hover:border-green-600'
+                              ? 'border-[#e53935] bg-[#fff8f7]'
+                              : 'border-[#F5F5F5] hover:border-[#e53935]'
                               }`}
                           >
-                            <Star className={`h-6 w-6 ${activeFilters.has('rating-45-plus') ? 'text-green-600 fill-green-600' : 'text-gray-400'}`} />
-                            <span className={`text-sm font-medium ${activeFilters.has('rating-45-plus') ? 'text-green-600' : 'text-gray-700'}`}>Rated 4.5+</span>
+                            <Star className={`h-6 w-6 ${activeFilters.has('rating-45-plus') ? 'text-[#e53935] fill-[#FFC400]' : 'text-[#1E1E1E]/45'}`} />
+                            <span className={`text-sm font-medium ${activeFilters.has('rating-45-plus') ? 'text-[#e53935]' : 'text-[#1E1E1E]'}`}>Rated 4.5+</span>
                           </button>
                         </div>
                       </div>
@@ -901,27 +901,27 @@ export default function Category() {
                         data-section-id="distance"
                         className="space-y-4 mb-8"
                       >
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Distance</h3>
+                        <h3 className="text-lg font-semibold text-[#1E1E1E] mb-4">Distance</h3>
                         <div className="grid grid-cols-2 gap-3">
                           <button
                             onClick={() => toggleFilter('distance-under-1km')}
                             className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('distance-under-1km')
-                              ? 'border-green-600 bg-green-50'
-                              : 'border-gray-200 hover:border-green-600'
+                              ? 'border-[#e53935] bg-[#fff8f7]'
+                              : 'border-[#F5F5F5] hover:border-[#e53935]'
                               }`}
                           >
-                            <MapPin className={`h-6 w-6 ${activeFilters.has('distance-under-1km') ? 'text-green-600' : 'text-gray-600'}`} strokeWidth={1.5} />
-                            <span className={`text-sm font-medium ${activeFilters.has('distance-under-1km') ? 'text-green-600' : 'text-gray-700'}`}>Under 1 km</span>
+                            <MapPin className={`h-6 w-6 ${activeFilters.has('distance-under-1km') ? 'text-[#e53935]' : 'text-[#1E1E1E]/70'}`} strokeWidth={1.5} />
+                            <span className={`text-sm font-medium ${activeFilters.has('distance-under-1km') ? 'text-[#e53935]' : 'text-[#1E1E1E]'}`}>Under 1 km</span>
                           </button>
                           <button
                             onClick={() => toggleFilter('distance-under-2km')}
                             className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${activeFilters.has('distance-under-2km')
-                              ? 'border-green-600 bg-green-50'
-                              : 'border-gray-200 hover:border-green-600'
+                              ? 'border-[#e53935] bg-[#fff8f7]'
+                              : 'border-[#F5F5F5] hover:border-[#e53935]'
                               }`}
                           >
-                            <MapPin className={`h-6 w-6 ${activeFilters.has('distance-under-2km') ? 'text-green-600' : 'text-gray-600'}`} strokeWidth={1.5} />
-                            <span className={`text-sm font-medium ${activeFilters.has('distance-under-2km') ? 'text-green-600' : 'text-gray-700'}`}>Under 2 km</span>
+                            <MapPin className={`h-6 w-6 ${activeFilters.has('distance-under-2km') ? 'text-[#e53935]' : 'text-[#1E1E1E]/70'}`} strokeWidth={1.5} />
+                            <span className={`text-sm font-medium ${activeFilters.has('distance-under-2km') ? 'text-[#e53935]' : 'text-[#1E1E1E]'}`}>Under 2 km</span>
                           </button>
                         </div>
                       </div>
@@ -932,25 +932,25 @@ export default function Category() {
                         data-section-id="price"
                         className="space-y-4 mb-8"
                       >
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Dish Price</h3>
+                        <h3 className="text-lg font-semibold text-[#1E1E1E] mb-4">Dish Price</h3>
                         <div className="flex flex-col gap-3">
                           <button
                             onClick={() => toggleFilter('price-under-200')}
                             className={`px-4 py-3 rounded-xl border text-left transition-colors ${activeFilters.has('price-under-200')
-                              ? 'border-green-600 bg-green-50'
-                              : 'border-gray-200 hover:border-green-600'
+                              ? 'border-[#e53935] bg-[#fff8f7]'
+                              : 'border-[#F5F5F5] hover:border-[#e53935]'
                               }`}
                           >
-                            <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-green-600' : 'text-gray-700'}`}>Under ₹200</span>
+                            <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-[#e53935]' : 'text-[#1E1E1E]'}`}>Under ₹200</span>
                           </button>
                           <button
                             onClick={() => toggleFilter('price-under-500')}
                             className={`px-4 py-3 rounded-xl border text-left transition-colors ${activeFilters.has('price-under-500')
-                              ? 'border-green-600 bg-green-50'
-                              : 'border-gray-200 hover:border-green-600'
+                              ? 'border-[#e53935] bg-[#fff8f7]'
+                              : 'border-[#F5F5F5] hover:border-[#e53935]'
                               }`}
                           >
-                            <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-green-600' : 'text-gray-700'}`}>Under ₹500</span>
+                            <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-[#e53935]' : 'text-[#1E1E1E]'}`}>Under ₹500</span>
                           </button>
                         </div>
                       </div>
@@ -961,18 +961,18 @@ export default function Category() {
                         data-section-id="cuisine"
                         className="space-y-4 mb-8"
                       >
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Cuisine</h3>
+                        <h3 className="text-lg font-semibold text-[#1E1E1E] mb-4">Cuisine</h3>
                         <div className="grid grid-cols-2 gap-3">
                           {['Chinese', 'American', 'Japanese', 'Italian', 'Mexican', 'Indian', 'Asian', 'Seafood', 'Desserts', 'Cafe', 'Healthy'].map((cuisine) => (
                             <button
                               key={cuisine}
                               onClick={() => setSelectedCuisine(selectedCuisine === cuisine ? null : cuisine)}
                               className={`px-4 py-3 rounded-xl border text-center transition-colors ${selectedCuisine === cuisine
-                                ? 'border-green-600 bg-green-50'
-                                : 'border-gray-200 hover:border-green-600'
+                                ? 'border-[#e53935] bg-[#fff8f7]'
+                                : 'border-[#F5F5F5] hover:border-[#e53935]'
                                 }`}
                             >
-                              <span className={`text-sm font-medium ${selectedCuisine === cuisine ? 'text-green-600' : 'text-gray-700'}`}>
+                              <span className={`text-sm font-medium ${selectedCuisine === cuisine ? 'text-[#e53935]' : 'text-[#1E1E1E]'}`}>
                                 {cuisine}
                               </span>
                             </button>
@@ -983,13 +983,13 @@ export default function Category() {
                       {/* Trust Markers Tab */}
                       {activeFilterTab === 'trust' && (
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold text-gray-900">Trust Markers</h3>
+                          <h3 className="text-lg font-semibold text-[#1E1E1E]">Trust Markers</h3>
                           <div className="flex flex-col gap-3">
-                            <button className="px-4 py-3 rounded-xl border border-gray-200 hover:border-green-600 text-left transition-colors">
-                              <span className="text-sm font-medium text-gray-700">Top Rated</span>
+                            <button className="px-4 py-3 rounded-xl border border-[#F5F5F5] hover:border-[#e53935] text-left transition-colors">
+                              <span className="text-sm font-medium text-[#1E1E1E]">Top Rated</span>
                             </button>
-                            <button className="px-4 py-3 rounded-xl border border-gray-200 hover:border-green-600 text-left transition-colors">
-                              <span className="text-sm font-medium text-gray-700">Trusted by 1000+ users</span>
+                            <button className="px-4 py-3 rounded-xl border border-[#F5F5F5] hover:border-[#e53935] text-left transition-colors">
+                              <span className="text-sm font-medium text-[#1E1E1E]">Trusted by 1000+ users</span>
                             </button>
                           </div>
                         </div>
@@ -1001,15 +1001,15 @@ export default function Category() {
                   <div className="flex items-center gap-4 px-4 py-4 border-t bg-white">
                     <button
                       onClick={() => setIsFilterOpen(false)}
-                      className="flex-1 py-3 text-center font-semibold text-gray-700"
+                      className="flex-1 py-3 text-center font-semibold text-[#1E1E1E]"
                     >
                       Close
                     </button>
                     <button
                       onClick={() => setIsFilterOpen(false)}
                       className={`flex-1 py-3 font-semibold rounded-xl transition-colors ${activeFilters.size > 0 || sortBy || selectedCuisine
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-gray-200 text-gray-500'
+                        ? 'bg-[#e53935] text-white hover:bg-[#c62828]'
+                        : 'bg-[#F5F5F5] text-[#1E1E1E]/60'
                         }`}
                     >
                       {activeFilters.size > 0 || sortBy || selectedCuisine
@@ -1028,7 +1028,7 @@ export default function Category() {
       <AnimatePresence>
         <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
           <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none shadow-2xl rounded-2xl">
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white relative">
+            <div className="bg-gradient-to-r from-[#e53935] to-[#e53935] p-6 text-white relative">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
                   <LayoutGrid className="w-5 h-5 text-white" />
@@ -1038,7 +1038,7 @@ export default function Category() {
                     <DialogTitle className="text-xl font-bold text-white leading-tight">
                       {editingCategory ? 'Update Category' : 'Create New Category'}
                     </DialogTitle>
-                    <p className="text-blue-100 text-sm mt-0.5">
+                    <p className="text-white/80 text-sm mt-0.5">
                       {editingCategory ? 'Modify existing category details' : 'Organize your menu with a new section'}
                     </p>
                   </DialogHeader>
@@ -1055,12 +1055,12 @@ export default function Category() {
             <form onSubmit={handleSubmit} className="p-6 bg-white space-y-6">
               <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="type" className="text-sm font-semibold text-slate-700">Category Type *</Label>
+                  <Label htmlFor="type" className="text-sm font-semibold text-[#1E1E1E]">Category Type *</Label>
                   <Select
                     value={formData.type}
                     onValueChange={(value) => setFormData({ ...formData, type: value })}
                   >
-                    <SelectTrigger className="h-11 bg-slate-50 border-slate-200 focus:ring-blue-500/20 focus:border-blue-500 transition-all rounded-xl">
+                    <SelectTrigger className="h-11 bg-white border-[#F5F5F5] focus:ring-[#e53935]/20 focus:border-[#e53935] transition-all rounded-xl">
                       <SelectValue placeholder="Select Category Type" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
@@ -1074,21 +1074,21 @@ export default function Category() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-semibold text-slate-700">Category Name *</Label>
+                  <Label htmlFor="name" className="text-sm font-semibold text-[#1E1E1E]">Category Name *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Enter category name"
                     required
-                    className="h-11 bg-slate-50 border-slate-200 focus:bg-white focus:ring-blue-500/20 focus:border-blue-500 transition-all rounded-xl"
+                    className="h-11 bg-white border-[#F5F5F5] focus:bg-white focus:ring-[#e53935]/20 focus:border-[#e53935] transition-all rounded-xl"
                   />
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-sm font-semibold text-slate-700">Category Image</Label>
+                  <Label className="text-sm font-semibold text-[#1E1E1E]">Category Image</Label>
                   <div className="flex items-start gap-4">
-                    <div className="relative group w-24 h-24 rounded-2xl overflow-hidden bg-slate-50 border-2 border-dashed border-slate-200 hover:border-blue-400 transition-all">
+                    <div className="relative group w-24 h-24 rounded-2xl overflow-hidden bg-white border-2 border-dashed border-[#F5F5F5] hover:border-[#e53935] transition-all">
                       {imagePreview || formData.image ? (
                         <>
                           <img
@@ -1101,7 +1101,7 @@ export default function Category() {
                             <button
                               type="button"
                               onClick={() => fileInputRef.current?.click()}
-                              className="p-1.5 bg-white text-blue-600 rounded-lg shadow-lg scale-90 group-hover:scale-100 transition-transform"
+                              className="p-1.5 bg-white text-[#e53935] rounded-lg shadow-lg scale-90 group-hover:scale-100 transition-transform"
                             >
                               <Edit className="w-4 h-4" />
                             </button>
@@ -1111,7 +1111,7 @@ export default function Category() {
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="w-full h-full flex flex-col items-center justify-center gap-1 text-slate-400"
+                          className="w-full h-full flex flex-col items-center justify-center gap-1 text-[#1E1E1E]/45"
                         >
                           <Upload className="w-6 h-6" />
                         </button>
@@ -1132,7 +1132,7 @@ export default function Category() {
                           variant="outline"
                           size="sm"
                           onClick={() => fileInputRef.current?.click()}
-                          className="rounded-lg h-9 bg-slate-50 border-slate-200 text-slate-600"
+                          className="rounded-lg h-9 bg-white border-[#F5F5F5] text-[#1E1E1E]/70"
                         >
                           Upload File
                         </Button>
@@ -1142,13 +1142,13 @@ export default function Category() {
                             variant="ghost"
                             size="sm"
                             onClick={handleRemoveImage}
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                            className="text-[#e53935] hover:text-[#c62828] hover:bg-[#fff8f7]"
                           >
                             Remove
                           </Button>
                         )}
                       </div>
-                      <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
+                      <p className="text-[10px] text-[#1E1E1E]/60 leading-relaxed font-medium">
                         Supported: PNG, JPG, JPEG, WEBP. Max size 5MB.
                         A clear icon represents your category best.
                       </p>
@@ -1157,16 +1157,16 @@ export default function Category() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all hover:bg-slate-100/50">
+              <div className="flex items-center justify-between p-4 bg-white rounded-2xl border border-[#F5F5F5] transition-all hover:bg-[#fff8f7]">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg transition-colors ${formData.status ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-500'}`}>
+                  <div className={`p-2 rounded-lg transition-colors ${formData.status ? 'bg-[#FFF9E0] text-[#FFC400]' : 'bg-[#F5F5F5] text-[#1E1E1E]/55'}`}>
                     <Check className={`w-4 h-4 transition-transform ${formData.status ? 'scale-110' : 'scale-90'}`} />
                   </div>
                   <div>
-                    <Label htmlFor="status" className="text-sm font-bold text-slate-800 cursor-pointer block">
+                    <Label htmlFor="status" className="text-sm font-bold text-[#1E1E1E] cursor-pointer block">
                       Active Status
                     </Label>
-                    <p className="text-xs text-slate-500 font-medium">
+                    <p className="text-xs text-[#1E1E1E]/60 font-medium">
                       {formData.status ? 'Category will be live' : 'Hidden from customers'}
                     </p>
                   </div>
@@ -1175,7 +1175,7 @@ export default function Category() {
                   id="status"
                   checked={formData.status}
                   onCheckedChange={(checked) => setFormData({ ...formData, status: checked })}
-                  className="data-[state=checked]:bg-blue-600"
+                  className="data-[state=checked]:bg-[#e53935]"
                 />
               </div>
 
@@ -1185,14 +1185,14 @@ export default function Category() {
                   variant="ghost"
                   onClick={handleCloseModal}
                   disabled={uploadingImage}
-                  className="flex-1 h-12 rounded-xl text-slate-600 hover:bg-slate-100 font-medium"
+                  className="flex-1 h-12 rounded-xl text-[#1E1E1E]/70 hover:bg-[#fff8f7] font-medium"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={uploadingImage}
-                  className="flex-[2] h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98]"
+                  className="flex-[2] h-12 bg-[#e53935] hover:bg-[#c62828] text-white font-bold rounded-xl shadow-lg shadow-[#e53935]/20 transition-all active:scale-[0.98]"
                 >
                   {uploadingImage ? (
                     <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -1218,3 +1218,5 @@ export default function Category() {
     </div>
   )
 }
+
+

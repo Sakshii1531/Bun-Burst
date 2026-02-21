@@ -5,6 +5,7 @@ import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
 
 export default function FeeSettings() {
+  const [feeSettingsId, setFeeSettingsId] = useState(null)
   const [feeSettings, setFeeSettings] = useState({
     distanceConfig: {
       maxDeliveryDistance: 20,
@@ -37,14 +38,15 @@ export default function FeeSettings() {
       const response = await adminAPI.getFeeSettings()
       if (response.data.success && response.data.data.feeSettings) {
         const data = response.data.data.feeSettings;
+        setFeeSettingsId(data._id || null)
         setFeeSettings({
           distanceConfig: data.distanceConfig || { maxDeliveryDistance: 20, slabs: [] },
           amountConfig: data.amountConfig || { rules: [] },
-          platformFee: data.platformFee || 5,
-          gstRate: data.gstRate || 5,
-          deliveryFee: data.deliveryFee || 25,
+          platformFee: data.platformFee ?? 5,
+          gstRate: data.gstRate ?? 5,
+          deliveryFee: data.deliveryFee ?? 25,
           deliveryFeeRanges: data.deliveryFeeRanges || [],
-          freeDeliveryThreshold: data.freeDeliveryThreshold || 149
+          freeDeliveryThreshold: data.freeDeliveryThreshold ?? 149
         })
       }
     } catch (error) {
@@ -62,6 +64,18 @@ export default function FeeSettings() {
   const handleSaveFeeSettings = async () => {
     try {
       setSavingFeeSettings(true)
+
+      if (editingSlabIndex !== null) {
+        toast.error('Please update/cancel the distance slab edit before saving')
+        setSavingFeeSettings(false)
+        return
+      }
+
+      if (editingRuleIndex !== null) {
+        toast.error('Please update/cancel the amount rule edit before saving')
+        setSavingFeeSettings(false)
+        return
+      }
 
       const hasDraftSlab =
         newSlab.minKm !== '' || newSlab.maxKm !== '' || newSlab.fee !== ''
@@ -144,9 +158,17 @@ export default function FeeSettings() {
         isActive: true
       };
 
-      const response = await adminAPI.createOrUpdateFeeSettings(payload)
+      const response = feeSettingsId
+        ? await adminAPI.updateFeeSettings(feeSettingsId, payload)
+        : await adminAPI.createOrUpdateFeeSettings(payload)
 
       if (response.data.success) {
+        const savedId = response?.data?.data?.feeSettings?._id
+        if (savedId) {
+          setFeeSettingsId(savedId)
+        }
+        setNewSlab({ minKm: '', maxKm: '', fee: '' })
+        setNewRule({ minAmount: '', maxAmount: '', deliveryFee: '' })
         toast.success('Fee settings saved successfully')
         fetchFeeSettings()
       } else {

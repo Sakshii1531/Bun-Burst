@@ -171,7 +171,7 @@ export const getOrders = asyncHandler(async (req, res) => {
     // Fetch orders with population
     const orders = await Order.find(query)
       .populate('userId', 'name email phone')
-      .populate('restaurantId', 'name slug address')
+      .populate('restaurantId', 'name slug address location')
       .populate('deliveryPartnerId', 'name phone')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
@@ -307,6 +307,25 @@ export const getOrders = asyncHandler(async (req, res) => {
       // Order amount (final total)
       const orderAmount = order.pricing?.total || 0;
 
+      const restaurantEntity =
+        order.restaurantId && typeof order.restaurantId === 'object'
+          ? order.restaurantId
+          : null;
+
+      const restaurantLocation = restaurantEntity?.location || {};
+      const composedRestaurantAddress = [
+        restaurantLocation?.formattedAddress,
+        restaurantLocation?.address,
+        restaurantEntity?.address,
+        restaurantLocation?.addressLine1,
+        restaurantLocation?.addressLine2,
+        restaurantLocation?.street,
+        restaurantLocation?.area,
+        restaurantLocation?.city,
+        restaurantLocation?.state,
+        restaurantLocation?.zipCode || restaurantLocation?.pincode || restaurantLocation?.postalCode
+      ].filter(Boolean);
+
       return {
         sl: skip + index + 1,
         orderId: order.orderId,
@@ -318,6 +337,10 @@ export const getOrders = asyncHandler(async (req, res) => {
         customerEmail: order.userId?.email || '',
         restaurant: order.restaurantName || order.restaurantId?.name || 'Unknown Restaurant',
         restaurantId: order.restaurantId?.toString() || order.restaurantId || '',
+        restaurantAddress: composedRestaurantAddress.length > 0
+          ? composedRestaurantAddress[0] || composedRestaurantAddress.join(', ')
+          : '',
+        restaurantLocation: restaurantLocation || null,
         // Report-specific fields
         totalItemAmount: totalItemAmount,
         itemDiscount: itemDiscount,

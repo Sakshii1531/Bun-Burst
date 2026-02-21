@@ -28,15 +28,15 @@ export default function BottomNavigation() {
     return location.pathname.startsWith(path)
   }
 
-  const iconClass = "w-6 h-6"
+  const iconClass = "w-6 h-6 transition-colors"
 
   const TabIcon = (active, Outline, Solid) => {
     const Icon = active ? Solid : Outline
-    return <Icon className={iconClass} />
+    return <Icon className={`${iconClass} ${active ? "text-[#e53935]" : "text-[#1E1E1E]/55"}`} />
   }
 
   const TabLabel = (active, label) => (
-    <span className={`text-[10px] font-medium ${active ? "text-black" : "text-gray-500"}`}>
+    <span className={`text-[10px] font-medium ${active ? "text-[#1E1E1E]" : "text-[#1E1E1E]/55"}`}>
       {label}
     </span>
   )
@@ -80,7 +80,7 @@ export default function BottomNavigation() {
   }, [])
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#F5F5F5] shadow-lg z-50">
       <div className="flex items-center justify-around py-2 px-4">
 
         {/* Feed */}
@@ -107,7 +107,7 @@ export default function BottomNavigation() {
           className="flex flex-col items-center gap-1 p-2"
         >
           {TabIcon(isActive("/delivery/trip-history"), ClockOutline, ClockSolid)}
-          {TabLabel(isActive("/delivery/trip-history "), "Trip History")}
+          {TabLabel(isActive("/delivery/trip-history"), "Trip History")}
         </button>
 
         {/* Profile */}
@@ -120,17 +120,17 @@ export default function BottomNavigation() {
               src={profileImage}
               alt="Profile"
               className={`w-7 h-7 rounded-full border-2 object-cover ${
-                isActive("/delivery/profile") ? "border-black" : "border-gray-300"
+                isActive("/delivery/profile") ? "border-[#e53935]" : "border-[#F5F5F5]"
               }`}
               onError={() => {
                 setImageError(true)
               }}
             />
           ) : (
-            <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center bg-gray-200 ${
-              isActive("/delivery/profile") ? "border-black" : "border-gray-300"
+            <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center bg-white ${
+              isActive("/delivery/profile") ? "border-[#e53935]" : "border-[#F5F5F5]"
             }`}>
-              <User className="w-4 h-4 text-gray-500" />
+              <User className={`w-4 h-4 ${isActive("/delivery/profile") ? "text-[#e53935]" : "text-[#1E1E1E]/65"}`} />
             </div>
           )}
           {TabLabel(isActive("/delivery/profile"), "Profile")}

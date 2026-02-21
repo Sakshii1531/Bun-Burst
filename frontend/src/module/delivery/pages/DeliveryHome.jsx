@@ -2765,9 +2765,9 @@ export default function DeliveryHome() {
                     icon: {
                       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
                         <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
-                          <circle cx="12" cy="12" r="11" fill="#FF6B35" stroke="#FFFFFF" stroke-width="2"/>
+                          <circle cx="12" cy="12" r="11" fill="#e53935" stroke="#FFFFFF" stroke-width="2"/>
                           <path d="M8 10c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v6H8v-6z" fill="#FFFFFF"/>
-                          <path d="M7 16h10M10 12h4M9 14h6" stroke="#FF6B35" stroke-width="1.5" stroke-linecap="round"/>
+                          <path d="M7 16h10M10 12h4M9 14h6" stroke="#e53935" stroke-width="1.5" stroke-linecap="round"/>
                           <path d="M10 8h4v2h-4z" fill="#FFFFFF" opacity="0.7"/>
                         </svg>
                       `),
@@ -4312,9 +4312,7 @@ export default function DeliveryHome() {
   // Fetch restaurant address if missing when selectedRestaurant is set
   useEffect(() => {
     if (!selectedRestaurant?.orderId && !selectedRestaurant?.id) return
-    if (!selectedRestaurant?.address ||
-      selectedRestaurant.address === 'Restaurant address' ||
-      selectedRestaurant.address === 'Restaurant Address') {
+    if (!isValidAddress(getRestaurantDisplayAddress(selectedRestaurant))) {
       // Address is missing, fetch order details to get restaurant address
       const orderId = selectedRestaurant.orderId || selectedRestaurant.id
       console.log('🔄 Fetching restaurant address for order:', orderId)
@@ -4325,17 +4323,10 @@ export default function DeliveryHome() {
           if (response?.data?.success && response?.data?.data) {
             const order = response.data.data.order || response.data.data
 
-            // Extract restaurant address
-            let restaurantAddress = null
-            if (order.restaurantId?.address) {
-              restaurantAddress = order.restaurantId.address
-            } else if (order.restaurantId?.location?.formattedAddress) {
-              restaurantAddress = order.restaurantId.location.formattedAddress
-            } else if (order.restaurantId?.location?.address) {
-              restaurantAddress = order.restaurantId.location.address
-            }
+            // Extract restaurant address using the same unified helper as slider
+            const restaurantAddress = getRestaurantDisplayAddress(order)
 
-            if (restaurantAddress && restaurantAddress !== 'Restaurant address' && restaurantAddress !== 'Restaurant Address') {
+            if (isValidAddress(restaurantAddress)) {
               setSelectedRestaurant(prev => ({
                 ...prev,
                 address: restaurantAddress
@@ -4528,7 +4519,12 @@ export default function DeliveryHome() {
   // Fetch assigned orders from API when delivery person goes online
   const fetchAssignedOrders = useCallback(async () => {
     if (!isOnline) {
-      console.log('⚠️ Delivery person is offline, skipping order fetch')
+      console.log('âš ï¸ Delivery person is offline, skipping order fetch')
+      return
+    }
+
+    // Keep currently visible new-order card stable until rider accepts/rejects it.
+    if (showNewOrderPopup) {
       return
     }
 
@@ -4675,7 +4671,7 @@ export default function DeliveryHome() {
       console.error('❌ Error fetching assigned orders:', error)
       // Don't show error to user, just log it
     }
-  }, [isOnline, calculateTimeAway])
+  }, [isOnline, calculateTimeAway, riderLocation, showNewOrderPopup])
 
   // Fetch assigned orders when delivery person goes online
   useEffect(() => {
@@ -4688,6 +4684,23 @@ export default function DeliveryHome() {
       return () => clearTimeout(timeoutId)
     }
   }, [isOnline, fetchAssignedOrders])
+
+  // Fallback polling: fetch newly assigned orders without requiring page refresh.
+  useEffect(() => {
+    if (!isOnline) return undefined
+
+    const intervalId = setInterval(() => {
+      fetchAssignedOrders()
+    }, 10000)
+
+    return () => clearInterval(intervalId)
+  }, [isOnline, fetchAssignedOrders])
+
+  // On socket reconnect/connection, immediately sync assigned orders to avoid missed events.
+  useEffect(() => {
+    if (!isOnline || !isConnected) return
+    fetchAssignedOrders()
+  }, [isOnline, isConnected, fetchAssignedOrders])
 
   // Also fetch orders on initial page load if already online
   useEffect(() => {
@@ -5264,9 +5277,9 @@ export default function DeliveryHome() {
                   icon: {
                     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
                       <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="11" fill="#FF6B35" stroke="#FFFFFF" stroke-width="2"/>
+                        <circle cx="12" cy="12" r="11" fill="#e53935" stroke="#FFFFFF" stroke-width="2"/>
                         <path d="M8 10c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v6H8v-6z" fill="#FFFFFF"/>
-                        <path d="M7 16h10M10 12h4M9 14h6" stroke="#FF6B35" stroke-width="1.5" stroke-linecap="round"/>
+                        <path d="M7 16h10M10 12h4M9 14h6" stroke="#e53935" stroke-width="1.5" stroke-linecap="round"/>
                         <path d="M10 8h4v2h-4z" fill="#FFFFFF" opacity="0.7"/>
                       </svg>
                     `),
@@ -5509,9 +5522,9 @@ export default function DeliveryHome() {
             icon: {
               url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="11" fill="#FF6B35" stroke="#FFFFFF" stroke-width="2"/>
+                  <circle cx="12" cy="12" r="11" fill="#e53935" stroke="#FFFFFF" stroke-width="2"/>
                   <path d="M8 10c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v6H8v-6z" fill="#FFFFFF"/>
-                  <path d="M7 16h10M10 12h4M9 14h6" stroke="#FF6B35" stroke-width="1.5" stroke-linecap="round"/>
+                  <path d="M7 16h10M10 12h4M9 14h6" stroke="#e53935" stroke-width="1.5" stroke-linecap="round"/>
                   <path d="M10 8h4v2h-4z" fill="#FFFFFF" opacity="0.7"/>
                 </svg>
               `),
@@ -5553,9 +5566,9 @@ export default function DeliveryHome() {
         icon: {
           url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="11" fill="#FF6B35" stroke="#FFFFFF" stroke-width="2"/>
+              <circle cx="12" cy="12" r="11" fill="#e53935" stroke="#FFFFFF" stroke-width="2"/>
               <path d="M8 10c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v6H8v-6z" fill="#FFFFFF"/>
-              <path d="M7 16h10M10 12h4M9 14h6" stroke="#FF6B35" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M7 16h10M10 12h4M9 14h6" stroke="#e53935" stroke-width="1.5" stroke-linecap="round"/>
               <path d="M10 8h4v2h-4z" fill="#FFFFFF" opacity="0.7"/>
             </svg>
           `),
@@ -5958,13 +5971,13 @@ export default function DeliveryHome() {
           // Add custom Destination Marker (Restaurant or Customer)
           const markerIcon = navigationMode === 'customer'
             ? `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="#10B981">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="#e53935">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 4.17 4.42 9.92 6.24 12.11.4.48 1.08.48 1.52 0C14.58 18.92 19 13.17 19 9c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5 14.5 7.62 14.5 9 13.38 11.5 12 11.5z"/>
                   <circle cx="12" cy="9" r="3" fill="#FFFFFF"/>
                 </svg>
               `)}`
             : `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="#FF6B35">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="#e53935">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 4.17 4.42 9.92 6.24 12.11.4.48 1.08.48 1.52 0C14.58 18.92 19 13.17 19 9c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5 14.5 7.62 14.5 9 13.38 11.5 12 11.5z"/>
                   <circle cx="12" cy="9" r="3" fill="#FFFFFF"/>
                   <path d="M8 16h2v6H8zm6 0h2v6h-2z" fill="#FFFFFF"/>
@@ -7736,23 +7749,80 @@ export default function DeliveryHome() {
 
   // Bike marker update removed (Ola Maps removed)
 
+  const isValidAddress = (value) => Boolean(
+    value &&
+    typeof value === 'string' &&
+    value.trim() &&
+    value !== 'Restaurant Address' &&
+    value !== 'Restaurant address' &&
+    value !== 'Address'
+  )
+
+  const buildAddressFromLocation = (location) => {
+    if (!location || typeof location !== 'object') return null
+    const parts = [
+      location.formattedAddress,
+      location.address,
+      location.addressLine1,
+      location.addressLine2,
+      location.street,
+      location.area,
+      location.city,
+      location.state,
+      location.pincode || location.zipCode || location.postalCode
+    ].filter(Boolean)
+    if (!parts.length) return null
+    // If formattedAddress/address is already present, prefer it.
+    if (location.formattedAddress) return location.formattedAddress
+    if (location.address) return location.address
+    return parts.join(', ')
+  }
+
+  const getRestaurantDisplayAddress = (source) => {
+    if (!source || typeof source !== 'object') return null
+    const candidates = [
+      source.address,
+      source.restaurantAddress,
+      source.restaurantLocation?.formattedAddress,
+      source.restaurantLocation?.address,
+      buildAddressFromLocation(source.restaurantLocation),
+      source.restaurantId?.address,
+      source.restaurantId?.formattedAddress,
+      source.restaurantId?.location?.formattedAddress,
+      source.restaurantId?.location?.address,
+      buildAddressFromLocation(source.restaurantId?.location),
+      source.restaurant?.address,
+      source.restaurant?.location?.formattedAddress,
+      source.restaurant?.location?.address,
+      buildAddressFromLocation(source.restaurant?.location),
+      buildAddressFromLocation(source.location)
+    ]
+    return candidates.find(isValidAddress) || null
+  }
+
+  const getCustomerDisplayAddress = (source) => {
+    if (!source || typeof source !== 'object') return null
+    const candidates = [
+      source.deliveryAddress?.formattedAddress,
+      source.deliveryAddress?.address,
+      source.deliveryAddress?.street,
+      buildAddressFromLocation(source.deliveryAddress),
+      source.deliveryLocation?.formattedAddress,
+      source.deliveryLocation?.address,
+      source.address?.formattedAddress,
+      source.address?.address,
+      source.address?.street,
+      buildAddressFromLocation(source.address),
+      source.customerAddress
+    ]
+    return candidates.find((value) => Boolean(value && typeof value === 'string' && value.trim())) || null
+  }
+
   const sliderRestaurantAddress = useMemo(() => {
-    const selectedAddress = selectedRestaurant?.address
-    if (selectedAddress && selectedAddress !== 'Restaurant Address' && selectedAddress !== 'Restaurant address') {
-      return selectedAddress
-    }
-
-    const fallbackAddress =
-      newOrder?.restaurantLocation?.formattedAddress ||
-      newOrder?.restaurantLocation?.address ||
-      newOrder?.restaurantAddress
-
-    if (fallbackAddress && fallbackAddress !== 'Restaurant Address' && fallbackAddress !== 'Restaurant address') {
-      return fallbackAddress
-    }
-
-    return null
-  }, [selectedRestaurant?.address, newOrder?.restaurantLocation?.formattedAddress, newOrder?.restaurantLocation?.address, newOrder?.restaurantAddress])
+    const selectedRestaurantAddress = getRestaurantDisplayAddress(selectedRestaurant)
+    if (isValidAddress(selectedRestaurantAddress)) return selectedRestaurantAddress
+    return getRestaurantDisplayAddress(newOrder)
+  }, [selectedRestaurant, newOrder])
 
   // Carousel slides data - filter based on bank details status
   const carouselSlides = useMemo(() => [
@@ -7762,7 +7832,7 @@ export default function DeliveryHome() {
       subtitle: "PAN & bank details required for payouts",
       icon: "bank",
       buttonText: "Submit",
-      bgColor: "bg-yellow-400"
+      bgColor: "bg-[#FFC400]"
     }])
   ], [bankDetailsFilled])
 
@@ -8334,7 +8404,7 @@ export default function DeliveryHome() {
                     }}
                     className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-colors ${slide.bgColor === "bg-gray-700"
                       ? "bg-gray-600 text-white hover:bg-gray-500"
-                      : "bg-yellow-300 text-black hover:bg-yellow-200"
+                      : "bg-[#FFC400] text-black hover:bg-[#FFE082]"
                       }`}>
                     {slide.buttonText}
                   </button>
@@ -8423,7 +8493,7 @@ export default function DeliveryHome() {
                       type: "tween",
                       times: [0, 0.5, 1]
                     }}
-                    className="absolute inset-0 w-20 h-20 bg-blue-500/20 rounded-full"
+                    className="absolute inset-0 w-20 h-20 bg-[#FFC400]/20 rounded-full"
                   />
 
                   {/* Middle ring */}
@@ -8440,7 +8510,7 @@ export default function DeliveryHome() {
                       delay: 0.3,
                       times: [0, 0.5, 1]
                     }}
-                    className="absolute inset-0 w-16 h-16 bg-blue-500/30 rounded-full m-2"
+                    className="absolute inset-0 w-16 h-16 bg-[#FFC400]/30 rounded-full m-2"
                   />
 
                   {/* Inner spinner */}
@@ -8453,7 +8523,7 @@ export default function DeliveryHome() {
                         ease: "linear",
                         type: "tween"
                       }}
-                      className="w-8 h-8 border-[3px] border-blue-600 border-t-transparent rounded-full"
+                      className="w-8 h-8 border-[3px] border-[#e53935] border-t-transparent rounded-full"
                     />
                   </div>
                 </motion.div>
@@ -8541,7 +8611,7 @@ export default function DeliveryHome() {
                   )
                 }
               }}
-              className="absolute bottom-44 right-3 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors z-20 overflow-visible"
+              className="absolute bottom-44 right-3 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-[#fff8f7] transition-colors z-20 overflow-visible"
               whileTap={{ scale: 0.92 }}
               transition={{
                 type: "spring",
@@ -8554,7 +8624,7 @@ export default function DeliveryHome() {
                 {/* Ripple effect */}
                 {isRefreshingLocation && (
                   <motion.div
-                    className="absolute inset-0 rounded-full bg-blue-500/20"
+                    className="absolute inset-0 rounded-full bg-[#FFC400]/20"
                     initial={{ scale: 0.9, opacity: 0.6 }}
                     animate={{
                       scale: [0.9, 1.6, 1.8],
@@ -8593,7 +8663,7 @@ export default function DeliveryHome() {
                   }}
                 >
                   <MapPin
-                    className={`w-6 h-6 transition-colors duration-500 ease-in-out ${isRefreshingLocation ? 'text-blue-600' : 'text-gray-700'
+                    className={`w-6 h-6 transition-colors duration-500 ease-in-out ${isRefreshingLocation ? 'text-[#1E1E1E]' : 'text-gray-700'
                       }`}
                   />
                 </motion.div>
@@ -8610,16 +8680,16 @@ export default function DeliveryHome() {
               >
                 {deliveryStatus === "pending" ? (
                   <>
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">Verification Done in 24 Hours</h3>
+                    <h3 className="text-lg font-bold text-[#1E1E1E] mb-1">Verification Done in 24 Hours</h3>
                     <p className="text-sm text-gray-600">Your account is under verification. You'll be notified once approved.</p>
                   </>
                 ) : deliveryStatus === "blocked" ? (
                   <>
-                    <h3 className="text-lg font-bold text-red-600 mb-2">Denied Verification</h3>
+                    <h3 className="text-lg font-bold text-[#e53935] mb-2">Denied Verification</h3>
                     {rejectionReason && (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3 text-left">
-                        <p className="text-xs font-semibold text-red-800 mb-2">Reason for Rejection:</p>
-                        <div className="text-xs text-red-700 space-y-1">
+                      <div className="bg-[#fff8f7] border border-[#F5F5F5] rounded-lg p-3 mb-3 text-left">
+                        <p className="text-xs font-semibold text-[#1E1E1E] mb-2">Reason for Rejection:</p>
+                        <div className="text-xs text-[#1E1E1E] space-y-1">
                           {rejectionReason.split('\n').filter(line => line.trim()).length > 1 ? (
                             <ul className="space-y-1 list-disc list-inside">
                               {rejectionReason.split('\n').map((point, index) => (
@@ -8629,7 +8699,7 @@ export default function DeliveryHome() {
                               ))}
                             </ul>
                           ) : (
-                            <p className="text-red-700">{rejectionReason}</p>
+                            <p className="text-[#1E1E1E]">{rejectionReason}</p>
                           )}
                         </div>
                       </div>
@@ -8640,7 +8710,7 @@ export default function DeliveryHome() {
                     <button
                       onClick={handleReverify}
                       disabled={isReverifying}
-                      className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mx-auto"
+                      className="px-6 py-2.5 bg-[#e53935] text-white rounded-lg font-semibold text-sm hover:bg-[#c62828] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mx-auto"
                     >
                       {isReverifying ? (
                         <>
@@ -8704,12 +8774,12 @@ export default function DeliveryHome() {
                 <div className="px-4 pb-6">
                   {mapViewMode === "hotspot" ? (
                     <div className="flex flex-col items-center">
-                      {/* <h3 className="text-lg font-bold text-gray-900 mb-2">No hotspots are available</h3>
+                      {/* <h3 className="text-lg font-bold text-[#1E1E1E] mb-2">No hotspots are available</h3>
                   <p className="text-sm text-gray-600 mb-4">Please go online to see hotspots</p> */}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center">
-                      {/* <h3 className="text-lg font-bold text-gray-900 mb-2">Select drop location</h3>
+                      {/* <h3 className="text-lg font-bold text-[#1E1E1E] mb-2">Select drop location</h3>
                   <p className="text-sm text-gray-600 mb-4">Choose a drop location on the map</p> */}
                     </div>
                   )}
@@ -8782,10 +8852,10 @@ export default function DeliveryHome() {
                 className="w-full rounded-xl overflow-hidden shadow-lg bg-white"
               >
                 {/* Header */}
-                <div className="bg-black px-4 py-3 flex items-center gap-3">
+                <div className="bg-[#e53935] px-4 py-3 flex items-center gap-3">
                   <div className="relative">
                     <Calendar className="w-5 h-5 text-white" />
-                    <CheckCircle className="w-3 h-3 text-green-500 absolute -top-1 -right-1 bg-white rounded-full" fill="currentColor" />
+                    <CheckCircle className="w-3 h-3 text-[#FFC400] absolute -top-1 -right-1 bg-white rounded-full" fill="currentColor" />
                   </div>
                   <span className="text-white font-semibold">Today's progress</span>
                 </div>
@@ -8799,7 +8869,7 @@ export default function DeliveryHome() {
                       onClick={() => navigate("/delivery/trip-history")}
                       className="flex flex-col items-start gap-1 hover:opacity-80 transition-opacity"
                     >
-                      <span className="text-2xl font-bold text-gray-900">
+                      <span className="text-2xl font-bold text-[#1E1E1E]">
                         {todayTrips}
                       </span>
                       <div className="flex items-center gap-1 text-sm text-gray-600">
@@ -8813,7 +8883,7 @@ export default function DeliveryHome() {
                       onClick={() => navigate("/delivery/time-on-orders")}
                       className="flex flex-col items-start gap-1 hover:opacity-80 transition-opacity"
                     >
-                      <span className="text-2xl font-bold text-gray-900">
+                      <span className="text-2xl font-bold text-[#1E1E1E]">
                         {`${formatHours(todayHoursWorked)} hrs`}
                       </span>
                       <div className="flex items-center gap-1 text-sm text-gray-600">
@@ -8827,7 +8897,7 @@ export default function DeliveryHome() {
                       onClick={() => navigate("/delivery/gig")}
                       className="flex flex-col items-end gap-1 hover:opacity-80 transition-opacity"
                     >
-                      <span className="text-2xl font-bold text-gray-900">
+                      <span className="text-2xl font-bold text-[#1E1E1E]">
                         {`${todayGigsCount} Gigs`}
                       </span>
                       <div className="flex items-center gap-1 text-sm text-gray-600">
@@ -8857,7 +8927,7 @@ export default function DeliveryHome() {
             <button
               key={option.id}
               onClick={() => handleHelpOptionClick(option)}
-              className="w-full flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+              className="w-full flex items-center gap-4 p-4 hover:bg-[#fff8f7] transition-colors border-b border-[#F5F5F5] last:border-b-0"
             >
               {/* Icon */}
               <div className="shrink-0 w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
@@ -8883,7 +8953,7 @@ export default function DeliveryHome() {
 
               {/* Text Content */}
               <div className="flex-1 text-left">
-                <h3 className="text-base font-semibold text-gray-900 mb-1">{option.title}</h3>
+                <h3 className="text-base font-semibold text-[#1E1E1E] mb-1">{option.title}</h3>
                 <p className="text-sm text-gray-600">{option.subtitle}</p>
               </div>
 
@@ -8908,20 +8978,20 @@ export default function DeliveryHome() {
             <button
               key={option.id}
               onClick={() => handleEmergencyOptionClick(option)}
-              className="w-full flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+              className="w-full flex items-center gap-4 p-4 hover:bg-[#fff8f7] transition-colors border-b border-[#F5F5F5] last:border-b-0"
             >
               {/* Icon */}
               <div className="shrink-0 w-14 h-14 rounded-lg flex items-center justify-center">
                 {option.icon === "ambulance" && (
-                  <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-sm border border-gray-200 relative overflow-hidden">
+                  <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-sm border border-[#F5F5F5] relative overflow-hidden">
                     {/* Ambulance vehicle */}
-                    <div className="absolute inset-0 bg-blue-500"></div>
+                    <div className="absolute inset-0 bg-[#FFC400]"></div>
                     {/* Red and blue lights on roof */}
-                    <div className="absolute top-1 left-2 w-2 h-3 bg-red-500 rounded-sm"></div>
-                    <div className="absolute top-1 right-2 w-2 h-3 bg-blue-500 rounded-sm"></div>
+                    <div className="absolute top-1 left-2 w-2 h-3 bg-[#e53935] rounded-sm"></div>
+                    <div className="absolute top-1 right-2 w-2 h-3 bg-[#FFC400] rounded-sm"></div>
                     {/* Star of Life emblem */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-6 h-6 text-[#1E1E1E]" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2L2 7v10l10 5 10-5V7l-10-5zm0 2.18l8 4v7.64l-8 4-8-4V8.18l8-4z" />
                         <path d="M12 8L6 11v6l6 3 6-3v-6l-6-3z" />
                       </svg>
@@ -8931,20 +9001,20 @@ export default function DeliveryHome() {
                   </div>
                 )}
                 {option.icon === "siren" && (
-                  <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-sm border border-gray-200 relative">
+                  <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-sm border border-[#F5F5F5] relative">
                     {/* Red siren dome */}
-                    <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center relative">
+                    <div className="w-10 h-10 bg-[#e53935] rounded-full flex items-center justify-center relative">
                       {/* Yellow light rays */}
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-12 h-12 border-2 border-yellow-400 rounded-full animate-pulse"></div>
+                        <div className="w-12 h-12 border-2 border-[#FFC400] rounded-full animate-pulse"></div>
                       </div>
                       {/* Phone icon inside */}
-                      <Phone className="w-5 h-5 text-yellow-400 z-10" />
+                      <Phone className="w-5 h-5 text-[#FFC400] z-10" />
                     </div>
                   </div>
                 )}
                 {option.icon === "police" && (
-                  <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-sm border border-gray-200">
+                  <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-sm border border-[#F5F5F5]">
                     {/* Police officer bust */}
                     <div className="relative">
                       {/* Head */}
@@ -8959,15 +9029,15 @@ export default function DeliveryHome() {
                   </div>
                 )}
                 {option.icon === "insurance" && (
-                  <div className="w-14 h-14 bg-yellow-400 rounded-lg flex items-center justify-center shadow-sm border border-gray-200 relative">
+                  <div className="w-14 h-14 bg-[#FFC400] rounded-lg flex items-center justify-center shadow-sm border border-[#F5F5F5] relative">
                     {/* Card shape */}
                     <div className="w-12 h-8 bg-white rounded-sm relative">
                       {/* Red heart and cross on left */}
                       <div className="absolute left-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                        <svg className="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 text-[#e53935]" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                         </svg>
-                        <div className="w-0.5 h-3 bg-red-500"></div>
+                        <div className="w-0.5 h-3 bg-[#e53935]"></div>
                       </div>
                     </div>
                   </div>
@@ -8976,7 +9046,7 @@ export default function DeliveryHome() {
 
               {/* Text Content */}
               <div className="flex-1 text-left">
-                <h3 className="text-base font-semibold text-gray-900 mb-1">{option.title}</h3>
+                <h3 className="text-base font-semibold text-[#1E1E1E] mb-1">{option.title}</h3>
                 <p className="text-sm text-gray-600">{option.subtitle}</p>
               </div>
 
@@ -8998,7 +9068,7 @@ export default function DeliveryHome() {
       >
         <div className="py-4">
           {/* Gig Details Card */}
-          <div className="mb-6 rounded-lg overflow-hidden shadow-sm border border-gray-200">
+          <div className="mb-6 rounded-lg overflow-hidden shadow-sm border border-[#F5F5F5]">
             {/* Header - Teal background */}
             <div className="bg-teal-100 px-4 py-3 flex items-center gap-3">
               <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center">
@@ -9009,12 +9079,12 @@ export default function DeliveryHome() {
 
             {/* Body - White background */}
             <div className="bg-white px-4 py-4">
-              <p className="text-gray-900 text-sm">Gig booking open in your zone</p>
+              <p className="text-[#1E1E1E] text-sm">Gig booking open in your zone</p>
             </div>
           </div>
 
           {/* Description */}
-          <p className="text-gray-900 text-sm mb-6">
+          <p className="text-[#1E1E1E] text-sm mb-6">
             Book your Gigs now to go online and start delivering orders
           </p>
 
@@ -9024,7 +9094,7 @@ export default function DeliveryHome() {
               setShowBookGigsPopup(false)
               navigate("/delivery/gig")
             }}
-            className="w-full bg-black hover:bg-gray-800 text-white font-semibold py-4 rounded-lg transition-colors"
+            className="w-full bg-[#e53935] hover:bg-[#c62828] text-white font-semibold py-4 rounded-lg transition-colors"
           >
             Book gigs
           </button>
@@ -9059,7 +9129,7 @@ export default function DeliveryHome() {
                 onTouchEnd={handleNewOrderPopupTouchEnd}
                 style={{ touchAction: 'none' }}
               >
-                <div className="bg-green-500 rounded-t-2xl px-6 py-3 shadow-lg cursor-grab active:cursor-grabbing">
+                <div className="bg-[#e53935] rounded-t-2xl px-6 py-3 shadow-lg cursor-grab active:cursor-grabbing">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-1 bg-white/80 rounded-full" />
                     <span className="text-white text-sm font-semibold">Swipe up to view order</span>
@@ -9103,7 +9173,7 @@ export default function DeliveryHome() {
               </div>
 
               {/* Green Countdown Header */}
-              <div className="relative scale-110 mb-0 bg-green-500 rounded-t-3xl overflow-visible">
+              <div className="relative scale-110 mb-0 bg-[#e53935] rounded-t-3xl overflow-visible">
                 {/* Small countdown badge - positioned at center edge, half above popup */}
                 <div className="absolute left-1/2 -translate-x-1/2 -top-5 z-20">
                   <div className="relative inline-flex items-center justify-center">
@@ -9120,8 +9190,8 @@ export default function DeliveryHome() {
                     >
                       <defs>
                         <linearGradient id="newOrderCountdownGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#22c55e" stopOpacity="1" />
-                          <stop offset="100%" stopColor="#16a34a" stopOpacity="1" />
+                          <stop offset="0%" stopColor="#e53935" stopOpacity="1" />
+                          <stop offset="100%" stopColor="#e53935" stopOpacity="1" />
                         </linearGradient>
                       </defs>
 
@@ -9135,11 +9205,11 @@ export default function DeliveryHome() {
                         strokeLinejoin="round"
                       />
 
-                      {/* Animated green progress border - starts from top center, decreases clockwise */}
+                      {/* Animated progress border - starts from top center, decreases clockwise */}
                       <motion.path
                         d="M 100,5 L 170,5 A 25,25 0 0,1 195,30 L 195,30 A 25,25 0 0,1 170,55 L 30,55 A 25,25 0 0,1 5,30 L 5,30 A 25,25 0 0,1 30,5 L 100,5"
                         fill="none"
-                        stroke="#22c55e"
+                        stroke="#e53935"
                         strokeWidth="8"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -9164,7 +9234,7 @@ export default function DeliveryHome() {
 
                     {/* White pill-shaped badge - positioned above SVG */}
                     <div className="relative bg-white rounded-full px-6 py-2 shadow-lg" style={{ zIndex: 30 }}>
-                      <div className="text-sm font-bold text-gray-900">
+                      <div className="text-sm font-bold text-[#1E1E1E]">
                         New order
                       </div>
                     </div>
@@ -9180,7 +9250,7 @@ export default function DeliveryHome() {
                   {/* Order ID */}
                   <div className="mb-4">
                     <p className="text-gray-500 text-xs mb-1">Order ID</p>
-                    <p className="text-base font-semibold text-gray-900">
+                    <p className="text-base font-semibold text-[#1E1E1E]">
                       {newOrder?.orderId || selectedRestaurant?.orderId || 'ORD1234567890'}
                     </p>
                   </div>
@@ -9193,11 +9263,11 @@ export default function DeliveryHome() {
                       </span>
                     </div>
 
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">
+                    <h3 className="text-lg font-bold text-[#1E1E1E] mb-1">
                       {newOrder?.restaurantName || selectedRestaurant?.name || 'Restaurant'}
                     </h3>
                     <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                      {newOrder?.restaurantLocation?.address || selectedRestaurant?.address || 'Address'}
+                      {sliderRestaurantAddress || 'Address'}
                     </p>
 
                     <div className="flex items-center gap-1.5 text-gray-500 text-sm mb-2">
@@ -9227,7 +9297,7 @@ export default function DeliveryHome() {
                   <div className="relative w-full">
                     <motion.div
                       ref={newOrderAcceptButtonRef}
-                      className="relative w-full bg-green-600 rounded-full overflow-hidden shadow-xl"
+                      className="relative w-full bg-[#e53935] rounded-full overflow-hidden shadow-xl"
                       style={{ touchAction: 'pan-x' }} // Prevent vertical scrolling, allow horizontal pan
                       onTouchStart={handleNewOrderAcceptTouchStart}
                       onTouchMove={handleNewOrderAcceptTouchMove}
@@ -9236,7 +9306,7 @@ export default function DeliveryHome() {
                     >
                       {/* Swipe progress background */}
                       <motion.div
-                        className="absolute inset-0 bg-green-500 rounded-full"
+                        className="absolute inset-0 bg-[#e53935] rounded-full"
                         animate={{
                           width: `${newOrderAcceptButtonProgress * 100}%`
                         }}
@@ -9298,7 +9368,7 @@ export default function DeliveryHome() {
             >
               <button
                 onClick={handleRejectConfirm}
-                className="  bg-black border-2 border-white text-white text-bold px-5 p-2 rounded-full font-semibold text-sm hover:bg-red-50 transition-colors shadow-2xl"
+                className="bg-[#e53935] border-2 border-white text-white text-bold px-5 p-2 rounded-full font-semibold text-sm hover:bg-[#c62828] transition-colors shadow-2xl"
               >
                 Deny
               </button>
@@ -9326,8 +9396,8 @@ export default function DeliveryHome() {
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
-                <div className="px-4 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-bold text-gray-900">Can't Accept Order</h3>
+                <div className="px-4 py-4 border-b border-[#F5F5F5]">
+                  <h3 className="text-lg font-bold text-[#1E1E1E]">Can't Accept Order</h3>
                   <p className="text-sm text-gray-500 mt-1">Please select a reason for not accepting this order</p>
                 </div>
 
@@ -9339,17 +9409,17 @@ export default function DeliveryHome() {
                         key={reason}
                         onClick={() => setRejectReason(reason)}
                         className={`w-full text-left p-4 rounded-lg border-2 transition-all ${rejectReason === reason
-                          ? "border-black bg-red-50"
-                          : "border-gray-200 bg-white hover:border-gray-300"
+                          ? "border-[#e53935] bg-[#fff8f7]"
+                          : "border-[#F5F5F5] bg-white hover:border-[#F5F5F5]"
                           }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className={`text-sm font-medium ${rejectReason === reason ? "text-black" : "text-gray-900"
+                          <span className={`text-sm font-medium ${rejectReason === reason ? "text-[#1E1E1E]" : "text-[#1E1E1E]"
                             }`}>
                             {reason}
                           </span>
                           {rejectReason === reason && (
-                            <div className="w-5 h-5 rounded-full bg-black flex items-center justify-center">
+                            <div className="w-5 h-5 rounded-full bg-[#e53935] flex items-center justify-center">
                               <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                               </svg>
@@ -9362,10 +9432,10 @@ export default function DeliveryHome() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-4 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
+                <div className="px-4 py-4 bg-gray-50 border-t border-[#F5F5F5] flex gap-3">
                   <button
                     onClick={handleRejectCancel}
-                    className="flex-1 bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-colors"
+                    className="flex-1 bg-white border-2 border-[#F5F5F5] text-gray-700 py-3 rounded-lg font-semibold text-sm hover:bg-[#fff8f7] transition-colors"
                   >
                     Cancel
                   </button>
@@ -9373,7 +9443,7 @@ export default function DeliveryHome() {
                     onClick={handleRejectConfirm}
                     disabled={!rejectReason}
                     className={`flex-1 py-3 rounded-lg font-semibold text-sm transition-colors ${rejectReason
-                      ? "!bg-black !text-white"
+                      ? "!bg-[#e53935] !text-white"
                       : "bg-gray-200 text-gray-400 cursor-not-allowed"
                       }`}
                   >
@@ -9436,7 +9506,7 @@ export default function DeliveryHome() {
 
           {/* Restaurant Info */}
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <h2 className="text-2xl font-bold text-[#1E1E1E] mb-2">
               {selectedRestaurant?.name || 'Restaurant Name'}
             </h2>
             <p className="text-gray-600 mb-2 leading-relaxed">
@@ -9597,7 +9667,7 @@ export default function DeliveryHome() {
                   })
                 }
               }}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-[#F5F5F5] rounded-lg hover:bg-[#fff8f7] transition-colors"
             >
               <Phone className="w-5 h-5 text-gray-700" />
               <span className="text-gray-700 font-medium">Call</span>
@@ -9677,7 +9747,7 @@ export default function DeliveryHome() {
           <div className="relative w-full">
             <motion.div
               ref={reachedPickupButtonRef}
-              className="relative w-full bg-green-600 rounded-full overflow-hidden shadow-xl"
+              className="relative w-full bg-[#e53935] rounded-full overflow-hidden shadow-xl"
               style={{ touchAction: 'pan-x' }} // Prevent vertical scrolling, allow horizontal pan
               onTouchStart={handlereachedPickupTouchStart}
               onTouchMove={handlereachedPickupTouchMove}
@@ -9686,7 +9756,7 @@ export default function DeliveryHome() {
             >
               {/* Swipe progress background */}
               <motion.div
-                className="absolute inset-0 bg-green-500 rounded-full"
+                className="absolute inset-0 bg-[#e53935] rounded-full"
                 animate={{
                   width: `${reachedPickupButtonProgress * 100}%`
                 }}
@@ -9750,7 +9820,7 @@ export default function DeliveryHome() {
       >
         <div className="">
           <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
+            <h2 className="text-xl font-bold text-[#1E1E1E] mb-2">
               Confirm Order ID
             </h2>
             <p className="text-gray-600 text-sm mb-4">
@@ -9758,17 +9828,17 @@ export default function DeliveryHome() {
             </p>
 
             {/* Order ID Display - single line, scroll horizontally if needed */}
-            <div className="bg-gray-50 rounded-xl p-6 mb-6 overflow-hidden">
+            <div className="bg-white rounded-xl p-6 mb-6 overflow-hidden border border-[#F5F5F5]">
               <p className="text-gray-500 text-xs mb-2">Order ID</p>
-              <p className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-wider whitespace-nowrap overflow-x-auto min-w-0">
+              <p className="text-2xl sm:text-3xl font-bold text-[#1E1E1E] tracking-wider whitespace-nowrap overflow-x-auto min-w-0">
                 {selectedRestaurant?.orderId || selectedRestaurant?.id || newOrder?.orderId || newOrder?.orderMongoId || 'ORD1234567890'}
               </p>
             </div>
 
             {/* Digital Bill Section - Always show, check via API */}
-            <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-100">
-              <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4" />
+            <div className="bg-white rounded-xl p-4 mb-6 border border-[#F5F5F5]">
+              <h3 className="text-sm font-semibold text-[#1E1E1E] mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#FFC400]" />
                 Digital Bill
               </h3>
               <div className="flex items-center gap-3">
@@ -9793,7 +9863,7 @@ export default function DeliveryHome() {
                     }
                   }}
                   disabled={isLoadingBill}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[#e53935] text-white rounded-lg text-sm font-medium hover:bg-[#c62828] transition-colors disabled:opacity-50"
                 >
                   {isLoadingBill ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
                   {isLoadingBill ? 'Loading...' : 'View'}
@@ -9918,7 +9988,7 @@ export default function DeliveryHome() {
         <div class="section-title">From</div>
         <div class="info-box">
           <h3>${orderData.restaurantId?.name || orderData.restaurantName || 'Restaurant'}</h3>
-          <p>${orderData.restaurantId?.address || orderData.restaurantId?.location?.address || 'Address'}</p>
+          <p>${getRestaurantDisplayAddress(orderData) || 'Address'}</p>
         </div>
       </div>
 
@@ -9927,7 +9997,7 @@ export default function DeliveryHome() {
         <div class="section-title">Bill To</div>
         <div class="info-box">
           <h3>${orderData.userId?.name || orderData.userName || 'Customer'}</h3>
-          <p>${orderData.deliveryAddress?.street || orderData.deliveryLocation?.address || 'Delivery Address'}</p>
+          <p>${getCustomerDisplayAddress(orderData) || 'Delivery Address'}</p>
         </div>
       </div>
 
@@ -10030,13 +10100,13 @@ export default function DeliveryHome() {
                     toast.success('Bill downloaded successfully!');
                   }}
                   disabled={isLoadingBill}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white text-blue-700 border border-blue-200 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white text-[#1E1E1E] border border-[#F5F5F5] rounded-lg text-sm font-medium hover:bg-[#fff8f7] transition-colors disabled:opacity-50"
                 >
                   {isLoadingBill ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
                   {isLoadingBill ? 'Loading...' : 'Download'}
                 </button>
               </div>
-              <p className="text-xs text-blue-700 text-center mt-2">
+              <p className="text-xs text-[#FFC400] text-center mt-2">
                 Auto-generated digital invoice
               </p>
             </div>
@@ -10047,7 +10117,7 @@ export default function DeliveryHome() {
             <div className="relative w-full">
               <motion.div
                 ref={orderIdConfirmButtonRef}
-                className="relative w-full bg-green-600 rounded-full overflow-hidden shadow-xl"
+                className="relative w-full bg-[#e53935] rounded-full overflow-hidden shadow-xl"
                 style={{
                   touchAction: 'pan-x'
                 }}
@@ -10058,7 +10128,7 @@ export default function DeliveryHome() {
               >
                 {/* Swipe progress background */}
                 <motion.div
-                  className="absolute inset-0 bg-green-500 rounded-full"
+                  className="absolute inset-0 bg-[#d32f2f] rounded-full"
                   animate={{
                     width: `${orderIdConfirmButtonProgress * 100}%`
                   }}
@@ -10126,7 +10196,7 @@ export default function DeliveryHome() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 100, opacity: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="bg-white rounded-2xl shadow-2xl p-5 border border-gray-100"
+              className="bg-white rounded-2xl shadow-2xl p-5 border border-[#F5F5F5]"
             >
               {/* Customer Info */}
               <div className="mb-4">
@@ -10145,7 +10215,7 @@ export default function DeliveryHome() {
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-base font-semibold text-gray-900">
+                    <h3 className="text-base font-semibold text-[#1E1E1E]">
                       Head to Customer Location
                     </h3>
                     <p className="text-sm text-gray-600 mt-0.5">
@@ -10163,7 +10233,7 @@ export default function DeliveryHome() {
               {/* Start Navigation Button */}
               <button
                 onClick={handleStartNavigation}
-                className="w-full bg-[#4285F4] hover:bg-[#357ae8] text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 active:scale-95"
+                className="w-full bg-[#e53935] hover:bg-[#c62828] text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 active:scale-95"
               >
                 <svg
                   width="24"
@@ -10206,7 +10276,7 @@ export default function DeliveryHome() {
 
           {/* Customer Info */}
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <h2 className="text-2xl font-bold text-[#1E1E1E] mb-2">
               {selectedRestaurant?.customerName || 'Customer Name'}
             </h2>
             <p className="text-gray-600 mb-2 leading-relaxed">
@@ -10219,11 +10289,11 @@ export default function DeliveryHome() {
 
           {/* Action Buttons */}
           <div className="flex gap-3 mb-6">
-            <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-[#F5F5F5] rounded-lg hover:bg-[#fff8f7] transition-colors">
               <Phone className="w-5 h-5 text-gray-700" />
               <span className="text-gray-700 font-medium">Call</span>
             </button>
-            <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-[#F5F5F5] rounded-lg hover:bg-[#fff8f7] transition-colors">
               <MapPin className="w-5 h-5 text-gray-700" />
               <span className="text-gray-700 font-medium">Chat</span>
             </button>
@@ -10237,7 +10307,7 @@ export default function DeliveryHome() {
           <div className="relative w-full">
             <motion.div
               ref={reachedDropButtonRef}
-              className="relative w-full bg-green-600 rounded-full overflow-hidden shadow-xl"
+              className="relative w-full bg-[#e53935] rounded-full overflow-hidden shadow-xl"
               style={{ touchAction: 'pan-x' }} // Prevent vertical scrolling, allow horizontal pan
               onTouchStart={handleReachedDropTouchStart}
               onTouchMove={handleReachedDropTouchMove}
@@ -10246,7 +10316,7 @@ export default function DeliveryHome() {
             >
               {/* Swipe progress background */}
               <motion.div
-                className="absolute inset-0 bg-green-500 rounded-full"
+                className="absolute inset-0 bg-[#e53935] rounded-full"
                 animate={{
                   width: `${reachedDropButtonProgress * 100}%`
                 }}
@@ -10314,12 +10384,12 @@ export default function DeliveryHome() {
         <div className="">
           {/* Success Icon and Title */}
           <div className="text-center mb-6">
-            <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-20 h-20 bg-[#e53935] rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            <h1 className="text-2xl font-bold text-[#1E1E1E] mb-2">
               Great job! Delivery complete 👍
             </h1>
           </div>
@@ -10332,7 +10402,7 @@ export default function DeliveryHome() {
                   <MapPin className="w-4 h-4 text-gray-600" />
                   <span className="text-gray-600 text-sm">Trip distance</span>
                 </div>
-                <span className="text-gray-900 font-semibold">
+                <span className="text-[#1E1E1E] font-semibold">
                   {tripDistance !== null
                     ? (tripDistance >= 1000
                       ? `${(tripDistance / 1000).toFixed(1)} kms`
@@ -10345,7 +10415,7 @@ export default function DeliveryHome() {
                   <Clock className="w-4 h-4 text-gray-600" />
                   <span className="text-gray-600 text-sm">Trip time</span>
                 </div>
-                <span className="text-gray-900 font-semibold">
+                <span className="text-[#1E1E1E] font-semibold">
                   {tripTime !== null
                     ? (tripTime >= 60
                       ? `${Math.round(tripTime / 60)} mins`
@@ -10382,7 +10452,7 @@ export default function DeliveryHome() {
           <div className="relative w-full">
             <motion.div
               ref={orderDeliveredButtonRef}
-              className="relative w-full bg-green-600 rounded-full overflow-hidden shadow-xl"
+              className="relative w-full bg-[#e53935] rounded-full overflow-hidden shadow-xl"
               style={{ touchAction: 'pan-x' }} // Prevent vertical scrolling, allow horizontal pan
               onTouchStart={handleOrderDeliveredTouchStart}
               onTouchMove={handleOrderDeliveredTouchMove}
@@ -10391,7 +10461,7 @@ export default function DeliveryHome() {
             >
               {/* Swipe progress background */}
               <motion.div
-                className="absolute inset-0 bg-green-500 rounded-full"
+                className="absolute inset-0 bg-[#e53935] rounded-full"
                 animate={{
                   width: `${orderDeliveredButtonProgress * 100}%`
                 }}
@@ -10453,7 +10523,7 @@ export default function DeliveryHome() {
       >
         <div className="">
           <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
+            <h2 className="text-xl font-bold text-[#1E1E1E] mb-2">
               Rate Your Experience
             </h2>
             <p className="text-gray-600 text-sm mb-6">
@@ -10469,7 +10539,7 @@ export default function DeliveryHome() {
                   className="text-4xl transition-transform hover:scale-110"
                 >
                   {star <= customerRating ? (
-                    <span className="text-yellow-400">★</span>
+                    <span className="text-[#FFC400]">★</span>
                   ) : (
                     <span className="text-gray-300">★</span>
                   )}
@@ -10486,7 +10556,7 @@ export default function DeliveryHome() {
                 value={customerReviewText}
                 onChange={(e) => setCustomerReviewText(e.target.value)}
                 placeholder="Share your experience..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-3 border border-[#F5F5F5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935] focus:border-transparent resize-none"
                 rows={4}
               />
             </div>
@@ -10556,7 +10626,7 @@ export default function DeliveryHome() {
                   setShowPaymentPage(true)
                 }
               }}
-              className="w-full bg-green-600 text-white py-4 rounded-xl font-semibold text-lg hover:bg-green-700 transition-colors shadow-lg"
+              className="w-full bg-[#e53935] text-white py-4 rounded-xl font-semibold text-lg hover:bg-[#e53935] transition-colors shadow-lg"
             >
               Submit Review
             </button>
@@ -10575,7 +10645,7 @@ export default function DeliveryHome() {
             className="fixed inset-0 z-[200] bg-white overflow-y-auto"
           >
             {/* Header */}
-            <div className="bg-green-500 text-white px-6 py-6">
+            <div className="bg-[#e53935] text-white px-6 py-6">
               <h1 className="text-2xl font-bold mb-2">Payment</h1>
               <p className="text-white/90 text-sm">Order ID: {selectedRestaurant?.orderId || 'ORD1234567890'}</p>
             </div>
@@ -10583,7 +10653,7 @@ export default function DeliveryHome() {
             {/* Payment Amount */}
             <div className="px-6 py-8 text-center bg-gray-50">
               <p className="text-gray-600 text-sm mb-2">Earnings from this order</p>
-              <p className="text-5xl font-bold text-gray-900">
+              <p className="text-5xl font-bold text-[#1E1E1E]">
                 ₹{(() => {
                   if (orderEarnings > 0) {
                     return orderEarnings.toFixed(2);
@@ -10596,18 +10666,18 @@ export default function DeliveryHome() {
                   return typeof earnings === 'number' ? earnings.toFixed(2) : '0.00';
                 })()}
               </p>
-              <p className="text-green-600 text-sm mt-2">💰 Added to your wallet</p>
+              <p className="text-[#FFC400] text-sm mt-2">💰 Added to your wallet</p>
             </div>
 
             {/* Payment Details */}
             <div className="px-6 py-6 pb-6 h-full flex flex-col justify-between">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Payment Details</h3>
+              <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-5 mb-6">
+                <h3 className="text-lg font-bold text-[#1E1E1E] mb-4">Payment Details</h3>
 
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <div className="flex justify-between items-center py-2 border-b border-[#F5F5F5]">
                     <span className="text-gray-600">Trip pay</span>
-                    <span className="text-gray-900 font-semibold">₹{(() => {
+                    <span className="text-[#1E1E1E] font-semibold">₹{(() => {
                       let earnings = 0;
                       if (orderEarnings > 0) {
                         earnings = orderEarnings;
@@ -10623,14 +10693,14 @@ export default function DeliveryHome() {
                     })()}</span>
                   </div>
 
-                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <div className="flex justify-between items-center py-2 border-b border-[#F5F5F5]">
                     <span className="text-gray-600">Long distance return pay</span>
-                    <span className="text-gray-900 font-semibold">₹5.00</span>
+                    <span className="text-[#1E1E1E] font-semibold">₹5.00</span>
                   </div>
 
                   <div className="flex justify-between items-center py-2">
-                    <span className="text-lg font-bold text-gray-900">Total Earnings</span>
-                    <span className="text-lg font-bold text-gray-900">₹{(() => {
+                    <span className="text-lg font-bold text-[#1E1E1E]">Total Earnings</span>
+                    <span className="text-lg font-bold text-[#1E1E1E]">₹{(() => {
                       if (orderEarnings > 0) {
                         return orderEarnings.toFixed(2);
                       }
@@ -10681,7 +10751,7 @@ export default function DeliveryHome() {
                     setCustomerReviewText("")
                   }, 500)
                 }}
-                className="w-full sticky bottom-4 bg-black text-white py-4 rounded-xl font-semibold text-lg hover:bg-gray-800 transition-colors shadow-lg "
+                className="w-full sticky bottom-4 bg-[#e53935] text-white py-4 rounded-xl font-semibold text-lg hover:bg-[#c62828] transition-colors shadow-lg "
               >
                 Complete
               </button>
@@ -10710,11 +10780,11 @@ export default function DeliveryHome() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 50 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[201] max-w-lg mx-auto max-h-[85vh] overflow-y-auto"
+              className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[210] max-w-lg mx-auto max-h-[85vh]"
             >
-              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 relative">
+                <div className="px-6 py-5 relative" style={{ background: '#e53935' }}>
                   <button
                     onClick={() => setShowDigitalBillPopup(false)}
                     className="absolute top-4 right-4 w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
@@ -10727,51 +10797,51 @@ export default function DeliveryHome() {
                     </div>
                     <div>
                       <h2 className="text-white text-xl font-bold">Digital Bill</h2>
-                      <p className="text-blue-100 text-sm">Invoice #{digitalBillData.orderId || 'N/A'}</p>
+                      <p className="text-white/80 text-sm">Invoice #{digitalBillData.orderId || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Bill Content */}
-                <div className="p-6 space-y-5">
+                <div className="p-6 space-y-5 overflow-y-auto">
                   {/* Restaurant Info */}
-                  <div className="border-b border-gray-200 pb-4">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">From</p>
-                    <h3 className="text-lg font-bold text-gray-900">
+                  <div className="pb-4" style={{ borderBottom: '1.5px solid #F5F5F5' }}>
+                    <p className="text-xs uppercase tracking-wide mb-2" style={{ color: '#9e9e9e' }}>From</p>
+                    <h3 className="text-lg font-bold" style={{ color: '#1E1E1E' }}>
                       {digitalBillData.restaurantId?.name || digitalBillData.restaurantName || 'Restaurant'}
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {digitalBillData.restaurantId?.address || digitalBillData.restaurantId?.location?.address || 'Address'}
+                    <p className="text-sm mt-1" style={{ color: '#555' }}>
+                      {getRestaurantDisplayAddress(digitalBillData) || 'Address'}
                     </p>
                   </div>
 
                   {/* Customer Info */}
-                  <div className="border-b border-gray-200 pb-4">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Bill To</p>
-                    <h3 className="text-base font-semibold text-gray-900">
+                  <div className="pb-4" style={{ borderBottom: '1.5px solid #F5F5F5' }}>
+                    <p className="text-xs uppercase tracking-wide mb-2" style={{ color: '#9e9e9e' }}>Bill To</p>
+                    <h3 className="text-base font-semibold" style={{ color: '#1E1E1E' }}>
                       {digitalBillData.userId?.name || digitalBillData.userName || 'Customer'}
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {digitalBillData.deliveryAddress?.street || digitalBillData.deliveryLocation?.address || 'Delivery Address'}
+                    <p className="text-sm mt-1" style={{ color: '#555' }}>
+                      {getCustomerDisplayAddress(digitalBillData) || 'Delivery Address'}
                     </p>
                   </div>
 
                   {/* Order Items */}
-                  <div className="border-b border-gray-200 pb-4">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Items</p>
+                  <div className="pb-4" style={{ borderBottom: '1.5px solid #F5F5F5' }}>
+                    <p className="text-xs uppercase tracking-wide mb-3" style={{ color: '#9e9e9e' }}>Items</p>
                     <div className="space-y-3">
                       {digitalBillData.items?.map((item, index) => (
                         <div key={index} className="flex justify-between items-start gap-3">
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{item.name || item.menuItemId?.name}</p>
-                            <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                            <p className="text-sm font-medium" style={{ color: '#1E1E1E' }}>{item.name || item.menuItemId?.name}</p>
+                            <p className="text-xs" style={{ color: '#888' }}>Qty: {item.quantity}</p>
                             {item.selectedAddons && item.selectedAddons.length > 0 && (
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs mt-1" style={{ color: '#888' }}>
                                 Addons: {item.selectedAddons.map(a => a.name).join(', ')}
                               </p>
                             )}
                           </div>
-                          <p className="text-sm font-semibold text-gray-900">
+                          <p className="text-sm font-semibold" style={{ color: '#1E1E1E' }}>
                             ₹{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
                           </p>
                         </div>
@@ -10782,31 +10852,31 @@ export default function DeliveryHome() {
                   {/* Pricing Details */}
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <p className="text-sm text-gray-600">Subtotal</p>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm" style={{ color: '#555' }}>Subtotal</p>
+                      <p className="text-sm font-medium" style={{ color: '#1E1E1E' }}>
                         ₹{(digitalBillData.pricing?.subtotal || digitalBillData.pricing?.itemTotal || 0).toFixed(2)}
                       </p>
                     </div>
                     {(digitalBillData.pricing?.tax || 0) > 0 && (
                       <div className="flex justify-between items-center">
-                        <p className="text-sm text-gray-600">Tax & Fees</p>
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm" style={{ color: '#555' }}>Tax & Fees</p>
+                        <p className="text-sm font-medium" style={{ color: '#1E1E1E' }}>
                           ₹{digitalBillData.pricing.tax.toFixed(2)}
                         </p>
                       </div>
                     )}
                     {(digitalBillData.pricing?.deliveryFee || 0) > 0 && (
                       <div className="flex justify-between items-center">
-                        <p className="text-sm text-gray-600">Delivery Fee</p>
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm" style={{ color: '#555' }}>Delivery Fee</p>
+                        <p className="text-sm font-medium" style={{ color: '#1E1E1E' }}>
                           ₹{digitalBillData.pricing.deliveryFee.toFixed(2)}
                         </p>
                       </div>
                     )}
                     {(digitalBillData.pricing?.discount || 0) > 0 && (
                       <div className="flex justify-between items-center">
-                        <p className="text-sm text-green-600">Discount</p>
-                        <p className="text-sm font-medium text-green-600">
+                        <p className="text-sm" style={{ color: '#e53935' }}>Discount</p>
+                        <p className="text-sm font-medium" style={{ color: '#e53935' }}>
                           -₹{digitalBillData.pricing.discount.toFixed(2)}
                         </p>
                       </div>
@@ -10814,19 +10884,19 @@ export default function DeliveryHome() {
                   </div>
 
                   {/* Total */}
-                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+                  <div className="rounded-xl p-4" style={{ background: '#FFF9E0', border: '1.5px solid #FFC400' }}>
                     <div className="flex justify-between items-center">
-                      <p className="text-base font-bold text-gray-900">Total Amount</p>
-                      <p className="text-xl font-bold text-blue-700">
+                      <p className="text-base font-bold" style={{ color: '#1E1E1E' }}>Total Amount</p>
+                      <p className="text-xl font-bold" style={{ color: '#FFC400' }}>
                         ₹{(digitalBillData.pricing?.total || 0).toFixed(2)}
                       </p>
                     </div>
                   </div>
 
                   {/* Payment Method */}
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                    <p className="text-sm text-gray-600">Payment Method</p>
-                    <p className="text-sm font-medium text-gray-900">
+                  <div className="flex items-center justify-between pt-3" style={{ borderTop: '1.5px solid #F5F5F5' }}>
+                    <p className="text-sm" style={{ color: '#555' }}>Payment Method</p>
+                    <p className="text-sm font-medium" style={{ color: '#1E1E1E' }}>
                       {digitalBillData.payment?.method === 'cash' ? 'Cash on Delivery' : 'Online Payment'}
                     </p>
                   </div>
@@ -10834,8 +10904,9 @@ export default function DeliveryHome() {
                 </div>
 
                 {/* Upload Button */}
-                <div className="pt-4 border-t border-gray-200">
+                <div className="sticky bottom-0 bg-white px-4 pb-4 pt-3" style={{ borderTop: '1.5px solid #F5F5F5' }}>
                   <button
+                    type="button"
                     onClick={async () => {
                       const mongoId = digitalBillData._id;
                       const orderId = digitalBillData.orderId;
@@ -10864,7 +10935,7 @@ export default function DeliveryHome() {
                       }
                     }}
                     disabled={isUploadingBill}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 text-white font-semibold rounded-xl transition-colors shadow-lg bg-[#e53935] hover:bg-[#c62828] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isUploadingBill ? (
                       <>
@@ -10887,3 +10958,6 @@ export default function DeliveryHome() {
     </div >
   )
 }
+
+
+

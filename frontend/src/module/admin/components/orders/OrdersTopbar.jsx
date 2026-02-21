@@ -22,12 +22,12 @@ export default function OrdersTopbar({
 }) {
   const navigate = useNavigate()
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] p-6 mb-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[#1E1E1E] flex items-center gap-2">
             {title}
-            <span className="px-3 py-1 rounded-full text-sm font-semibold bg-slate-100 text-slate-700">
+            <span className="px-3 py-1 rounded-full text-sm font-semibold bg-[#FFC400] text-[#1E1E1E]">
               {count}
             </span>
           </h1>
@@ -39,54 +39,54 @@ export default function OrdersTopbar({
               placeholder="Search your order..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-4 pr-12 py-2.5 w-full sm:w-80 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 transition-all"
+              className="pl-4 pr-12 py-2.5 w-full sm:w-80 text-sm rounded-lg border border-[#F5F5F5] bg-white text-[#1E1E1E] focus:outline-none focus:ring-2 focus:ring-[#FFC400] focus:border-[#FFC400] transition-all"
             />
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-slate-100">
-              <Search className="w-4 h-4 text-slate-500" />
+            <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-[#F5F5F5]">
+              <Search className="w-4 h-4 text-[#1E1E1E]" />
             </button>
           </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all">
+              <button className="px-4 py-2.5 text-sm font-medium rounded-lg border border-[#e53935] bg-[#e53935] hover:bg-[#d32f2f] text-white flex items-center gap-2 transition-all">
                 <Download className="w-4 h-4" />
-                <span className="text-black font-bold">Export</span>
+                <span className="text-white font-bold">Export</span>
                 <ChevronDown className="w-3 h-3" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
-              <DropdownMenuLabel>Export Format</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-56 bg-white border border-[#F5F5F5] rounded-lg shadow-lg z-50">
+              <DropdownMenuLabel className="text-[#1E1E1E]">Export Format</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onExport("excel")} className="cursor-pointer">
-                <div className="w-6 h-6 rounded-md bg-green-50 flex items-center justify-center mr-3">
-                  <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                <div className="w-6 h-6 rounded-md bg-[#FFF8E1] flex items-center justify-center mr-3">
+                  <FileSpreadsheet className="w-4 h-4 text-[#1E1E1E]" />
                 </div>
-                <span>Excel</span>
+                <span className="text-[#1E1E1E]">Excel</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onExport("pdf")} className="cursor-pointer">
-                <div className="w-6 h-6 rounded-md bg-red-50 flex items-center justify-center mr-3">
-                  <FileText className="w-4 h-4 text-red-600" />
+                <div className="w-6 h-6 rounded-md bg-[#FFF8E1] flex items-center justify-center mr-3">
+                  <FileText className="w-4 h-4 text-[#1E1E1E]" />
                 </div>
-                <span>PDF</span>
+                <span className="text-[#1E1E1E]">PDF</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <button
             onClick={onFilterClick}
-            className={`px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all relative ${activeFiltersCount > 0 ? "border-emerald-500 bg-emerald-50" : ""
+            className={`px-4 py-2.5 text-sm font-medium rounded-lg border border-[#e53935] bg-[#e53935] hover:bg-[#d32f2f] text-white flex items-center gap-2 transition-all relative ${activeFiltersCount > 0 ? "ring-2 ring-[#FFC400]" : ""
               }`}
           >
             <Filter className="w-4 h-4" />
-            <span className="text-black font-bold">Filters</span>
+            <span className="text-white font-bold">Filters</span>
             {activeFiltersCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-white rounded-full text-[10px] flex items-center justify-center font-bold">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FFC400] text-[#1E1E1E] rounded-full text-[10px] flex items-center justify-center font-bold">
                 {activeFiltersCount}
               </span>
             )}
           </button>
           <button
             onClick={onSettingsClick}
-            className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all"
+            className="p-2.5 rounded-lg border border-[#e53935] bg-[#e53935] hover:bg-[#d32f2f] text-white transition-all"
           >
             <Settings className="w-5 h-5" />
           </button>

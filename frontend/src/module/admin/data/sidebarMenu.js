@@ -17,12 +17,6 @@ export const sidebarMenuData = [
     label: "FOOD MANAGEMENT",
     items: [
       {
-        type: "link",
-        label: "Food Approval",
-        path: "/admin/food-approval",
-        icon: "CheckCircle2",
-      },
-      {
         type: "expandable",
         label: "Foods",
         icon: "Utensils",

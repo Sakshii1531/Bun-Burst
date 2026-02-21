@@ -551,44 +551,44 @@ export default function MenuAdd() {
     )
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-[#F5F5F5]">
             {/* Header */}
-            <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+            <div className="bg-white border-b border-[#F5F5F5] sticky top-0 z-10">
                 <div className="px-4 py-4 flex items-center gap-4">
                     <button
                         onClick={() => navigate(-1)}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-2 hover:bg-[#F5F5F5] rounded-lg transition-colors"
                     >
-                        <ArrowLeft className="w-5 h-5 text-gray-700" />
+                        <ArrowLeft className="w-5 h-5 text-[#1E1E1E]" />
                     </button>
                     <div>
-                        <h1 className="text-xl font-bold text-gray-900">Menu Add</h1>
-                        <p className="text-sm text-gray-600">Add dishes to restaurant menus</p>
+                        <h1 className="text-xl font-bold text-[#1E1E1E]">Menu Add</h1>
+                        <p className="text-sm text-[#1E1E1E]">Add dishes to restaurant menus</p>
                     </div>
                 </div>
             </div>
 
             <div className="p-4 max-w-7xl mx-auto">
                 {/* Restaurant Selection */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Restaurant</h2>
+                <div className="bg-white rounded-lg shadow-sm border border-[#F5F5F5] p-4 mb-6">
+                    <h2 className="text-lg font-semibold text-[#1E1E1E] mb-4">Select Restaurant</h2>
 
                     {/* Search */}
                     <div className="relative mb-4">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#1E1E1E]" />
                         <input
                             type="text"
                             placeholder="Search restaurants..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full pl-10 pr-4 py-2 border border-[#F5F5F5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935]"
                         />
                     </div>
 
                     {/* Restaurant List */}
                     {loading ? (
                         <div className="flex items-center justify-center py-8">
-                            <Loader2 className="w-6 h-6 animate-spin text-gray-600" />
+                            <Loader2 className="w-6 h-6 animate-spin text-[#1E1E1E]" />
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
@@ -597,16 +597,16 @@ export default function MenuAdd() {
                                     key={restaurant._id || restaurant.id}
                                     onClick={() => handleRestaurantSelect(restaurant)}
                                     className={`p-3 rounded-lg border-2 text-left transition-all ${selectedRestaurant?._id === restaurant._id
-                                        ? "border-blue-500 bg-blue-50"
-                                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                                        ? "border-[#e53935] bg-[#FFF8E1]"
+                                        : "border-[#F5F5F5] hover:border-[#F5F5F5] hover:bg-[#F5F5F5]"
                                         }`}
                                 >
-                                    <div className="font-semibold text-gray-900">{restaurant.name}</div>
-                                    <div className="text-sm text-gray-600 mt-1">
+                                    <div className="font-semibold text-[#1E1E1E]">{restaurant.name}</div>
+                                    <div className="text-sm text-[#1E1E1E] mt-1">
                                         Owner: {restaurant.ownerName || "N/A"}
                                     </div>
                                     {restaurant.location?.area && (
-                                        <div className="text-xs text-gray-500 mt-1">
+                                        <div className="text-xs text-[#1E1E1E] mt-1">
                                             {restaurant.location.area}
                                         </div>
                                     )}
@@ -618,41 +618,41 @@ export default function MenuAdd() {
 
                 {/* Menu Sections */}
                 {selectedRestaurant && (
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <div className="bg-white rounded-lg shadow-sm border border-[#F5F5F5] p-4">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-semibold text-gray-900">
+                            <h2 className="text-lg font-semibold text-[#1E1E1E]">
                                 Menu for {selectedRestaurant.name}
                             </h2>
                             {loading && (
-                                <Loader2 className="w-5 h-5 animate-spin text-gray-600" />
+                                <Loader2 className="w-5 h-5 animate-spin text-[#1E1E1E]" />
                             )}
                         </div>
 
                         {menu && menu.sections && menu.sections.length > 0 ? (
                             <div className="space-y-2">
                                 {menu.sections.map((section) => (
-                                    <div key={section.id} className="border border-gray-200 rounded-lg">
-                                        <div className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                    <div key={section.id} className="border border-[#F5F5F5] rounded-lg">
+                                        <div className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#F5F5F5] transition-colors">
                                             <button
                                                 type="button"
                                                 onClick={() => toggleSection(section.id)}
                                                 className="flex items-center gap-3 text-left"
                                             >
                                                 {expandedSections[section.id] ? (
-                                                    <ChevronDown className="w-5 h-5 text-gray-600" />
+                                                    <ChevronDown className="w-5 h-5 text-[#1E1E1E]" />
                                                 ) : (
-                                                    <ChevronRight className="w-5 h-5 text-gray-600" />
+                                                    <ChevronRight className="w-5 h-5 text-[#1E1E1E]" />
                                                 )}
-                                                <Utensils className="w-5 h-5 text-gray-600" />
-                                                <span className="font-semibold text-gray-900">{section.name}</span>
-                                                <span className="text-sm text-gray-500">
+                                                <Utensils className="w-5 h-5 text-[#1E1E1E]" />
+                                                <span className="font-semibold text-[#1E1E1E]">{section.name}</span>
+                                                <span className="text-sm text-[#1E1E1E]">
                                                     ({section.items?.length || 0} items)
                                                 </span>
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => handleAddDish(section)}
-                                                className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-1"
+                                                className="px-3 py-1 bg-[#e53935] text-white rounded-lg hover:bg-[#d32f2f] transition-colors text-sm flex items-center gap-1"
                                             >
                                                 <Plus className="w-4 h-4" />
                                                 Add Dish
@@ -660,13 +660,13 @@ export default function MenuAdd() {
                                         </div>
 
                                         {expandedSections[section.id] && (
-                                            <div className="px-4 pb-4 border-t border-gray-200">
+                                            <div className="px-4 pb-4 border-t border-[#F5F5F5]">
                                                 <div className="mt-3 space-y-2">
                                                     {section.items && section.items.length > 0 ? (
                                                         section.items.map((item) => (
                                                             <div
                                                                 key={item.id}
-                                                                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                                                className="flex items-center gap-3 p-3 bg-[#F5F5F5] rounded-lg hover:bg-[#F5F5F5] transition-colors"
                                                             >
                                                                 {item.image && (
                                                                     <img
@@ -676,18 +676,18 @@ export default function MenuAdd() {
                                                                     />
                                                                 )}
                                                                 <div className="flex-1 min-w-0">
-                                                                    <div className="font-medium text-gray-900 truncate">{item.name}</div>
-                                                                    <div className="text-sm text-gray-600">
+                                                                    <div className="font-medium text-[#1E1E1E] truncate">{item.name}</div>
+                                                                    <div className="text-sm text-[#1E1E1E]">
                                                                         ₹{item.price} • {item.foodType}
                                                                     </div>
                                                                 </div>
                                                                 <div className="flex items-center gap-2">
-                                                                    <div className="text-sm font-semibold text-gray-900">
+                                                                    <div className="text-sm font-semibold text-[#1E1E1E]">
                                                                         ₹{item.price}
                                                                     </div>
                                                                     <button
                                                                         onClick={() => handleEditDish(item, section)}
-                                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                                        className="p-2 text-[#e53935] hover:bg-[#FFF8E1] rounded-lg transition-colors"
                                                                         title="Edit"
                                                                     >
                                                                         <Edit2 className="w-4 h-4" />
@@ -695,7 +695,7 @@ export default function MenuAdd() {
                                                                     <button
                                                                         onClick={() => handleDeleteDish(item, section)}
                                                                         disabled={deletingDish}
-                                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                                                        className="p-2 text-[#e53935] hover:bg-[#FFF8E1] rounded-lg transition-colors disabled:opacity-50"
                                                                         title="Delete"
                                                                     >
                                                                         {deletingDish ? (
@@ -708,7 +708,7 @@ export default function MenuAdd() {
                                                             </div>
                                                         ))
                                                     ) : (
-                                                        <div className="text-center py-8 text-gray-500">
+                                                        <div className="text-center py-8 text-[#1E1E1E]">
                                                             No dishes in this section
                                                         </div>
                                                     )}
@@ -719,7 +719,7 @@ export default function MenuAdd() {
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-center py-12 text-gray-500">
+                            <div className="text-center py-12 text-[#1E1E1E]">
                                 {loading ? (
                                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                                 ) : (
@@ -749,7 +749,7 @@ export default function MenuAdd() {
                                                 setNewCategoryName("")
                                                 setShowAddDishModal(true)
                                             }}
-                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2 mx-auto"
+                                            className="px-4 py-2 bg-[#e53935] text-white rounded-lg hover:bg-[#d32f2f] transition-colors text-sm flex items-center gap-2 mx-auto"
                                         >
                                             <Plus className="w-4 h-4" />
                                             Add First Dish
@@ -762,12 +762,12 @@ export default function MenuAdd() {
                 )}
 
                 {!selectedRestaurant && (
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                        <Utensils className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <div className="bg-white rounded-lg shadow-sm border border-[#F5F5F5] p-12 text-center">
+                        <Utensils className="w-16 h-16 text-[#1E1E1E] mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-[#1E1E1E] mb-2">
                             Select a Restaurant
                         </h3>
-                        <p className="text-gray-600">
+                        <p className="text-[#1E1E1E]">
                             Choose a restaurant from the list above to view and manage its menu
                         </p>
                     </div>
@@ -778,8 +778,8 @@ export default function MenuAdd() {
             {showAddDishModal && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-gray-900">
+                        <div className="sticky top-0 bg-white border-b border-[#F5F5F5] px-6 py-4 flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-[#1E1E1E]">
                                 {editingDish ? "Edit Dish" : "Add Dish"}
                             </h2>
                             <button
@@ -805,16 +805,16 @@ export default function MenuAdd() {
                                     setShowNewCategoryInput(false)
                                     setNewCategoryName("")
                                 }}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="p-2 hover:bg-[#F5F5F5] rounded-lg transition-colors"
                             >
-                                <X className="w-5 h-5 text-gray-600" />
+                                <X className="w-5 h-5 text-[#1E1E1E]" />
                             </button>
                         </div>
 
                         <div className="p-6 space-y-6">
                             {/* Category Selection */}
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Category</h3>
+                                <h3 className="text-lg font-semibold text-[#1E1E1E] mb-4">Category</h3>
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-3">
                                         <select
@@ -828,7 +828,7 @@ export default function MenuAdd() {
                                                     setShowNewCategoryInput(false)
                                                 }
                                             }}
-                                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="flex-1 px-4 py-2 border border-[#F5F5F5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935]"
                                         >
                                             <option value="">Select Category</option>
                                             {menu?.sections?.map((section) => (
@@ -846,7 +846,7 @@ export default function MenuAdd() {
                                                 value={newCategoryName}
                                                 onChange={(e) => setNewCategoryName(e.target.value)}
                                                 placeholder="Enter new category name"
-                                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                className="flex-1 px-4 py-2 border border-[#F5F5F5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935]"
                                                 onKeyPress={(e) => {
                                                     if (e.key === "Enter") {
                                                         e.preventDefault()
@@ -857,7 +857,7 @@ export default function MenuAdd() {
                                             <button
                                                 onClick={handleCreateCategory}
                                                 disabled={creatingCategory}
-                                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                                className="px-4 py-2 bg-[#e53935] text-white rounded-lg hover:bg-[#d32f2f] transition-colors disabled:opacity-50 flex items-center gap-2"
                                             >
                                                 {creatingCategory ? (
                                                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -871,7 +871,7 @@ export default function MenuAdd() {
                                                     setShowNewCategoryInput(false)
                                                     setNewCategoryName("")
                                                 }}
-                                                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                                className="px-4 py-2 border border-[#F5F5F5] rounded-lg hover:bg-[#F5F5F5] transition-colors"
                                             >
                                                 <X className="w-4 h-4" />
                                             </button>
@@ -882,12 +882,12 @@ export default function MenuAdd() {
 
                             {/* Global Category Association */}
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Add-on Category Correlation</h3>
-                                <p className="text-sm text-gray-600 mb-2">Select the global category to link add-ons for this dish</p>
+                                <h3 className="text-lg font-semibold text-[#1E1E1E] mb-4">Add-on Category Correlation</h3>
+                                <p className="text-sm text-[#1E1E1E] mb-2">Select the global category to link add-ons for this dish</p>
                                 <select
                                     value={formData.categoryId}
                                     onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-4 py-2 border border-[#F5F5F5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935]"
                                 >
                                     <option value="">Select Global Category</option>
                                     {globalCategories.map((cat) => (
@@ -900,29 +900,29 @@ export default function MenuAdd() {
 
                             {/* Basic Information */}
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+                                <h3 className="text-lg font-semibold text-[#1E1E1E] mb-4">Basic Information</h3>
                                 <div className="grid grid-cols-1 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <label className="block text-sm font-medium text-[#1E1E1E] mb-2">
                                             Dish Name *
                                         </label>
                                         <input
                                             type="text"
                                             value={formData.name}
                                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="w-full px-4 py-2 border border-[#F5F5F5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935]"
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <label className="block text-sm font-medium text-[#1E1E1E] mb-2">
                                             Item Description
                                         </label>
                                         <textarea
                                             value={formData.description}
                                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                             rows={3}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="w-full px-4 py-2 border border-[#F5F5F5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935]"
                                             placeholder="Describe the dish..."
                                         />
                                     </div>
@@ -931,7 +931,7 @@ export default function MenuAdd() {
 
                             {/* Image Upload */}
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Image</h3>
+                                <h3 className="text-lg font-semibold text-[#1E1E1E] mb-4">Image</h3>
                                 <div className="flex items-center gap-4">
                                     {formData.image && (
                                         <img
@@ -940,7 +940,7 @@ export default function MenuAdd() {
                                             className="w-32 h-32 object-cover rounded-lg"
                                         />
                                     )}
-                                    <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
+                                    <label className="flex items-center gap-2 px-4 py-2 bg-[#e53935] text-white rounded-lg hover:bg-[#d32f2f] cursor-pointer transition-colors">
                                         <Upload className="w-5 h-5" />
                                         Upload Image
                                         <input
@@ -955,10 +955,10 @@ export default function MenuAdd() {
 
                             {/* Variants Toggle */}
                             <div>
-                                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                <div className="flex items-center justify-between p-4 border border-[#F5F5F5] rounded-lg bg-[#F5F5F5]">
                                     <div>
-                                        <span className="text-sm font-medium text-gray-700">Enable Variants</span>
-                                        <p className="text-xs text-gray-500 mt-1">
+                                        <span className="text-sm font-medium text-[#1E1E1E]">Enable Variants</span>
+                                        <p className="text-xs text-[#1E1E1E] mt-1">
                                             Add multiple sizes/prices (e.g., Small, Medium, Large)
                                         </p>
                                     </div>
@@ -982,7 +982,7 @@ export default function MenuAdd() {
                                                 })
                                             }
                                         }}
-                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.hasVariants ? 'bg-blue-600' : 'bg-gray-300'
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.hasVariants ? 'bg-[#e53935]' : 'bg-[#F5F5F5]'
                                             }`}
                                     >
                                         <span
@@ -996,22 +996,22 @@ export default function MenuAdd() {
                             {/* Variants Section */}
                             {formData.hasVariants && (
                                 <div>
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Variants</h3>
+                                    <h3 className="text-lg font-semibold text-[#1E1E1E] mb-4">Variants</h3>
                                     <div className="space-y-4">
                                         {formData.variants.map((variant, index) => (
                                             <div
                                                 key={variant.id}
-                                                className="p-4 border border-gray-200 rounded-lg bg-gray-50"
+                                                className="p-4 border border-[#F5F5F5] rounded-lg bg-[#F5F5F5]"
                                             >
                                                 <div className="flex items-center justify-between mb-3">
-                                                    <span className="text-sm font-medium text-gray-700">
+                                                    <span className="text-sm font-medium text-[#1E1E1E]">
                                                         Variant {index + 1}
                                                     </span>
                                                     {formData.variants.length > 1 && (
                                                         <button
                                                             type="button"
                                                             onClick={() => handleRemoveVariant(variant.id)}
-                                                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                            className="p-1 text-[#e53935] hover:bg-[#FFF8E1] rounded transition-colors"
                                                             title="Remove variant"
                                                         >
                                                             <Minus className="w-4 h-4" />
@@ -1020,7 +1020,7 @@ export default function MenuAdd() {
                                                 </div>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        <label className="block text-sm font-medium text-[#1E1E1E] mb-2">
                                                             Size/Name * (e.g., Small, Medium, Large)
                                                         </label>
                                                         <input
@@ -1030,12 +1030,12 @@ export default function MenuAdd() {
                                                                 handleUpdateVariant(variant.id, "name", e.target.value)
                                                             }
                                                             placeholder="e.g., Small, Medium, Large"
-                                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            className="w-full px-4 py-2 border border-[#F5F5F5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935]"
                                                             required
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        <label className="block text-sm font-medium text-[#1E1E1E] mb-2">
                                                             Price (₹) *
                                                         </label>
                                                         <input
@@ -1045,7 +1045,7 @@ export default function MenuAdd() {
                                                             onChange={(e) =>
                                                                 handleUpdateVariant(variant.id, "price", e.target.value)
                                                             }
-                                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            className="w-full px-4 py-2 border border-[#F5F5F5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935]"
                                                             required
                                                         />
                                                     </div>
@@ -1055,7 +1055,7 @@ export default function MenuAdd() {
                                         <button
                                             type="button"
                                             onClick={handleAddVariant}
-                                            className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
+                                            className="w-full px-4 py-2 border-2 border-dashed border-[#F5F5F5] rounded-lg hover:border-[#e53935] hover:bg-[#FFF8E1] transition-colors flex items-center justify-center gap-2 text-[#1E1E1E] hover:text-[#e53935]"
                                         >
                                             <Plus className="w-4 h-4" />
                                             Add Another Variant
@@ -1066,10 +1066,10 @@ export default function MenuAdd() {
 
                             {/* Price & Food Type */}
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Price & Food Type</h3>
+                                <h3 className="text-lg font-semibold text-[#1E1E1E] mb-4">Price & Food Type</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <label className="block text-sm font-medium text-[#1E1E1E] mb-2">
                                             {formData.hasVariants ? "Base Price (₹)" : "Price (₹) *"}
                                         </label>
                                         <input
@@ -1077,24 +1077,24 @@ export default function MenuAdd() {
                                             step="0.01"
                                             value={formData.price}
                                             onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="w-full px-4 py-2 border border-[#F5F5F5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935]"
                                             disabled={formData.hasVariants}
                                             required={!formData.hasVariants}
                                         />
                                         {formData.hasVariants && (
-                                            <p className="text-xs text-gray-500 mt-1">
+                                            <p className="text-xs text-[#1E1E1E] mt-1">
                                                 Base price will be set to minimum variant price
                                             </p>
                                         )}
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <label className="block text-sm font-medium text-[#1E1E1E] mb-2">
                                             Food Type
                                         </label>
                                         <select
                                             value={formData.foodType}
                                             onChange={(e) => setFormData({ ...formData, foodType: e.target.value })}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="w-full px-4 py-2 border border-[#F5F5F5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935]"
                                         >
                                             <option value="Veg">Veg</option>
                                             <option value="Non-Veg">Non-Veg</option>
@@ -1105,11 +1105,11 @@ export default function MenuAdd() {
 
                             {/* Preparation Time */}
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Preparation Time</h3>
+                                <h3 className="text-lg font-semibold text-[#1E1E1E] mb-4">Preparation Time</h3>
                                 <select
                                     value={formData.preparationTime}
                                     onChange={(e) => setFormData({ ...formData, preparationTime: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-4 py-2 border border-[#F5F5F5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935]"
                                 >
                                     <option value="">Select timing</option>
                                     {preparationTimeOptions.map((time) => (
@@ -1122,20 +1122,20 @@ export default function MenuAdd() {
 
                             {/* Toggles */}
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Settings</h3>
+                                <h3 className="text-lg font-semibold text-[#1E1E1E] mb-4">Settings</h3>
                                 <div className="space-y-4">
                                     {/* Stock Toggle */}
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <span className="text-sm font-medium text-gray-700">Stock</span>
-                                            <p className="text-xs text-gray-500 mt-1">
+                                            <span className="text-sm font-medium text-[#1E1E1E]">Stock</span>
+                                            <p className="text-xs text-[#1E1E1E] mt-1">
                                                 {formData.stock ? "In Stock" : "Out of Stock"}
                                             </p>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => setFormData({ ...formData, stock: !formData.stock })}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.stock ? 'bg-green-600' : 'bg-gray-300'
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.stock ? 'bg-[#e53935]' : 'bg-[#F5F5F5]'
                                                 }`}
                                         >
                                             <span
@@ -1148,15 +1148,15 @@ export default function MenuAdd() {
                                     {/* Recommended Toggle */}
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <span className="text-sm font-medium text-gray-700">Recommended</span>
-                                            <p className="text-xs text-gray-500 mt-1">
+                                            <span className="text-sm font-medium text-[#1E1E1E]">Recommended</span>
+                                            <p className="text-xs text-[#1E1E1E] mt-1">
                                                 Show as recommended dish
                                             </p>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => setFormData({ ...formData, isRecommended: !formData.isRecommended })}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.isRecommended ? 'bg-blue-600' : 'bg-gray-300'
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.isRecommended ? 'bg-[#e53935]' : 'bg-[#F5F5F5]'
                                                 }`}
                                         >
                                             <span
@@ -1169,15 +1169,15 @@ export default function MenuAdd() {
                                     {/* Available Toggle */}
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <span className="text-sm font-medium text-gray-700">Available</span>
-                                            <p className="text-xs text-gray-500 mt-1">
+                                            <span className="text-sm font-medium text-[#1E1E1E]">Available</span>
+                                            <p className="text-xs text-[#1E1E1E] mt-1">
                                                 Make dish available for ordering
                                             </p>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => setFormData({ ...formData, isAvailable: !formData.isAvailable })}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.isAvailable ? 'bg-blue-600' : 'bg-gray-300'
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.isAvailable ? 'bg-[#e53935]' : 'bg-[#F5F5F5]'
                                                 }`}
                                         >
                                             <span
@@ -1191,7 +1191,7 @@ export default function MenuAdd() {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3">
+                        <div className="sticky bottom-0 bg-white border-t border-[#F5F5F5] px-6 py-4 flex items-center justify-end gap-3">
                             <button
                                 onClick={() => {
                                     setShowAddDishModal(false)
@@ -1215,14 +1215,14 @@ export default function MenuAdd() {
                                     setShowNewCategoryInput(false)
                                     setNewCategoryName("")
                                 }}
-                                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                className="px-4 py-2 border border-[#F5F5F5] rounded-lg hover:bg-[#F5F5F5] transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleSaveDish}
                                 disabled={saving}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                                className="px-4 py-2 bg-[#e53935] text-white rounded-lg hover:bg-[#d32f2f] transition-colors flex items-center gap-2 disabled:opacity-50"
                             >
                                 {saving ? (
                                     <>
@@ -1243,3 +1243,4 @@ export default function MenuAdd() {
         </div>
     )
 }
+

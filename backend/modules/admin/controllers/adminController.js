@@ -28,6 +28,33 @@ const logger = winston.createLogger({
 
 const trimText = (value) => (typeof value === "string" ? value.trim() : "");
 
+const hasBase64ImagePayload = (value) =>
+  typeof value === "string" && value.startsWith("data:image/");
+
+const requiresCloudinaryUpload = (...values) =>
+  values.some((value) => {
+    if (Array.isArray(value)) {
+      return value.some((item) => hasBase64ImagePayload(item));
+    }
+    return hasBase64ImagePayload(value);
+  });
+
+const normalizeImageSubdoc = (value) => {
+  if (!value) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.startsWith("http")) return { url: trimmed };
+    return null;
+  }
+  if (typeof value === "object" && typeof value.url === "string" && value.url.trim()) {
+    return {
+      url: value.url.trim(),
+      ...(value.publicId ? { publicId: value.publicId } : {}),
+    };
+  }
+  return null;
+};
+
 const normalizeRestaurantLocation = (incomingLocation = {}, existingLocation = {}) => {
   const normalizedLocation = { ...existingLocation, ...incomingLocation };
 
@@ -1880,8 +1907,18 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
       }
     }
 
-    // Initialize Cloudinary for uploads
-    await initializeCloudinary();
+    // Initialize Cloudinary only when this request contains base64 images.
+    if (
+      requiresCloudinaryUpload(
+        profileImage,
+        menuImages,
+        panImage,
+        gstRegistered ? gstImage : null,
+        fssaiImage,
+      )
+    ) {
+      await initializeCloudinary();
+    }
 
     // Handle Profile Image Update
     if (profileImage) {
@@ -2037,10 +2074,20 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     restaurant.onboarding.step2.deliveryTimings = restaurant.deliveryTimings || {};
     restaurant.onboarding.step2.openDays = restaurant.openDays || [];
 
+    const panImageSubdoc = normalizeImageSubdoc(
+      panImageData ?? restaurant.onboarding.step3.pan?.image,
+    );
+    const gstImageSubdoc = normalizeImageSubdoc(
+      gstImageData ?? restaurant.onboarding.step3.gst?.image,
+    );
+    const fssaiImageSubdoc = normalizeImageSubdoc(
+      fssaiImageData ?? restaurant.onboarding.step3.fssai?.image,
+    );
+
     restaurant.onboarding.step3.pan = {
       panNumber: panNumber || restaurant.onboarding.step3.pan?.panNumber || "",
       nameOnPan: nameOnPan || restaurant.onboarding.step3.pan?.nameOnPan || "",
-      image: panImageData,
+      ...(panImageSubdoc ? { image: panImageSubdoc } : {}),
     };
 
     restaurant.onboarding.step3.gst = {
@@ -2048,14 +2095,14 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
       gstNumber: gstNumber || restaurant.onboarding.step3.gst?.gstNumber || "",
       legalName: gstLegalName || restaurant.onboarding.step3.gst?.legalName || "",
       address: gstAddress || restaurant.onboarding.step3.gst?.address || "",
-      image: gstImageData,
+      ...(gstImageSubdoc ? { image: gstImageSubdoc } : {}),
     };
 
     restaurant.onboarding.step3.fssai = {
       registrationNumber:
         fssaiNumber || restaurant.onboarding.step3.fssai?.registrationNumber || "",
       expiryDate: fssaiExpiry || restaurant.onboarding.step3.fssai?.expiryDate || null,
-      image: fssaiImageData,
+      ...(fssaiImageSubdoc ? { image: fssaiImageSubdoc } : {}),
     };
 
     restaurant.onboarding.step3.bank = {
@@ -2072,8 +2119,9 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     restaurant.onboarding.step4.featuredPrice = restaurant.featuredPrice || 0;
     restaurant.onboarding.step4.offer = restaurant.offer || "";
 
-    // Save
-    await restaurant.save();
+    // Save only validating changed fields to avoid blocking updates on legacy records
+    // that may have old missing/invalid non-edited fields.
+    await restaurant.save({ validateModifiedOnly: true });
 
     logger.info(`Restaurant updated by admin: ${id}`, { adminId: req.user._id });
 
@@ -2088,6 +2136,16 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     logger.error(`Error updating restaurant: ${error.message}`, { error: error.stack });
+    if (error?.name === "ValidationError" || error?.name === "CastError") {
+      const firstPath = error?.errors ? Object.keys(error.errors)[0] : null;
+      const firstMessage =
+        (firstPath && error.errors[firstPath]?.message) || error.message;
+      return errorResponse(res, 400, firstMessage || "Invalid restaurant data");
+    }
+    if (error?.code === 11000) {
+      const duplicateField = Object.keys(error.keyPattern || {})[0] || "field";
+      return errorResponse(res, 409, `${duplicateField} already exists`);
+    }
     return errorResponse(res, 500, "Failed to update restaurant");
   }
 });
@@ -2199,8 +2257,18 @@ export const createRestaurant = asyncHandler(async (req, res) => {
       }
     }
 
-    // Initialize Cloudinary
-    await initializeCloudinary();
+    // Initialize Cloudinary only when this request contains base64 images.
+    if (
+      requiresCloudinaryUpload(
+        profileImage,
+        menuImages,
+        panImage,
+        gstRegistered ? gstImage : null,
+        fssaiImage,
+      )
+    ) {
+      await initializeCloudinary();
+    }
 
     // Upload images if provided as base64 or files
     let profileImageData = null;
@@ -2352,6 +2420,10 @@ export const createRestaurant = asyncHandler(async (req, res) => {
       restaurantData.phoneVerified = true; // Admin created, so verified
     }
 
+    const panImageSubdoc = normalizeImageSubdoc(panImageData);
+    const gstImageSubdoc = normalizeImageSubdoc(gstImageData);
+    const fssaiImageSubdoc = normalizeImageSubdoc(fssaiImageData);
+
     // Add onboarding data
     restaurantData.onboarding = {
       step1: {
@@ -2380,19 +2452,19 @@ export const createRestaurant = asyncHandler(async (req, res) => {
         pan: {
           panNumber: panNumber || "",
           nameOnPan: nameOnPan || "",
-          image: panImageData,
+          ...(panImageSubdoc ? { image: panImageSubdoc } : {}),
         },
         gst: {
           isRegistered: gstRegistered || false,
           gstNumber: gstNumber || "",
           legalName: gstLegalName || "",
           address: gstAddress || "",
-          image: gstImageData,
+          ...(gstImageSubdoc ? { image: gstImageSubdoc } : {}),
         },
         fssai: {
           registrationNumber: fssaiNumber || "",
           expiryDate: fssaiExpiry || null,
-          image: fssaiImageData,
+          ...(fssaiImageSubdoc ? { image: fssaiImageSubdoc } : {}),
         },
         bank: {
           accountNumber: accountNumber || "",

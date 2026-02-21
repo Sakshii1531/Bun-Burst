@@ -69,20 +69,20 @@ export default function ProfileDetails() {
   }, [navigate])
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-white px-4 py-3 flex items-center gap-4 border-b border-gray-200">
+      <div className="bg-white px-4 py-3 flex items-center gap-4 border-b border-[#F5F5F5]">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          className="p-2 hover:bg-[#fff8f7] rounded-full transition-colors"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-5 h-5 text-[#1E1E1E]" />
         </button>
-        <h1 className="text-lg font-medium">Profile</h1>
+        <h1 className="text-lg font-medium text-[#1E1E1E]">Profile</h1>
       </div>
 
       {/* Profile Picture Area */}
-      <div className="relative w-full bg-gray-200 overflow-hidden flex items-center justify-center">
+      <div className="relative w-full bg-[#F5F5F5] overflow-hidden flex items-center justify-center">
         <img
           src={profile?.profileImage?.url || profile?.documents?.photo || "https://i.pravatar.cc/400?img=12"}
           alt="Profile"
@@ -94,14 +94,14 @@ export default function ProfileDetails() {
       <div className="px-4 py-6 space-y-6">
         {/* Rider Details Section */}
         <div>
-          <h2 className="text-base font-bold text-gray-900 mb-3">Rider details</h2>
-          <div className="bg-white rounded-lg shadow-sm divide-y divide-gray-200">
+          <h2 className="text-base font-bold text-[#1E1E1E] mb-3">Rider details</h2>
+          <div className="bg-white rounded-lg shadow-sm divide-y divide-[#F5F5F5] border border-[#F5F5F5]">
             <div className="p-2 px-3 flex items-center justify-between">
               <p className="text-base text-gray-900">
                 {loading ? "Loading..." : `${profile?.name || "N/A"} (${profile?.deliveryId || "N/A"})`}
               </p>
             </div>
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-[#F5F5F5]">
               <div className="p-2 px-3 flex items-center justify-between">
                 <p className="text-sm text-gray-900">Zone</p>
                 <p className="text-base text-gray-900">
@@ -130,9 +130,9 @@ export default function ProfileDetails() {
                         setVehicleInput(vehicleNumber)
                         setShowVehiclePopup(true)
                       }}
-                      className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                      className="p-1 hover:bg-[#fff8f7] rounded-full transition-colors"
                     >
-                      <Edit2 className="w-4 h-4 text-green-600" />
+                      <Edit2 className="w-4 h-4 text-[#e53935]" />
                     </button>
                   </div>
                 ) : (
@@ -141,7 +141,7 @@ export default function ProfileDetails() {
                       setVehicleInput("")
                       setShowVehiclePopup(true)
                     }}
-                    className="flex items-center gap-2 text-green-600 font-medium"
+                    className="flex items-center gap-2 text-[#e53935] font-medium"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Add</span>
@@ -151,10 +151,10 @@ export default function ProfileDetails() {
 
               {/* Monthly Salary Display - Read Only */}
               {profile?.salary?.type === 'fixed' && (
-                <div className="p-2 px-3 flex items-center justify-between bg-blue-50/50">
+                <div className="p-2 px-3 flex items-center justify-between bg-[#FFF9E0]">
                   <div className="flex flex-col">
                     <p className="text-sm text-gray-900 font-medium">Monthly Salary</p>
-                    <p className="text-xs text-blue-600">Fixed Amount</p>
+                    <p className="text-xs text-[#FFC400]">Fixed Amount</p>
                   </div>
                   <p className="text-base font-bold text-gray-900">
                     ₹{profile?.salary?.amount?.toLocaleString() || "0"}
@@ -177,8 +177,8 @@ export default function ProfileDetails() {
 
         {/* Documents Section */}
         <div>
-          <h2 className="text-base font-medium text-gray-900 mb-3">Documents</h2>
-          <div className="bg-white rounded-lg shadow-sm divide-y divide-gray-200">
+          <h2 className="text-base font-medium text-[#1E1E1E] mb-3">Documents</h2>
+          <div className="bg-white rounded-lg shadow-sm divide-y divide-[#F5F5F5] border border-[#F5F5F5]">
             {/* Aadhar Card */}
             <div className="p-4 flex items-center justify-between">
               <div className="flex-1">
@@ -196,9 +196,9 @@ export default function ProfileDetails() {
                     })
                     setShowDocumentModal(true)
                   }}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  className="p-2 hover:bg-[#fff8f7] rounded-full transition-colors"
                 >
-                  <Eye className="w-5 h-5 text-gray-600" />
+                  <Eye className="w-5 h-5 text-[#1E1E1E]/70" />
                 </button>
               )}
             </div>
@@ -220,9 +220,9 @@ export default function ProfileDetails() {
                     })
                     setShowDocumentModal(true)
                   }}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  className="p-2 hover:bg-[#fff8f7] rounded-full transition-colors"
                 >
-                  <Eye className="w-5 h-5 text-gray-600" />
+                  <Eye className="w-5 h-5 text-[#1E1E1E]/70" />
                 </button>
               )}
             </div>
@@ -244,9 +244,9 @@ export default function ProfileDetails() {
                     })
                     setShowDocumentModal(true)
                   }}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  className="p-2 hover:bg-[#fff8f7] rounded-full transition-colors"
                 >
-                  <Eye className="w-5 h-5 text-gray-600" />
+                  <Eye className="w-5 h-5 text-[#1E1E1E]/70" />
                 </button>
               )}
             </div>
@@ -255,8 +255,8 @@ export default function ProfileDetails() {
 
         {/* Personal Details Section */}
         <div>
-          <h2 className="text-base font-medium text-gray-900 mb-3">Personal details</h2>
-          <div className="bg-white rounded-lg shadow-sm divide-y divide-gray-200">
+          <h2 className="text-base font-medium text-[#1E1E1E] mb-3">Personal details</h2>
+          <div className="bg-white rounded-lg shadow-sm divide-y divide-[#F5F5F5] border border-[#F5F5F5]">
             <div className="p-2 px-3 flex items-center justify-between">
               <div className="w-full align-center flex content-center justify-between">
                 <p className="text-sm text-gray-900 mb-1">Phone</p>
@@ -308,7 +308,7 @@ export default function ProfileDetails() {
 
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-bold text-gray-900">Bank details</h2>
+            <h2 className="text-base font-bold text-[#1E1E1E]">Bank details</h2>
             <button
               onClick={() => {
                 setShowBankDetailsPopup(true)
@@ -321,13 +321,13 @@ export default function ProfileDetails() {
                 })
                 setBankDetailsErrors({})
               }}
-              className="text-green-600 font-medium text-sm flex items-center gap-1 hover:text-green-700"
+              className="text-[#e53935] font-medium text-sm flex items-center gap-1 hover:text-[#c62828]"
             >
               <Edit2 className="w-4 h-4" />
               <span>Edit</span>
             </button>
           </div>
-          <div className="bg-white rounded-lg shadow-sm divide-y divide-gray-200">
+          <div className="bg-white rounded-lg shadow-sm divide-y divide-[#F5F5F5] border border-[#F5F5F5]">
             <div className="p-2 px-3 flex items-center justify-between">
               <div className="w-full align-center flex content-center justify-between">
                 <p className="text-sm text-gray-900 mb-1">Account Holder Name</p>
@@ -390,7 +390,7 @@ export default function ProfileDetails() {
               value={vehicleInput}
               onChange={(e) => setVehicleInput(e.target.value)}
               placeholder="Enter vehicle number"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-[#F5F5F5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935] focus:border-transparent"
               autoFocus
             />
           </div>
@@ -420,7 +420,7 @@ export default function ProfileDetails() {
                 toast.error("Please enter a valid vehicle number")
               }
             }}
-            className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+            className="w-full bg-[#e53935] text-white py-3 rounded-lg font-medium hover:bg-[#c62828] transition-colors"
           >
             {vehicleNumber ? "Update" : "Add"}
           </button>
@@ -437,14 +437,14 @@ export default function ProfileDetails() {
                 setShowDocumentModal(false)
                 setSelectedDocument(null)
               }}
-              className="absolute top-4 right-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors"
+              className="absolute top-4 right-4 z-10 bg-white rounded-full p-2 shadow-lg border border-[#F5F5F5] hover:bg-[#fff8f7] transition-colors"
             >
-              <X className="w-5 h-5 text-gray-600" />
+              <X className="w-5 h-5 text-[#1E1E1E]/70" />
             </button>
 
             {/* Document Title */}
-            <div className="p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">{selectedDocument.name}</h3>
+            <div className="p-4 border-b border-[#F5F5F5]">
+              <h3 className="text-lg font-semibold text-[#1E1E1E]">{selectedDocument.name}</h3>
             </div>
 
             {/* Document Image */}
@@ -474,8 +474,8 @@ export default function ProfileDetails() {
         <div className="space-y-4">
           {/* Account Holder Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Account Holder Name <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-[#1E1E1E] mb-1">
+              Account Holder Name <span className="text-[#e53935]">*</span>
             </label>
             <input
               type="text"
@@ -485,18 +485,18 @@ export default function ProfileDetails() {
                 setBankDetailsErrors(prev => ({ ...prev, accountHolderName: "" }))
               }}
               placeholder="Enter account holder name"
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${bankDetailsErrors.accountHolderName ? "border-red-500" : "border-gray-300"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935] ${bankDetailsErrors.accountHolderName ? "border-[#e53935]" : "border-[#F5F5F5]"
                 }`}
             />
             {bankDetailsErrors.accountHolderName && (
-              <p className="text-red-500 text-xs mt-1">{bankDetailsErrors.accountHolderName}</p>
+              <p className="text-[#e53935] text-xs mt-1">{bankDetailsErrors.accountHolderName}</p>
             )}
           </div>
 
           {/* Account Number */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Account Number <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-[#1E1E1E] mb-1">
+              Account Number <span className="text-[#e53935]">*</span>
             </label>
             <input
               type="text"
@@ -508,18 +508,18 @@ export default function ProfileDetails() {
               }}
               placeholder="Enter account number"
               maxLength={18}
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${bankDetailsErrors.accountNumber ? "border-red-500" : "border-gray-300"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935] ${bankDetailsErrors.accountNumber ? "border-[#e53935]" : "border-[#F5F5F5]"
                 }`}
             />
             {bankDetailsErrors.accountNumber && (
-              <p className="text-red-500 text-xs mt-1">{bankDetailsErrors.accountNumber}</p>
+              <p className="text-[#e53935] text-xs mt-1">{bankDetailsErrors.accountNumber}</p>
             )}
           </div>
 
           {/* IFSC Code */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              IFSC Code <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-[#1E1E1E] mb-1">
+              IFSC Code <span className="text-[#e53935]">*</span>
             </label>
             <input
               type="text"
@@ -531,18 +531,18 @@ export default function ProfileDetails() {
               }}
               placeholder="Enter IFSC code"
               maxLength={11}
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${bankDetailsErrors.ifscCode ? "border-red-500" : "border-gray-300"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935] ${bankDetailsErrors.ifscCode ? "border-[#e53935]" : "border-[#F5F5F5]"
                 }`}
             />
             {bankDetailsErrors.ifscCode && (
-              <p className="text-red-500 text-xs mt-1">{bankDetailsErrors.ifscCode}</p>
+              <p className="text-[#e53935] text-xs mt-1">{bankDetailsErrors.ifscCode}</p>
             )}
           </div>
 
           {/* Bank Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Bank Name <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-[#1E1E1E] mb-1">
+              Bank Name <span className="text-[#e53935]">*</span>
             </label>
             <input
               type="text"
@@ -552,11 +552,11 @@ export default function ProfileDetails() {
                 setBankDetailsErrors(prev => ({ ...prev, bankName: "" }))
               }}
               placeholder="Enter bank name"
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${bankDetailsErrors.bankName ? "border-red-500" : "border-gray-300"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935] ${bankDetailsErrors.bankName ? "border-[#e53935]" : "border-[#F5F5F5]"
                 }`}
             />
             {bankDetailsErrors.bankName && (
-              <p className="text-red-500 text-xs mt-1">{bankDetailsErrors.bankName}</p>
+              <p className="text-[#e53935] text-xs mt-1">{bankDetailsErrors.bankName}</p>
             )}
           </div>
 
@@ -617,8 +617,8 @@ export default function ProfileDetails() {
             }}
             disabled={isUpdatingBankDetails}
             className={`w-full py-3 rounded-lg font-medium text-white transition-colors ${isUpdatingBankDetails
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-[#00B761] hover:bg-[#00A055]"
+                ? "bg-[#1E1E1E]/35 cursor-not-allowed"
+                : "bg-[#e53935] hover:bg-[#c62828]"
               }`}
           >
             {isUpdatingBankDetails ? "Updating..." : "Save Bank Details"}

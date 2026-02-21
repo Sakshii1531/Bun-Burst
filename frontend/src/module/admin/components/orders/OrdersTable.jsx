@@ -3,27 +3,27 @@ import { Eye, Printer, ArrowUpDown, Loader2 } from "lucide-react"
 
 const getStatusColor = (orderStatus) => {
   const colors = {
-    "Delivered": "bg-emerald-100 text-emerald-700",
-    "Pending": "bg-blue-100 text-blue-700",
-    "Scheduled": "bg-blue-100 text-blue-700",
-    "Accepted": "bg-green-100 text-green-700",
-    "Processing": "bg-orange-100 text-orange-700",
-    "Food On The Way": "bg-yellow-100 text-yellow-700",
-    "Canceled": "bg-rose-100 text-rose-700",
-    "Cancelled by Restaurant": "bg-red-100 text-red-700",
-    "Cancelled by User": "bg-orange-100 text-orange-700",
-    "Payment Failed": "bg-red-100 text-red-700",
-    "Refunded": "bg-sky-100 text-sky-700",
-    "Dine In": "bg-indigo-100 text-indigo-700",
-    "Offline Payments": "bg-slate-100 text-slate-700",
+    "Delivered": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Pending": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Scheduled": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Accepted": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Processing": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Food On The Way": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Canceled": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Cancelled by Restaurant": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Cancelled by User": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Payment Failed": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Refunded": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Dine In": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Offline Payments": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
   }
-  return colors[orderStatus] || "bg-slate-100 text-slate-700"
+  return colors[orderStatus] || "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]"
 }
 
 const getPaymentStatusColor = (paymentStatus) => {
-  if (paymentStatus === "Paid") return "text-emerald-600"
-  if (paymentStatus === "Unpaid" || paymentStatus === "Failed") return "text-red-600"
-  return "text-slate-600"
+  if (paymentStatus === "Paid") return "text-[#1E1E1E]"
+  if (paymentStatus === "Unpaid" || paymentStatus === "Failed") return "text-[#e53935]"
+  return "text-[#1E1E1E]"
 }
 
 export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPrintOrder, onRefund }) {
@@ -47,147 +47,153 @@ export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPri
     return name
   }
 
+  const formatPrice = (value) => {
+    const amount = Number(value)
+    if (!Number.isFinite(amount)) return "0.00"
+    return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+
   if (orders.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+      <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5]">
         <div className="flex flex-col items-center justify-center py-20">
-          <div className="w-32 h-32 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center mb-6 shadow-inner">
+          <div className="w-32 h-32 bg-gradient-to-br from-[#FFF8E1] to-[#F5F5F5] rounded-2xl flex items-center justify-center mb-6 shadow-inner">
             <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center shadow-md">
-              <span className="text-5xl text-orange-500 font-bold">!</span>
+              <span className="text-5xl text-[#e53935] font-bold">!</span>
             </div>
           </div>
-          <p className="text-lg font-semibold text-slate-700 mb-1">No Data Found</p>
-          <p className="text-sm text-slate-500">There are no orders matching your criteria</p>
+          <p className="text-lg font-semibold text-[#1E1E1E] mb-1">No Data Found</p>
+          <p className="text-sm text-[#1E1E1E]">There are no orders matching your criteria</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden w-full max-w-full">
+    <div className="bg-white rounded-xl shadow-sm border border-[#F5F5F5] overflow-hidden w-full max-w-full">
       <div className="overflow-x-auto">
         <table className="w-full min-w-full">
-          <thead className="bg-slate-50 border-b border-slate-200">
+          <thead className="bg-[#F5F5F5] border-b border-[#F5F5F5]">
             <tr>
               {visibleColumns.si && (
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                   <div className="flex items-center gap-2">
                     <span>SI</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                    <ArrowUpDown className="w-3 h-3 text-[#1E1E1E] cursor-pointer hover:text-[#1E1E1E]" />
                   </div>
                 </th>
               )}
               {visibleColumns.orderId && (
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                   <div className="flex items-center gap-2">
                     <span>Order ID</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                    <ArrowUpDown className="w-3 h-3 text-[#1E1E1E] cursor-pointer hover:text-[#1E1E1E]" />
                   </div>
                 </th>
               )}
               {visibleColumns.orderDate && (
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                   <div className="flex items-center gap-2">
                     <span>Order Date</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                    <ArrowUpDown className="w-3 h-3 text-[#1E1E1E] cursor-pointer hover:text-[#1E1E1E]" />
                   </div>
                 </th>
               )}
               {visibleColumns.customer && (
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                   <div className="flex items-center gap-2">
                     <span>Customer Information</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                    <ArrowUpDown className="w-3 h-3 text-[#1E1E1E] cursor-pointer hover:text-[#1E1E1E]" />
                   </div>
                 </th>
               )}
               {visibleColumns.restaurant && (
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                   <div className="flex items-center gap-2">
                     <span>Restaurant</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                    <ArrowUpDown className="w-3 h-3 text-[#1E1E1E] cursor-pointer hover:text-[#1E1E1E]" />
                   </div>
                 </th>
               )}
               {visibleColumns.foodItems && (
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider min-w-[200px]">
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider min-w-[200px]">
                   <div className="flex items-center gap-2">
                     <span>Food Items</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                    <ArrowUpDown className="w-3 h-3 text-[#1E1E1E] cursor-pointer hover:text-[#1E1E1E]" />
                   </div>
                 </th>
               )}
               {visibleColumns.totalAmount && (
-                <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-right text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                   <div className="flex items-center justify-end gap-2">
                     <span>Total Amount</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                    <ArrowUpDown className="w-3 h-3 text-[#1E1E1E] cursor-pointer hover:text-[#1E1E1E]" />
                   </div>
                 </th>
               )}
               {(visibleColumns.paymentType !== false) && (
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                   <div className="flex items-center gap-2">
                     <span>Payment Type</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                    <ArrowUpDown className="w-3 h-3 text-[#1E1E1E] cursor-pointer hover:text-[#1E1E1E]" />
                   </div>
                 </th>
               )}
               {(visibleColumns.paymentCollectionStatus !== false) && (
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                   <div className="flex items-center gap-2">
                     <span>Payment Status</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                    <ArrowUpDown className="w-3 h-3 text-[#1E1E1E] cursor-pointer hover:text-[#1E1E1E]" />
                   </div>
                 </th>
               )}
               {visibleColumns.orderStatus && (
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                   <div className="flex items-center gap-2">
                     <span>Order Status</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                    <ArrowUpDown className="w-3 h-3 text-[#1E1E1E] cursor-pointer hover:text-[#1E1E1E]" />
                   </div>
                 </th>
               )}
               {visibleColumns.actions && (
-                <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-center text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                   Actions
                 </th>
               )}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-slate-100">
+          <tbody className="bg-white divide-y divide-[#F5F5F5]">
             {paginatedOrders.map((order, index) => (
               <tr 
                 key={order.orderId} 
-                className="hover:bg-slate-50 transition-colors"
+                className="hover:bg-[#F5F5F5] transition-colors"
               >
                 {visibleColumns.si && (
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-medium text-slate-700">{(currentPage - 1) * itemsPerPage + index + 1}</span>
+                    <span className="text-sm font-medium text-[#1E1E1E]">{(currentPage - 1) * itemsPerPage + index + 1}</span>
                   </td>
                 )}
                 {visibleColumns.orderId && (
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-medium text-slate-900">{order.orderId}</span>
+                    <span className="text-sm font-medium text-[#1E1E1E]">{order.orderId}</span>
                   </td>
                 )}
                 {visibleColumns.orderDate && (
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-medium text-slate-700">{order.date}, {order.time}</span>
+                    <span className="text-sm font-medium text-[#1E1E1E]">{order.date}, {order.time}</span>
                   </td>
                 )}
                 {visibleColumns.customer && (
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-slate-700">{order.customerName}</span>
-                      <span className="text-xs text-slate-500 mt-0.5">{order.customerPhone}</span>
+                      <span className="text-sm font-medium text-[#1E1E1E]">{order.customerName}</span>
+                      <span className="text-xs text-[#1E1E1E] mt-0.5">{order.customerPhone}</span>
                     </div>
                   </td>
                 )}
                 {visibleColumns.restaurant && (
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-medium text-slate-700">{formatRestaurantName(order.restaurant)}</span>
+                    <span className="text-sm font-medium text-[#1E1E1E]">{formatRestaurantName(order.restaurant)}</span>
                   </td>
                 )}
                 {visibleColumns.foodItems && (
@@ -196,28 +202,28 @@ export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPri
                       {order.items && Array.isArray(order.items) && order.items.length > 0 ? (
                         order.items.map((item, idx) => (
                           <div key={idx || item.itemId || idx} className="flex items-center gap-2 text-sm">
-                            <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded min-w-[2.5rem] text-center">
+                            <span className="font-bold text-[#1E1E1E] bg-[#F5F5F5] px-2 py-0.5 rounded min-w-[2.5rem] text-center">
                               {item.quantity || 1}x
                             </span>
-                            <span className="text-slate-800 font-medium flex-1">
+                            <span className="text-[#1E1E1E] font-medium flex-1">
                               {item.name || 'Unknown Item'}
                             </span>
-                            {item.price && (
-                              <span className="text-xs text-slate-500">
-                                ₹{item.price}
+                            {(item.price !== undefined && item.price !== null) && (
+                              <span className="text-xs text-[#1E1E1E]">
+                                ₹{formatPrice(item.price)}
                               </span>
                             )}
                           </div>
                         ))
                       ) : (
-                        <span className="text-sm text-slate-400 italic">No items found</span>
+                        <span className="text-sm text-[#1E1E1E] italic">No items found</span>
                       )}
                     </div>
                   </td>
                 )}
                 {visibleColumns.totalAmount && (
                   <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <div className="text-sm font-medium text-slate-900">
+                    <div className="text-sm font-medium text-[#1E1E1E]">
                       ₹{order.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div className={`text-xs mt-0.5 ${getPaymentStatusColor(order.paymentStatus)}`}>
@@ -253,9 +259,9 @@ export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPri
                       
                       return (
                         <span className={`text-sm font-medium ${
-                          isCod ? 'text-amber-600' : 
-                          isWallet ? 'text-purple-600' : 
-                          'text-emerald-600'
+                          isCod ? 'text-[#1E1E1E]' : 
+                          isWallet ? 'text-[#1E1E1E]' : 
+                          'text-[#1E1E1E]'
                         }`}>
                           {paymentTypeDisplay}
                         </span>
@@ -269,7 +275,7 @@ export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPri
                       const isCod = order.paymentType === 'Cash on Delivery' || order.payment?.method === 'cash' || order.payment?.method === 'cod'
                       const status = order.paymentCollectionStatus ?? (isCod ? 'Not Collected' : 'Collected')
                       return (
-                        <span className={`text-sm font-medium ${status === 'Collected' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        <span className={`text-sm font-medium ${status === 'Collected' ? 'text-[#1E1E1E]' : 'text-[#1E1E1E]'}`}>
                           {status}
                         </span>
                       )
@@ -283,7 +289,7 @@ export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPri
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.orderStatus)}`}>
                           {order.orderStatus}
                         </span>
-                        <span className="text-xs text-slate-500">{order.deliveryType}</span>
+                        <span className="text-xs text-[#1E1E1E]">{order.deliveryType}</span>
                       </div>
                       {order.cancellationReason && (
                         <div className="text-xs text-red-600 mt-1">
@@ -303,14 +309,14 @@ export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPri
                     <div className="flex items-center justify-center gap-2">
                       <button 
                         onClick={() => onViewOrder(order)}
-                        className="p-1.5 rounded text-orange-600 hover:bg-orange-50 transition-colors"
+                        className="p-1.5 rounded text-[#e53935] hover:bg-[#fff1f1] transition-colors"
                         title="View Details"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => onPrintOrder(order)}
-                        className="p-1.5 rounded text-blue-600 hover:bg-blue-50 transition-colors"
+                        className="p-1.5 rounded text-[#e53935] hover:bg-[#fff1f1] transition-colors"
                         title="Print Order"
                       >
                         <Printer className="w-4 h-4" />
@@ -343,8 +349,8 @@ export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPri
                           {order.refundStatus === 'processed' || order.refundStatus === 'initiated' ? (
                             <span className={`px-3 py-1.5 rounded-md text-xs font-medium ${
                               order.paymentType === "Wallet" || order.payment?.method === "wallet"
-                                ? "bg-purple-100 text-purple-700"
-                                : "bg-emerald-100 text-emerald-700"
+                                ? "bg-[#FFF8E1] text-[#1E1E1E]"
+                                : "bg-[#FFF8E1] text-[#1E1E1E]"
                             }`}>
                               {order.paymentType === "Wallet" || order.payment?.method === "wallet" 
                                 ? "Wallet Refunded" 
@@ -355,8 +361,8 @@ export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPri
                               onClick={() => onRefund(order)}
                               className={`px-3 py-1.5 rounded-md text-white text-xs font-medium hover:opacity-90 transition-colors shadow-sm flex items-center gap-1.5 ${
                                 order.paymentType === "Wallet" || order.payment?.method === "wallet"
-                                  ? "bg-purple-600 hover:bg-purple-700"
-                                  : "bg-blue-600 hover:bg-blue-700"
+                                  ? "bg-[#e53935] hover:bg-[#d32f2f]"
+                                  : "bg-[#e53935] hover:bg-[#d32f2f]"
                               }`}
                               title={order.paymentType === "Wallet" || order.payment?.method === "wallet"
                                 ? "Process Wallet Refund (Add to user wallet)"
@@ -379,8 +385,8 @@ export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPri
       
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-          <div className="text-sm text-slate-600">
+        <div className="px-6 py-4 bg-[#F5F5F5] border-t border-[#F5F5F5] flex items-center justify-between">
+          <div className="text-sm text-[#1E1E1E]">
             Showing <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
             <span className="font-semibold">{Math.min(currentPage * itemsPerPage, orders.length)}</span> of{" "}
             <span className="font-semibold">{orders.length}</span> orders
@@ -389,7 +395,7 @@ export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPri
             <button
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-[#F5F5F5] bg-white text-[#1E1E1E] hover:bg-[#F5F5F5] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               Previous
             </button>
@@ -411,8 +417,8 @@ export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPri
                     onClick={() => setCurrentPage(pageNum)}
                     className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
                       currentPage === pageNum
-                        ? "bg-emerald-500 text-white shadow-md"
-                        : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                        ? "bg-[#e53935] text-white shadow-md"
+                        : "border border-[#F5F5F5] bg-white text-[#1E1E1E] hover:bg-[#F5F5F5]"
                     }`}
                   >
                     {pageNum}
@@ -423,7 +429,7 @@ export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPri
             <button
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-[#F5F5F5] bg-white text-[#1E1E1E] hover:bg-[#F5F5F5] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               Next
             </button>
@@ -433,4 +439,7 @@ export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPri
     </div>
   )
 }
+
+
+
 

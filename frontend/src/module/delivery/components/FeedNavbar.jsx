@@ -32,16 +32,16 @@ function BottomPopup({
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="relative w-full bg-white rounded-t-2xl shadow-xl p-4"
+        className="relative w-full bg-white rounded-t-2xl shadow-xl p-4 border-t border-[#F5F5F5]"
         style={{ maxHeight, overflow: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">{title}</h2>
+          <h2 className="text-lg font-semibold text-[#1E1E1E]">{title}</h2>
           {showCloseButton && (
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-sm px-3 py-1 rounded-md"
+              className="text-[#1E1E1E]/70 hover:text-[#1E1E1E] text-sm px-3 py-1 rounded-md"
             >
               Close
             </button>
@@ -367,7 +367,7 @@ export default function FeedNavbar({ className = "" }) {
 
   return (
     <>
-    <div className={`bg-white px-4 py-3 flex items-center justify-between sticky top-0 z-50 border-b border-gray-200 ${className}`}>
+    <div className={`bg-white px-4 py-3 flex items-center justify-between sticky top-0 z-50 border-b border-[#F5F5F5] ${className}`}>
         {/* Online/Offline Toggle */}
       <div className="relative" style={{ zIndex: 100 }}>
         <button
@@ -379,7 +379,7 @@ export default function FeedNavbar({ className = "" }) {
             aria-checked={isOnline}
             style={{ pointerEvents: "auto", zIndex: 100, WebkitTapHighlightColor: "transparent" }}
           >
-            <div className={`relative w-20 h-8 rounded-full transition-colors duration-300 ${isOnline ? "bg-green-500" : "bg-gray-400"}`}>
+            <div className={`relative w-20 h-8 rounded-full transition-colors duration-300 ${isOnline ? "bg-[#e53935]" : "bg-gray-400"}`}>
             <span
               className={`text-[11px] font-bold text-white absolute top-1/2 -translate-y-1/2 whitespace-nowrap transition-all duration-300 ${
                   isOnline ? "left-2" : "right-2"
@@ -404,10 +404,10 @@ export default function FeedNavbar({ className = "" }) {
         {/* Emergency */}
         <button
             onClick={() => setShowEmergencyPopup(true)}
-          className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-red-600 transition-colors relative"
+          className="w-10 h-10 rounded-full bg-white border border-[#F5F5F5] flex items-center justify-center hover:bg-[#fff8f7] transition-colors relative"
             title="Emergency"
         >
-          <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+          <svg className="w-5 h-5 text-[#FFC400]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </button>
@@ -415,14 +415,14 @@ export default function FeedNavbar({ className = "" }) {
         {/* Help */}
         <button
             onClick={() => setShowHelpPopup(true)}
-          className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors"
+          className="w-10 h-10 rounded-full bg-white border border-[#F5F5F5] flex items-center justify-center hover:bg-[#fff8f7] transition-colors"
             title="Help"
         >
-          <HelpCircle className="w-5 h-5 text-gray-700" />
+          <HelpCircle className="w-5 h-5 text-[#1E1E1E]" />
         </button>
 
         {/* Profile */}
-        <button onClick={handleProfileClick} className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-gray-300 flex items-center justify-center bg-gray-200" title="Profile">
+        <button onClick={handleProfileClick} className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-[#F5F5F5] flex items-center justify-center bg-white" title="Profile">
           {profileImage && !imageError ? (
             <img
               src={profileImage}
@@ -433,7 +433,7 @@ export default function FeedNavbar({ className = "" }) {
               }}
             />
           ) : (
-            <User className="w-5 h-5 text-gray-500" />
+            <User className="w-5 h-5 text-[#1E1E1E]/70" />
           )}
         </button>
       </div>
@@ -453,25 +453,25 @@ export default function FeedNavbar({ className = "" }) {
             <button
               key={option.id}
               onClick={() => handleHelpOptionClick(option)}
-              className="w-full flex items-center gap-4 py-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+              className="w-full flex items-center gap-4 py-4 hover:bg-[#fff8f7] transition-colors border-b border-[#F5F5F5] last:border-b-0"
             >
               {/* Icon */}
-              <div className="shrink-0 w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+              <div className="shrink-0 w-12 h-12 rounded-full bg-white border border-[#F5F5F5] flex items-center justify-center">
                 {option.icon === "helpCenter" && (
-                  <HelpCircle className="w-6 h-6 text-gray-700" />
+                  <HelpCircle className="w-6 h-6 text-[#FFC400]" />
                 )}
                 {option.icon === "ticket" && (
-                  <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-[#FFC400]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
                   </svg>
                 )}
                 {option.icon === "idCard" && (
-                  <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-[#FFC400]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
                   </svg>
                 )}
                 {option.icon === "language" && (
-                  <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-[#FFC400]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
                   </svg>
                 )}
@@ -479,7 +479,7 @@ export default function FeedNavbar({ className = "" }) {
 
               {/* Text Content */}
               <div className="flex-1 text-left">
-                <h3 className="text-base font-semibold text-gray-900 mb-1">{option.title}</h3>
+                <h3 className="text-base font-semibold text-[#1E1E1E] mb-1">{option.title}</h3>
                 <p className="text-sm text-gray-600">{option.subtitle}</p>
               </div>
 
@@ -507,25 +507,25 @@ export default function FeedNavbar({ className = "" }) {
                 option.onClick?.();
                 setShowEmergencyPopup(false);
               }}
-              className="w-full flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+              className="w-full flex items-center gap-4 p-4 hover:bg-[#fff8f7] transition-colors border-b border-[#F5F5F5] last:border-b-0"
             >
-              <div className="shrink-0 w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+              <div className="shrink-0 w-12 h-12 rounded-full bg-white border border-[#F5F5F5] flex items-center justify-center">
                 {option.icon === "ambulance" && (
-                  <Ambulance className="w-6 h-6 text-red-600" />
+                  <Ambulance className="w-6 h-6 text-[#e53935]" />
                 )}
                 {option.icon === "accident" && (
-                  <AlertTriangle className="w-6 h-6 text-orange-600" />
+                  <AlertTriangle className="w-6 h-6 text-[#FFC400]" />
                 )}
                 {option.icon === "police" && (
-                  <Shield className="w-6 h-6 text-blue-600" />
+                  <Shield className="w-6 h-6 text-[#FFC400]" />
                 )}
                 {option.icon === "insurance" && (
-                  <ShieldCheck className="w-6 h-6 text-green-600" />
+                  <ShieldCheck className="w-6 h-6 text-[#FFC400]" />
                 )}
               </div>
 
               <div className="flex-1 text-left">
-                <h3 className="text-base font-semibold text-gray-900 mb-1">{option.title}</h3>
+                <h3 className="text-base font-semibold text-[#1E1E1E] mb-1">{option.title}</h3>
                 <p className="text-sm text-gray-600">{option.subtitle}</p>
               </div>
 

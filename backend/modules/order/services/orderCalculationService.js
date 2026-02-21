@@ -36,6 +36,47 @@ const getFeeSettings = async () => {
   }
 };
 
+const toFiniteNumber = (value) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+};
+
+const normalizeDistanceSlabs = (slabs = []) =>
+  slabs
+    .map((slab) => ({
+      minKm: toFiniteNumber(slab?.minKm),
+      maxKm: toFiniteNumber(slab?.maxKm),
+      fee: toFiniteNumber(slab?.fee),
+    }))
+    .filter(
+      (slab) =>
+        slab.minKm !== null &&
+        slab.maxKm !== null &&
+        slab.fee !== null &&
+        slab.minKm < slab.maxKm &&
+        slab.fee >= 0
+    )
+    .sort((a, b) => a.minKm - b.minKm);
+
+const normalizeAmountRules = (rules = []) =>
+  rules
+    .map((rule) => ({
+      minAmount: toFiniteNumber(rule?.minAmount),
+      maxAmount: toFiniteNumber(rule?.maxAmount),
+      deliveryFee: toFiniteNumber(rule?.deliveryFee),
+    }))
+    .filter(
+      (rule) =>
+        rule.minAmount !== null &&
+        rule.maxAmount !== null &&
+        rule.deliveryFee !== null &&
+        rule.minAmount < rule.maxAmount &&
+        rule.deliveryFee >= 0
+    );
+
+const isValueInRuleRange = (value, min, max, maxUpperBound) =>
+  value >= min && (value < max || (max === maxUpperBound && value <= max));
+
 /**
  * Calculate delivery fee based on order value, distance, and restaurant settings
  */
@@ -59,11 +100,12 @@ export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddre
     }
 
     // Find Matching Slab
-    const slabs = feeSettings.distanceConfig.slabs || [];
-    // Sort slabs by minKm
-    const sortedSlabs = [...slabs].sort((a, b) => a.minKm - b.minKm);
+    const sortedSlabs = normalizeDistanceSlabs(feeSettings.distanceConfig.slabs || []);
+    const maxSlabKm = sortedSlabs.reduce((acc, slab) => Math.max(acc, slab.maxKm), -Infinity);
 
-    const matchSlab = sortedSlabs.find(s => distance >= s.minKm && distance < s.maxKm);
+    const matchSlab = sortedSlabs.find((slab) =>
+      isValueInRuleRange(distance, slab.minKm, slab.maxKm, maxSlabKm)
+    );
 
     if (matchSlab) {
       deliveryFee = matchSlab.fee;
@@ -101,7 +143,21 @@ export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddre
 
   // Check Admin Amount Rules (Numeric Override)
   if (feeSettings.amountConfig && feeSettings.amountConfig.rules) {
-    const rule = feeSettings.amountConfig.rules.find(r => orderValue >= r.minAmount && orderValue < r.maxAmount);
+    const normalizedRules = normalizeAmountRules(feeSettings.amountConfig.rules);
+    const maxRuleAmount = normalizedRules.reduce((acc, rule) => Math.max(acc, rule.maxAmount), -Infinity);
+
+    // Priority: higher minAmount first (more specific/high-value bracket), then narrower range.
+    const prioritizedRules = [...normalizedRules].sort((a, b) => {
+      if (b.minAmount !== a.minAmount) return b.minAmount - a.minAmount;
+      const widthA = a.maxAmount - a.minAmount;
+      const widthB = b.maxAmount - b.minAmount;
+      if (widthA !== widthB) return widthA - widthB;
+      return b.maxAmount - a.maxAmount;
+    });
+
+    const rule = prioritizedRules.find((r) =>
+      isValueInRuleRange(orderValue, r.minAmount, r.maxAmount, maxRuleAmount)
+    );
     if (rule && typeof rule.deliveryFee === 'number') {
       // Use the specific fee from the rule
       deliveryFee = rule.deliveryFee;

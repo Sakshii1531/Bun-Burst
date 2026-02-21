@@ -249,17 +249,17 @@ export default function OrdersPage({ statusKey = "all" }) {
 
   if (isLoading) {
     return (
-      <div className="p-4 lg:p-6 bg-slate-50 min-h-screen w-full max-w-full overflow-x-hidden flex items-center justify-center">
+      <div className="p-4 lg:p-6 bg-white min-h-screen w-full max-w-full overflow-x-hidden flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-          <p className="text-gray-600">Loading orders...</p>
+          <Loader2 className="w-8 h-8 animate-spin text-[#e53935]" />
+          <p className="text-[#1E1E1E]">Loading orders...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="p-4 lg:p-6 bg-slate-50 min-h-screen w-full max-w-full overflow-x-hidden">
+    <div className="p-4 lg:p-6 bg-white min-h-screen w-full max-w-full overflow-x-hidden">
       <OrdersTopbar 
         title={config.title} 
         count={count} 

@@ -12,28 +12,54 @@ import {
 
 const getStatusColor = (orderStatus) => {
   const colors = {
-    "Delivered": "bg-emerald-100 text-emerald-700",
-    "Pending": "bg-blue-100 text-blue-700",
-    "Scheduled": "bg-blue-100 text-blue-700",
-    "Accepted": "bg-green-100 text-green-700",
-    "Processing": "bg-orange-100 text-orange-700",
-    "Food On The Way": "bg-yellow-100 text-yellow-700",
-    "Canceled": "bg-rose-100 text-rose-700",
-    "Cancelled by Restaurant": "bg-red-100 text-red-700",
-    "Cancelled by User": "bg-orange-100 text-orange-700",
-    "Payment Failed": "bg-red-100 text-red-700",
-    "Refunded": "bg-sky-100 text-sky-700",
-    "Dine In": "bg-indigo-100 text-indigo-700",
-    "Offline Payments": "bg-slate-100 text-slate-700",
+    "Delivered": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Pending": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Scheduled": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Accepted": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Processing": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Food On The Way": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Canceled": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Cancelled by Restaurant": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Cancelled by User": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Payment Failed": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Refunded": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Dine In": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
+    "Offline Payments": "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]",
   }
-  return colors[orderStatus] || "bg-slate-100 text-slate-700"
+  return colors[orderStatus] || "bg-[#FFF8E1] text-[#1E1E1E] border border-[#FFC400]"
 }
 
 const getPaymentStatusColor = (paymentStatus) => {
-  if (paymentStatus === "Paid" || paymentStatus === "Collected") return "text-emerald-600"
+  if (paymentStatus === "Paid" || paymentStatus === "Collected") return "text-[#1E1E1E]"
   if (paymentStatus === "Not Collected") return "text-amber-600"
   if (paymentStatus === "Unpaid" || paymentStatus === "Failed") return "text-red-600"
-  return "text-slate-600"
+  return "text-[#1E1E1E]"
+}
+
+const getPaymentMethodLabel = (order) => {
+  const rawMethod = (
+    order?.paymentType ||
+    order?.paymentMethod ||
+    order?.payment?.method ||
+    order?.payment?.mode ||
+    ""
+  ).toString().trim()
+
+  if (!rawMethod) return "N/A"
+
+  const normalized = rawMethod.toLowerCase().replace(/[_-]/g, " ").trim()
+
+  if (["cash", "cod", "cash on delivery"].includes(normalized)) {
+    return "Cash on Delivery"
+  }
+  if (normalized === "upi") return "UPI"
+  if (normalized === "card") return "Card"
+  if (normalized === "netbanking") return "Net Banking"
+  if (normalized === "wallet") return "Wallet"
+  if (normalized === "online") return "Online Payment"
+
+  // Keep backend-provided labels (e.g. "Razorpay", "Cash on Delivery")
+  return rawMethod
 }
 
 import {
@@ -53,10 +79,27 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
   const [showDigitalBillPopup, setShowDigitalBillPopup] = useState(false)
   const [isLoadingBill, setIsLoadingBill] = useState(false)
 
+  const isPartnerOnline = (partner) => {
+    if (typeof partner?.availability?.isOnline === "boolean") {
+      return partner.availability.isOnline
+    }
+    if (typeof partner?.fullData?.availability?.isOnline === "boolean") {
+      return partner.fullData.availability.isOnline
+    }
+    if (typeof partner?.status === "string") {
+      return partner.status.toLowerCase() === "online"
+    }
+    return false
+  }
+
   useEffect(() => {
     if (showAssignDialog) {
       setIsLoadingPartners(true)
-      adminAPI.getDeliveryPartners({ status: 'approved', isActive: true })
+      adminAPI.getDeliveryPartners({
+        status: 'approved',
+        isActive: true,
+        includeAvailability: true
+      })
         .then(res => {
           // Handle various response structures
           const partners = res.data?.data?.deliveryPartners || res.data?.deliveryPartners || []
@@ -127,13 +170,56 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
     return null
   }
 
+  const isValidDisplayAddress = (value) => {
+    if (typeof value !== "string") return false
+    const normalized = value.trim().toLowerCase()
+    return Boolean(normalized && normalized !== "address" && normalized !== "n/a")
+  }
+
+  const buildAddressFromLocation = (location) => {
+    if (!location || typeof location !== "object") return null
+
+    const parts = [
+      location.addressLine1,
+      location.addressLine2,
+      location.street,
+      location.area,
+      location.city,
+      location.state,
+      location.zipCode || location.pincode || location.postalCode,
+    ].filter(Boolean)
+
+    return parts.length ? parts.join(", ") : null
+  }
+
+  const getRestaurantInvoiceAddress = (orderData) => {
+    const restaurant = orderData?.restaurantId || orderData?.restaurant || {}
+
+    const candidates = [
+      orderData?.restaurantAddress,
+      orderData?.restaurantLocation?.formattedAddress,
+      orderData?.restaurantLocation?.address,
+      buildAddressFromLocation(orderData?.restaurantLocation),
+      restaurant?.address,
+      restaurant?.location?.formattedAddress,
+      restaurant?.location?.address,
+      buildAddressFromLocation(restaurant?.location),
+      orderData?.pickupAddress?.formattedAddress,
+      orderData?.pickupAddress?.address,
+      buildAddressFromLocation(orderData?.pickupAddress),
+    ]
+
+    const resolved = candidates.find(isValidDisplayAddress)
+    return resolved || "Address"
+  }
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl max-h-[90vh] bg-white p-0 overflow-y-auto">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-200 sticky top-0 bg-white z-10">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-[#F5F5F5] sticky top-0 bg-white z-10">
             <DialogTitle className="flex items-center gap-2">
-              <Eye className="w-5 h-5 text-orange-600" />
+              <Eye className="w-5 h-5 text-[#e53935]" />
               Order Details
             </DialogTitle>
             <DialogDescription>
@@ -145,35 +231,35 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                  <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
                     <Package className="w-4 h-4" />
                     Order ID
                   </p>
-                  <p className="text-sm font-medium text-slate-900">{order.orderId || order.id || order.subscriptionId}</p>
+                  <p className="text-sm font-medium text-[#1E1E1E]">{order.orderId || order.id || order.subscriptionId}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                  <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
                     Order Date
                   </p>
-                  <p className="text-sm font-medium text-slate-900">{order.date}{order.time ? `, ${order.time}` : ""}</p>
+                  <p className="text-sm font-medium text-[#1E1E1E]">{order.date}{order.time ? `, ${order.time}` : ""}</p>
                 </div>
                 {order.estimatedDeliveryTime && (
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
                       <Clock className="w-4 h-4" />
                       Estimated Delivery Time
                     </p>
-                    <p className="text-sm font-medium text-slate-900">{order.estimatedDeliveryTime} minutes</p>
+                    <p className="text-sm font-medium text-[#1E1E1E]">{order.estimatedDeliveryTime} minutes</p>
                   </div>
                 )}
                 {order.deliveredAt && (
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
                       <Clock className="w-4 h-4" />
                       Delivered At
                     </p>
-                    <p className="text-sm font-medium text-slate-900">
+                    <p className="text-sm font-medium text-[#1E1E1E]">
                       {new Date(order.deliveredAt).toLocaleString('en-GB', {
                         day: '2-digit',
                         month: 'short',
@@ -189,7 +275,7 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
               <div className="space-y-4">
                 {order.orderStatus && (
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Order Status</p>
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider">Order Status</p>
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.orderStatus)}`}>
                       {order.orderStatus}
                     </span>
@@ -203,7 +289,7 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                       </p>
                     )}
                     {order.cancelledAt && (
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-[#1E1E1E] mt-1">
                         Cancelled: {new Date(order.cancelledAt).toLocaleString('en-GB', {
                           day: '2-digit',
                           month: 'short',
@@ -217,7 +303,7 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                 )}
                 {(order.paymentStatus || order.paymentCollectionStatus != null) && (
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
                       <CreditCard className="w-4 h-4" />
                       Payment Status
                     </p>
@@ -234,43 +320,43 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                 )}
                 {order.deliveryType && (
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
                       <Truck className="w-4 h-4" />
                       Delivery Type
                     </p>
-                    <p className="text-sm font-medium text-slate-900">{order.deliveryType}</p>
+                    <p className="text-sm font-medium text-[#1E1E1E]">{order.deliveryType}</p>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Customer Information */}
-            <div className="border-t border-slate-200 pt-4">
-              <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+            <div className="border-t border-[#F5F5F5] pt-4">
+              <h3 className="text-sm font-semibold text-[#1E1E1E] mb-4 flex items-center gap-2">
                 <User className="w-4 h-4" />
                 Customer Information
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer Name</p>
-                  <p className="text-sm font-medium text-slate-900">{order.customerName || "N/A"}</p>
+                  <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider">Customer Name</p>
+                  <p className="text-sm font-medium text-[#1E1E1E]">{order.customerName || "N/A"}</p>
                 </div>
                 {order.customerPhone && (
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
                       <Phone className="w-4 h-4" />
                       Phone
                     </p>
-                    <p className="text-sm font-medium text-slate-900">{order.customerPhone}</p>
+                    <p className="text-sm font-medium text-[#1E1E1E]">{order.customerPhone}</p>
                   </div>
                 )}
                 {order.customerEmail && (
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
                       <Mail className="w-4 h-4" />
                       Email
                     </p>
-                    <p className="text-sm font-medium text-slate-900">{order.customerEmail}</p>
+                    <p className="text-sm font-medium text-[#1E1E1E]">{order.customerEmail}</p>
                   </div>
                 )}
               </div>
@@ -278,31 +364,31 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
 
             {/* Restaurant Information */}
             {order.restaurant && (
-              <div className="border-t border-slate-200 pt-4">
-                <h3 className="text-sm font-semibold text-slate-700 mb-4">Restaurant Information</h3>
+              <div className="border-t border-[#F5F5F5] pt-4">
+                <h3 className="text-sm font-semibold text-[#1E1E1E] mb-4">Restaurant Information</h3>
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Restaurant Name</p>
-                  <p className="text-sm font-medium text-slate-900">{order.restaurant}</p>
+                  <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider">Restaurant Name</p>
+                  <p className="text-sm font-medium text-[#1E1E1E]">{order.restaurant}</p>
                 </div>
               </div>
             )}
 
             {/* Order Items */}
             {order.items && Array.isArray(order.items) && order.items.length > 0 && (
-              <div className="border-t border-slate-200 pt-4">
-                <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+              <div className="border-t border-[#F5F5F5] pt-4">
+                <h3 className="text-sm font-semibold text-[#1E1E1E] mb-4 flex items-center gap-2">
                   <Package className="w-4 h-4" />
                   Order Items ({order.items.length})
                 </h3>
                 <div className="space-y-3">
                   {order.items.map((item, index) => (
-                    <div key={index} className="flex items-start justify-between p-3 bg-slate-50 rounded-lg">
+                    <div key={index} className="flex items-start justify-between p-3 bg-[#F5F5F5] rounded-lg">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-700 bg-white px-2 py-1 rounded">
+                          <span className="text-xs font-bold text-[#1E1E1E] bg-white px-2 py-1 rounded">
                             {item.quantity || 1}x
                           </span>
-                          <p className="text-sm font-medium text-slate-900">{item.name || "Unknown Item"}</p>
+                          <p className="text-sm font-medium text-[#1E1E1E]">{item.name || "Unknown Item"}</p>
                           {item.isVeg !== undefined && (
                             <span className={`text-xs px-1.5 py-0.5 rounded ${item.isVeg ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                               {item.isVeg ? 'Veg' : 'Non-Veg'}
@@ -310,10 +396,10 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                           )}
                         </div>
                         {item.description && (
-                          <p className="text-xs text-slate-500 mt-1 ml-8">{item.description}</p>
+                          <p className="text-xs text-[#1E1E1E] mt-1 ml-8">{item.description}</p>
                         )}
                       </div>
-                      <p className="text-sm font-semibold text-slate-900">
+                      <p className="text-sm font-semibold text-[#1E1E1E]">
                         ₹{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
                       </p>
                     </div>
@@ -324,13 +410,13 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
 
             {/* Bill Image (Captured by Delivery Boy) */}
             {(order.billImageUrl || order.billImage || order.deliveryState?.billImageUrl) && (
-              <div className="border-t border-slate-200 pt-4">
-                <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-orange-600" />
+              <div className="border-t border-[#F5F5F5] pt-4">
+                <h3 className="text-sm font-semibold text-[#1E1E1E] mb-4 flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-[#e53935]" />
                   Bill Image (Captured by Delivery Boy)
                 </h3>
                 <div className="space-y-3">
-                  <div className="relative w-full max-w-2xl border-2 border-slate-300 rounded-xl overflow-hidden bg-white shadow-sm">
+                  <div className="relative w-full max-w-2xl border-2 border-[#F5F5F5] rounded-xl overflow-hidden bg-white shadow-sm">
                     <img
                       src={order.billImageUrl || order.billImage || order.deliveryState?.billImageUrl}
                       alt="Order Bill"
@@ -346,8 +432,8 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                         console.log('✅ Bill image loaded successfully')
                       }}
                     />
-                    <div className="error-message hidden p-6 text-center text-slate-500 text-sm bg-slate-50">
-                      <Receipt className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+                    <div className="error-message hidden p-6 text-center text-[#1E1E1E] text-sm bg-[#F5F5F5]">
+                      <Receipt className="w-8 h-8 mx-auto mb-2 text-[#1E1E1E]" />
                       Failed to load bill image
                     </div>
                   </div>
@@ -356,7 +442,7 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                       href={order.billImageUrl || order.billImage || order.deliveryState?.billImageUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#e53935] hover:bg-[#d32f2f] rounded-lg transition-colors shadow-sm"
                     >
                       <Eye className="w-4 h-4" />
                       View Full Size
@@ -364,7 +450,7 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                     <a
                       href={order.billImageUrl || order.billImage || order.deliveryState?.billImageUrl}
                       download
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#1E1E1E] bg-[#F5F5F5] hover:bg-[#ececec] rounded-lg transition-colors"
                     >
                       <Package className="w-4 h-4" />
                       Download
@@ -375,19 +461,19 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
             )}
 
             {/* Digital Bill - Always show */}
-            <div className="border-t border-slate-200 pt-4">
-              <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-orange-600" />
+            <div className="border-t border-[#F5F5F5] pt-4">
+              <h3 className="text-sm font-semibold text-[#1E1E1E] mb-2 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#e53935]" />
                 Digital Invoice
                 {order.digitalBillUploaded && (
-                  <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                  <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-[#FFF8E1] text-[#1E1E1E] text-xs font-medium rounded-full border border-[#FFC400]">
                     <CheckCircle className="w-3 h-3" />
                     Uploaded by Delivery Boy
                   </span>
                 )}
               </h3>
               {order.digitalBillUploadedAt && (
-                <p className="text-xs text-slate-500 mb-3">
+                <p className="text-xs text-[#1E1E1E] mb-3">
                   Uploaded on {new Date(order.digitalBillUploadedAt).toLocaleString('en-IN', {
                     day: '2-digit',
                     month: 'short',
@@ -402,7 +488,7 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                   onClick={() => {
                     setShowDigitalBillPopup(true);
                   }}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors shadow-sm"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#e53935] hover:bg-[#d32f2f] rounded-lg transition-colors shadow-sm"
                 >
                   <Eye className="w-4 h-4" />
                   View Bill
@@ -411,7 +497,50 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                   onClick={async () => {
                     setIsLoadingBill(true);
                     try {
-                      // Generate HTML bill
+                      const restaurantName = order.restaurant || order.restaurantName || order.restaurantId?.name || 'Restaurant';
+                      const restaurantAddress = getRestaurantInvoiceAddress(order);
+                      const customerName = order.customerName || order.userId?.name || order.userName || 'Customer';
+                      const customerAddress = formatAddress(order.address);
+
+                      const subtotal = Number(order.totalItemAmount ?? order.pricing?.subtotal ?? order.pricing?.itemTotal ?? 0);
+                      const taxFees = Number(order.vatTax ?? order.pricing?.tax ?? 0);
+                      const deliveryFee = Number(order.deliveryCharge ?? order.pricing?.deliveryFee ?? 0);
+                      const platformFee = Number(order.platformFee ?? order.pricing?.platformFee ?? 0);
+                      const totalDiscount = Number(order.itemDiscount ?? 0) + Number(order.couponDiscount ?? 0) + Number(order.pricing?.discount ?? 0);
+                      const totalAmount = Number(order.totalAmount ?? order.total ?? order.pricing?.total ?? 0);
+                      const generatedAt = order?.createdAt ? new Date(order.createdAt).toLocaleString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      }) : 'N/A';
+
+                      const safeItems = Array.isArray(order.items) ? order.items : [];
+                      const itemRows = safeItems.length > 0
+                        ? safeItems.map((item) => {
+                          const quantity = Number(item.quantity || 1);
+                          const unitPrice = Number(item.price ?? item.unitPrice ?? 0);
+                          const lineTotal = unitPrice * quantity;
+                          const itemName = item.name || item.menuItemId?.name || 'Item';
+                          const addons = Array.isArray(item.selectedAddons) && item.selectedAddons.length > 0
+                            ? `<div class="addons">Addons: ${item.selectedAddons.map(a => a.name).join(', ')}</div>`
+                            : '';
+
+                          return `
+              <tr>
+                <td>
+                  <div class="font-semibold">${itemName}</div>
+                  ${addons}
+                </td>
+                <td class="text-right">${quantity}</td>
+                <td class="text-right">&#8377;${unitPrice.toFixed(2)}</td>
+                <td class="text-right font-semibold">&#8377;${lineTotal.toFixed(2)}</td>
+              </tr>
+            `;
+                        }).join('')
+                        : '<tr><td colspan="4">No items</td></tr>';
+
                       const billHtml = `
 <!DOCTYPE html>
 <html lang="en">
@@ -496,30 +625,27 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
 <body>
   <div class="container">
     <div class="header">
-      <h1>📄 Digital Invoice</h1>
+      <h1>Digital Invoice</h1>
       <p>Order #${order.orderId || 'N/A'}</p>
     </div>
-    
+
     <div class="content">
-      <!-- Restaurant Info -->
       <div class="section">
         <div class="section-title">From</div>
         <div class="info-box">
-          <h3>${order.restaurantId?.name || order.restaurantName || 'Restaurant'}</h3>
-          <p>${order.restaurantId?.address || order.restaurantId?.location?.address || 'Address'}</p>
+          <h3>${restaurantName}</h3>
+          <p>${restaurantAddress}</p>
         </div>
       </div>
 
-      <!-- Customer Info -->
       <div class="section">
         <div class="section-title">Bill To</div>
         <div class="info-box">
-          <h3>${order.userId?.name || order.userName || 'Customer'}</h3>
-          <p>${order.deliveryAddress?.street || order.deliveryLocation?.address || 'Delivery Address'}</p>
+          <h3>${customerName}</h3>
+          <p>${customerAddress}</p>
         </div>
       </div>
 
-      <!-- Order Items -->
       <div class="section">
         <div class="section-title">Order Items</div>
         <table>
@@ -532,70 +658,55 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
             </tr>
           </thead>
           <tbody>
-            ${order.items?.map(item => `
-              <tr>
-                <td>
-                  <div class="font-semibold">${item.name || item.menuItemId?.name || 'Item'}</div>
-                  ${item.selectedAddons && item.selectedAddons.length > 0 ? `
-                    <div class="addons">Addons: ${item.selectedAddons.map(a => a.name).join(', ')}</div>
-                  ` : ''}
-                </td>
-                <td class="text-right">${item.quantity || 1}</td>
-                <td class="text-right">₹${(item.price || 0).toFixed(2)}</td>
-                <td class="text-right font-semibold">₹${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</td>
-              </tr>
-            `).join('') || '<tr><td colspan="4">No items</td></tr>'}
+            ${itemRows}
           </tbody>
         </table>
       </div>
 
-      <!-- Pricing Summary -->
       <div class="section">
         <div class="pricing-row">
           <span>Subtotal</span>
-          <span class="font-semibold">₹${(order.pricing?.subtotal || order.pricing?.itemTotal || 0).toFixed(2)}</span>
+          <span class="font-semibold">&#8377;${subtotal.toFixed(2)}</span>
         </div>
-        ${(order.pricing?.tax || 0) > 0 ? `
+        ${taxFees > 0 ? `
           <div class="pricing-row">
             <span>Tax & Fees</span>
-            <span class="font-semibold">₹${order.pricing.tax.toFixed(2)}</span>
+            <span class="font-semibold">&#8377;${taxFees.toFixed(2)}</span>
           </div>
         ` : ''}
-        ${(order.pricing?.deliveryFee || 0) > 0 ? `
+        ${deliveryFee > 0 ? `
           <div class="pricing-row">
             <span>Delivery Fee</span>
-            <span class="font-semibold">₹${order.pricing.deliveryFee.toFixed(2)}</span>
+            <span class="font-semibold">&#8377;${deliveryFee.toFixed(2)}</span>
           </div>
         ` : ''}
-        ${(order.pricing?.discount || 0) > 0 ? `
+        ${platformFee > 0 ? `
+          <div class="pricing-row">
+            <span>Platform Fee</span>
+            <span class="font-semibold">&#8377;${platformFee.toFixed(2)}</span>
+          </div>
+        ` : ''}
+        ${totalDiscount > 0 ? `
           <div class="pricing-row" style="color: #059669;">
             <span>Discount</span>
-            <span class="font-semibold">-₹${order.pricing.discount.toFixed(2)}</span>
+            <span class="font-semibold">-&#8377;${totalDiscount.toFixed(2)}</span>
           </div>
         ` : ''}
         <div class="pricing-row total">
           <span>Total Amount</span>
-          <span>₹${(order.pricing?.total || 0).toFixed(2)}</span>
+          <span>&#8377;${totalAmount.toFixed(2)}</span>
         </div>
       </div>
 
-      <!-- Payment Info -->
       <div class="section">
         <div class="pricing-row">
           <span>Payment Method</span>
-          <span class="font-semibold">${order.payment?.method === 'cash' ? 'Cash on Delivery' : 'Online Payment'}</span>
+          <span class="font-semibold">${getPaymentMethodLabel(order)}</span>
         </div>
       </div>
 
-      <!-- Footer -->
       <div class="footer">
-        <p>Bill generated on ${new Date(order.createdAt).toLocaleString('en-IN', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}</p>
+        <p>Bill generated on ${generatedAt}</p>
         <p style="margin-top: 8px;">Thank you for your order!</p>
       </div>
     </div>
@@ -624,7 +735,7 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                     }
                   }}
                   disabled={isLoadingBill}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#1E1E1E] bg-[#F5F5F5] hover:bg-[#ececec] rounded-lg transition-colors disabled:opacity-50"
                 >
                   <Package className="w-4 h-4" />
                   {isLoadingBill ? 'Downloading...' : 'Download Bill'}
@@ -634,20 +745,20 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
 
             {/* Delivery Address */}
             {order.address && (
-              <div className="border-t border-slate-200 pt-4">
-                <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+              <div className="border-t border-[#F5F5F5] pt-4">
+                <h3 className="text-sm font-semibold text-[#1E1E1E] mb-4 flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
                   Delivery Address
                 </h3>
-                <div className="space-y-2 p-4 bg-slate-50 rounded-lg">
-                  <p className="text-sm text-slate-900">{formatAddress(order.address)}</p>
+                <div className="space-y-2 p-4 bg-[#F5F5F5] rounded-lg">
+                  <p className="text-sm text-[#1E1E1E]">{formatAddress(order.address)}</p>
                   {getCoordinates(order.address) && (
-                    <p className="text-xs text-slate-500 mt-2">
+                    <p className="text-xs text-[#1E1E1E] mt-2">
                       <span className="font-medium">Coordinates:</span> {getCoordinates(order.address)}
                     </p>
                   )}
                   {order.address.label && (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-[#1E1E1E]">
                       <span className="font-medium">Label:</span> {order.address.label}
                     </p>
                   )}
@@ -656,8 +767,8 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
             )}
 
             {/* Delivery Partner Information */}
-            <div className="border-t border-slate-200 pt-4">
-              <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+            <div className="border-t border-[#F5F5F5] pt-4">
+              <h3 className="text-sm font-semibold text-[#1E1E1E] mb-4 flex items-center gap-2">
                 <Truck className="w-4 h-4" />
                 Delivery Partner
               </h3>
@@ -665,25 +776,25 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {order.deliveryPartnerName && (
                     <div className="space-y-1">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</p>
-                      <p className="text-sm font-medium text-slate-900">{order.deliveryPartnerName}</p>
+                      <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider">Name</p>
+                      <p className="text-sm font-medium text-[#1E1E1E]">{order.deliveryPartnerName}</p>
                     </div>
                   )}
                   {order.deliveryPartnerPhone && (
                     <div className="space-y-1">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Phone</p>
-                      <p className="text-sm font-medium text-slate-900">{order.deliveryPartnerPhone}</p>
+                      <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider">Phone</p>
+                      <p className="text-sm font-medium text-[#1E1E1E]">{order.deliveryPartnerPhone}</p>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="bg-slate-50 p-4 rounded-lg flex items-center justify-between">
-                  <p className="text-sm text-slate-500 italic">No delivery partner assigned</p>
+                <div className="bg-[#F5F5F5] p-4 rounded-lg flex items-center justify-between">
+                  <p className="text-sm text-[#1E1E1E] italic">No delivery partner assigned</p>
                   {/* Allow assignment if status is not final/cancelled */}
                   {!['delivered', 'cancelled', 'scheduled', 'dine_in', 'refunded'].includes((order.status || '').toLowerCase()) && (
                     <button
                       onClick={() => setShowAssignDialog(true)}
-                      className="px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded hover:bg-orange-700 disabled:opacity-50"
+                      className="px-3 py-1.5 bg-[#e53935] text-white text-xs font-medium rounded hover:bg-[#d32f2f] disabled:opacity-50"
                     >
                       Assign Delivery Partner
                     </button>
@@ -693,53 +804,53 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
             </div>
 
             {/* Pricing Breakdown */}
-            <div className="border-t border-slate-200 pt-4">
-              <h3 className="text-sm font-semibold text-slate-700 mb-4">Pricing Breakdown</h3>
+            <div className="border-t border-[#F5F5F5] pt-4">
+              <h3 className="text-sm font-semibold text-[#1E1E1E] mb-4">Pricing Breakdown</h3>
               <div className="space-y-2">
                 {order.totalItemAmount !== undefined && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Subtotal</span>
-                    <span className="font-medium text-slate-900">₹{order.totalItemAmount.toFixed(2)}</span>
+                    <span className="text-[#1E1E1E]">Subtotal</span>
+                    <span className="font-medium text-[#1E1E1E]">₹{order.totalItemAmount.toFixed(2)}</span>
                   </div>
                 )}
                 {order.itemDiscount !== undefined && order.itemDiscount > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Discount</span>
-                    <span className="font-medium text-emerald-600">-₹{order.itemDiscount.toFixed(2)}</span>
+                    <span className="text-[#1E1E1E]">Discount</span>
+                    <span className="font-medium text-[#1E1E1E]">-₹{order.itemDiscount.toFixed(2)}</span>
                   </div>
                 )}
                 {order.couponDiscount !== undefined && order.couponDiscount > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Coupon Discount</span>
-                    <span className="font-medium text-emerald-600">-₹{order.couponDiscount.toFixed(2)}</span>
+                    <span className="text-[#1E1E1E]">Coupon Discount</span>
+                    <span className="font-medium text-[#1E1E1E]">-₹{order.couponDiscount.toFixed(2)}</span>
                   </div>
                 )}
                 {order.deliveryCharge !== undefined && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Delivery Charge</span>
-                    <span className="font-medium text-slate-900">
-                      {order.deliveryCharge > 0 ? `₹${order.deliveryCharge.toFixed(2)}` : <span className="text-emerald-600">Free delivery</span>}
+                    <span className="text-[#1E1E1E]">Delivery Charge</span>
+                    <span className="font-medium text-[#1E1E1E]">
+                      {order.deliveryCharge > 0 ? `₹${order.deliveryCharge.toFixed(2)}` : <span className="text-[#1E1E1E]">Free delivery</span>}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Platform Fee</span>
-                  <span className="font-medium text-slate-900">
+                  <span className="text-[#1E1E1E]">Platform Fee</span>
+                  <span className="font-medium text-[#1E1E1E]">
                     {order.platformFee !== undefined && order.platformFee > 0
                       ? `₹${order.platformFee.toFixed(2)}`
-                      : <span className="text-slate-400">₹0.00</span>}
+                      : <span className="text-[#1E1E1E]">₹0.00</span>}
                   </span>
                 </div>
                 {order.vatTax !== undefined && order.vatTax > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Tax (GST)</span>
-                    <span className="font-medium text-slate-900">₹{order.vatTax.toFixed(2)}</span>
+                    <span className="text-[#1E1E1E]">Tax (GST)</span>
+                    <span className="font-medium text-[#1E1E1E]">₹{order.vatTax.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="pt-2 border-t border-slate-200">
+                <div className="pt-2 border-t border-[#F5F5F5]">
                   <div className="flex justify-between items-center">
-                    <span className="text-base font-semibold text-slate-700">Total Amount</span>
-                    <span className="text-xl font-bold text-emerald-600">
+                    <span className="text-base font-semibold text-[#1E1E1E]">Total Amount</span>
+                    <span className="text-xl font-bold text-[#1E1E1E]">
                       ₹{(order.totalAmount || order.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -754,15 +865,15 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
         <DialogContent className="max-w-md bg-white p-0">
           <DialogHeader className="px-6 pt-6 pb-2">
-            <DialogTitle className="text-lg font-semibold text-slate-900">Assign Delivery Partner</DialogTitle>
-            <DialogDescription className="text-sm text-slate-500 mt-1">
-              Assign a delivery partner for Order <span className="font-mono font-medium text-slate-700">#{order.orderId}</span>
+            <DialogTitle className="text-lg font-semibold text-[#1E1E1E]">Assign Delivery Partner</DialogTitle>
+            <DialogDescription className="text-sm text-[#1E1E1E] mt-1">
+              Assign a delivery partner for Order <span className="font-mono font-medium text-[#1E1E1E]">#{order.orderId}</span>
             </DialogDescription>
           </DialogHeader>
 
           <div className="px-6 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Select Partner</label>
+              <label className="text-sm font-medium text-[#1E1E1E]">Select Partner</label>
               <Select
                 value={selectedPartner}
                 onValueChange={setSelectedPartner}
@@ -773,39 +884,42 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                 </SelectTrigger>
                 <SelectContent>
                   {deliveryPartners.length === 0 ? (
-                    <div className="p-2 text-sm text-slate-500 text-center">No active partners found</div>
+                    <div className="p-2 text-sm text-[#1E1E1E] text-center">No active partners found</div>
                   ) : (
-                    deliveryPartners.map((p) => (
-                      <SelectItem key={p._id} value={p._id}>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${p.availability?.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                          <span className="font-medium">{p.name}</span>
-                          {p.phone && <span className="text-slate-500 text-xs">({p.phone})</span>}
-                          {p.availability?.isOnline ? (
-                            <span className="text-emerald-600 text-xs bg-emerald-50 px-1.5 py-0.5 rounded">Online</span>
-                          ) : (
-                            <span className="text-slate-500 text-xs bg-slate-100 px-1.5 py-0.5 rounded">Offline</span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))
+                    deliveryPartners.map((p) => {
+                      const online = isPartnerOnline(p)
+                      return (
+                        <SelectItem key={p._id} value={p._id}>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${online ? 'bg-[#e53935]' : 'bg-[#F5F5F5]'}`} />
+                            <span className="font-medium">{p.name}</span>
+                            {p.phone && <span className="text-[#1E1E1E] text-xs">({p.phone})</span>}
+                            {online ? (
+                              <span className="text-[#1E1E1E] text-xs bg-[#FFF8E1] px-1.5 py-0.5 rounded">Online</span>
+                            ) : (
+                              <span className="text-[#1E1E1E] text-xs bg-[#F5F5F5] px-1.5 py-0.5 rounded">Offline</span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      )
+                    })
                   )}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <div className="px-6 pb-6 pt-2 flex justify-end gap-3 bg-slate-50/50 border-t border-slate-100 mt-2">
+          <div className="px-6 pb-6 pt-2 flex justify-end gap-3 bg-[#F5F5F5]/50 border-t border-[#F5F5F5] mt-2">
             <button
               onClick={() => setShowAssignDialog(false)}
-              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[#1E1E1E] bg-white border border-[#F5F5F5] rounded-lg hover:bg-[#F5F5F5] transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleAssign}
               disabled={!selectedPartner || isAssigning}
-              className="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+              className="px-4 py-2 text-sm font-medium text-white bg-[#e53935] rounded-lg hover:bg-[#d32f2f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
             >
               {isAssigning ? 'Assigning...' : 'Assign Partner'}
             </button>
@@ -818,14 +932,14 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
           <div className="bg-white rounded-lg shadow-2xl overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-6 py-5 relative">
+            <div className="bg-gradient-to-r from-[#e53935] to-[#d32f2f] px-6 py-5 relative">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
                   <Receipt className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <h2 className="text-white text-xl font-bold">Digital Invoice</h2>
-                  <p className="text-orange-100 text-sm">Invoice #{order?.orderId || 'N/A'}</p>
+                  <p className="text-[#FFF8E1] text-sm">Invoice #{order?.orderId || 'N/A'}</p>
                 </div>
               </div>
             </div>
@@ -833,43 +947,43 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
             {/* Bill Content */}
             <div className="p-6 space-y-5">
               {/* Restaurant Info */}
-              <div className="border-b border-gray-200 pb-4">
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">From</p>
-                <h3 className="text-lg font-bold text-gray-900">
+              <div className="border-b border-[#F5F5F5] pb-4">
+                <p className="text-xs text-[#1E1E1E] uppercase tracking-wide mb-2">From</p>
+                <h3 className="text-lg font-bold text-[#1E1E1E]">
                   {order.restaurant || order.restaurantName || order.restaurantId?.name || 'Bun Burst Cafe'}
                 </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  {order.restaurantAddress || order.restaurantId?.address || order.restaurantId?.location?.address || 'Address'}
+                <p className="text-sm text-[#1E1E1E] mt-1">
+                  {getRestaurantInvoiceAddress(order)}
                 </p>
               </div>
 
               {/* Customer Info */}
-              <div className="border-b border-gray-200 pb-4">
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Bill To</p>
-                <h3 className="text-base font-semibold text-gray-900">
+              <div className="border-b border-[#F5F5F5] pb-4">
+                <p className="text-xs text-[#1E1E1E] uppercase tracking-wide mb-2">Bill To</p>
+                <h3 className="text-base font-semibold text-[#1E1E1E]">
                   {order.customerName || order.userId?.name || 'Customer'}
                 </h3>
-                <div className="text-sm text-gray-600 mt-1">
+                <div className="text-sm text-[#1E1E1E] mt-1">
                   {formatAddress(order.address)}
                 </div>
               </div>
 
               {/* Order Items */}
-              <div className="border-b border-gray-200 pb-4">
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Items</p>
+              <div className="border-b border-[#F5F5F5] pb-4">
+                <p className="text-xs text-[#1E1E1E] uppercase tracking-wide mb-3">Items</p>
                 <div className="space-y-3">
                   {order.items?.map((item, index) => (
                     <div key={index} className="flex justify-between items-start gap-3">
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{item.name || item.menuItemId?.name}</p>
-                        <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                        <p className="text-sm font-medium text-[#1E1E1E]">{item.name || item.menuItemId?.name}</p>
+                        <p className="text-xs text-[#1E1E1E]">Qty: {item.quantity}</p>
                         {item.selectedAddons && item.selectedAddons.length > 0 && (
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-[#1E1E1E] mt-1">
                             Addons: {item.selectedAddons.map(a => a.name).join(', ')}
                           </p>
                         )}
                       </div>
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="text-sm font-semibold text-[#1E1E1E]">
                         ₹{((item.price || item.unitPrice || 0) * (item.quantity || 1)).toFixed(2)}
                       </p>
                     </div>
@@ -880,39 +994,39 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
               {/* Pricing Details */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <p className="text-sm text-gray-600">Subtotal</p>
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-sm text-[#1E1E1E]">Subtotal</p>
+                  <p className="text-sm font-medium text-[#1E1E1E]">
                     ₹{(order.totalItemAmount || order.pricing?.subtotal || 0).toFixed(2)}
                   </p>
                 </div>
                 {(order.vatTax || order.pricing?.tax || 0) > 0 && (
                   <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Tax & Fees (GST)</p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm text-[#1E1E1E]">Tax & Fees (GST)</p>
+                    <p className="text-sm font-medium text-[#1E1E1E]">
                       ₹{(order.vatTax || order.pricing?.tax || 0).toFixed(2)}
                     </p>
                   </div>
                 )}
                 {(order.deliveryCharge || order.pricing?.deliveryFee || 0) > 0 && (
                   <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Delivery Fee</p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm text-[#1E1E1E]">Delivery Fee</p>
+                    <p className="text-sm font-medium text-[#1E1E1E]">
                       ₹{(order.deliveryCharge || order.pricing?.deliveryFee || 0).toFixed(2)}
                     </p>
                   </div>
                 )}
                 {(order.platformFee || order.pricing?.platformFee || 0) > 0 && (
                   <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Platform Fee</p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm text-[#1E1E1E]">Platform Fee</p>
+                    <p className="text-sm font-medium text-[#1E1E1E]">
                       ₹{(order.platformFee || order.pricing?.platformFee || 0).toFixed(2)}
                     </p>
                   </div>
                 )}
                 {((order.itemDiscount || 0) + (order.couponDiscount || 0) + (order.pricing?.discount || 0)) > 0 && (
                   <div className="flex justify-between items-center">
-                    <p className="text-sm text-green-600">Total Discount</p>
-                    <p className="text-sm font-medium text-green-600">
+                    <p className="text-sm text-[#1E1E1E]">Total Discount</p>
+                    <p className="text-sm font-medium text-[#1E1E1E]">
                       -₹{((order.itemDiscount || 0) + (order.couponDiscount || 0) + (order.pricing?.discount || 0)).toFixed(2)}
                     </p>
                   </div>
@@ -920,26 +1034,26 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
               </div>
 
               {/* Total */}
-              <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+              <div className="bg-gradient-to-r from-[#FFF8E1] to-[#F5F5F5] rounded-xl p-4 border border-[#FFC400]">
                 <div className="flex justify-between items-center">
-                  <p className="text-base font-bold text-gray-900">Total Amount</p>
-                  <p className="text-xl font-bold text-orange-700">
+                  <p className="text-base font-bold text-[#1E1E1E]">Total Amount</p>
+                  <p className="text-xl font-bold text-[#1E1E1E]">
                     ₹{(order.totalAmount || order.total || order.pricing?.total || 0).toFixed(2)}
                   </p>
                 </div>
               </div>
 
               {/* Payment Method */}
-              <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                <p className="text-sm text-gray-600">Payment Method</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {order?.payment?.method === 'cash' ? 'Cash on Delivery' : 'Online Payment'}
+              <div className="flex items-center justify-between pt-3 border-t border-[#F5F5F5]">
+                <p className="text-sm text-[#1E1E1E]">Payment Method</p>
+                <p className="text-sm font-medium text-[#1E1E1E]">
+                  {getPaymentMethodLabel(order)}
                 </p>
               </div>
 
               {/* Footer */}
-              <div className="text-center pt-4 border-t border-gray-200">
-                <p className="text-xs text-gray-500">
+              <div className="text-center pt-4 border-t border-[#F5F5F5]">
+                <p className="text-xs text-[#1E1E1E]">
                   Bill generated on {order?.createdAt ? new Date(order.createdAt).toLocaleString('en-IN', {
                     day: '2-digit',
                     month: 'short',

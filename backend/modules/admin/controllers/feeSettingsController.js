@@ -189,15 +189,22 @@ export const createOrUpdateFeeSettings = asyncHandler(async (req, res) => {
       }
     }
 
-    // Deactivate all existing settings if this is being set as active
+    // Get current active config first so we can update it instead of creating duplicates
+    const currentActiveSettings = await FeeSettings.findOne({ isActive: true })
+      .sort({ createdAt: -1 });
+
+    // Deactivate all other active settings if this is being set as active
     if (isActive !== false) {
+      const excludeId = currentActiveSettings?._id || null;
       await FeeSettings.updateMany(
-        { isActive: true },
+        excludeId
+          ? { isActive: true, _id: { $ne: excludeId } }
+          : { isActive: true },
         { isActive: false, updatedBy: req.admin?._id || null }
       );
     }
 
-    // Create new fee settings
+    // Build payload
     const feeSettingsData = {
       deliveryFee: parsedDeliveryFee,
       freeDeliveryThreshold: parsedFreeDeliveryThreshold ?? 149,
@@ -219,8 +226,19 @@ export const createOrUpdateFeeSettings = asyncHandler(async (req, res) => {
       }));
     }
 
-    const feeSettings = new FeeSettings(feeSettingsData);
+    // Update current active settings to keep persistence stable on refresh
+    if (currentActiveSettings) {
+      Object.assign(currentActiveSettings, feeSettingsData);
+      currentActiveSettings.updatedBy = req.admin?._id || null;
+      await currentActiveSettings.save();
 
+      return successResponse(res, 200, 'Fee settings updated successfully', {
+        feeSettings: currentActiveSettings,
+      });
+    }
+
+    // Create first settings record if none exists
+    const feeSettings = new FeeSettings(feeSettingsData);
     await feeSettings.save();
 
     return successResponse(res, 201, 'Fee settings created successfully', {
@@ -243,7 +261,23 @@ export const createOrUpdateFeeSettings = asyncHandler(async (req, res) => {
 export const updateFeeSettings = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    const { deliveryFee, deliveryFeeRanges, freeDeliveryThreshold, platformFee, gstRate, isActive } = req.body;
+    const {
+      deliveryFee,
+      deliveryFeeRanges,
+      freeDeliveryThreshold,
+      platformFee,
+      gstRate,
+      isActive,
+      distanceConfig,
+      amountConfig,
+    } = req.body;
+
+    const parsedDeliveryFee = toNumber(deliveryFee);
+    const parsedPlatformFee = toNumber(platformFee);
+    const parsedGstRate = toNumber(gstRate);
+    const parsedFreeDeliveryThreshold = toNumber(freeDeliveryThreshold);
+    const normalizedDistanceConfig = sanitizeDistanceConfig(distanceConfig);
+    const normalizedAmountConfig = sanitizeAmountConfig(amountConfig);
 
     const feeSettings = await FeeSettings.findById(id);
 
@@ -251,8 +285,9 @@ export const updateFeeSettings = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'Fee settings not found');
     }
 
-    // If setting as active, deactivate others
-    if (isActive === true && !feeSettings.isActive) {
+    // Keep only one active config in DB to avoid stale reads on refresh
+    const shouldBeActive = isActive === true || (isActive === undefined && feeSettings.isActive);
+    if (shouldBeActive) {
       await FeeSettings.updateMany(
         { _id: { $ne: id }, isActive: true },
         { isActive: false, updatedBy: req.admin?._id || null }
@@ -261,10 +296,10 @@ export const updateFeeSettings = asyncHandler(async (req, res) => {
 
     // Update fields
     if (deliveryFee !== undefined) {
-      if (deliveryFee < 0) {
+      if (parsedDeliveryFee === null || parsedDeliveryFee < 0) {
         return errorResponse(res, 400, 'Delivery fee must be a positive number');
       }
-      feeSettings.deliveryFee = Number(deliveryFee);
+      feeSettings.deliveryFee = parsedDeliveryFee;
     }
 
     if (deliveryFeeRanges !== undefined && Array.isArray(deliveryFeeRanges)) {
@@ -291,21 +326,37 @@ export const updateFeeSettings = asyncHandler(async (req, res) => {
     }
 
     if (freeDeliveryThreshold !== undefined) {
-      feeSettings.freeDeliveryThreshold = Number(freeDeliveryThreshold);
+      feeSettings.freeDeliveryThreshold = parsedFreeDeliveryThreshold ?? feeSettings.freeDeliveryThreshold;
     }
 
     if (platformFee !== undefined) {
-      if (platformFee < 0) {
+      if (parsedPlatformFee === null || parsedPlatformFee < 0) {
         return errorResponse(res, 400, 'Platform fee must be a positive number');
       }
-      feeSettings.platformFee = Number(platformFee);
+      feeSettings.platformFee = parsedPlatformFee;
     }
 
     if (gstRate !== undefined) {
-      if (gstRate < 0 || gstRate > 100) {
+      if (parsedGstRate === null || parsedGstRate < 0 || parsedGstRate > 100) {
         return errorResponse(res, 400, 'GST rate must be between 0 and 100');
       }
-      feeSettings.gstRate = Number(gstRate);
+      feeSettings.gstRate = parsedGstRate;
+    }
+
+    if (distanceConfig !== undefined) {
+      const distanceConfigError = validateDistanceConfig(normalizedDistanceConfig);
+      if (distanceConfigError) {
+        return errorResponse(res, 400, distanceConfigError);
+      }
+      feeSettings.distanceConfig = normalizedDistanceConfig;
+    }
+
+    if (amountConfig !== undefined) {
+      const amountConfigError = validateAmountConfig(normalizedAmountConfig);
+      if (amountConfigError) {
+        return errorResponse(res, 400, amountConfigError);
+      }
+      feeSettings.amountConfig = normalizedAmountConfig;
     }
 
     if (isActive !== undefined) {

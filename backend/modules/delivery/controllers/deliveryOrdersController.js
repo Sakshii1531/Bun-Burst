@@ -136,6 +136,20 @@ export const getOrderDetails = asyncHandler(async (req, res) => {
       return errorResponse(res, 403, 'Order not found or not assigned to you');
     }
 
+    const pickRestaurantAddress = (restaurantDoc) => {
+      if (!restaurantDoc || typeof restaurantDoc !== 'object') return null;
+      const location = restaurantDoc.location || {};
+      return (
+        restaurantDoc.address ||
+        location.formattedAddress ||
+        location.address ||
+        [location.addressLine1, location.addressLine2, location.area, location.city, location.state, location.pincode || location.zipCode || location.postalCode]
+          .filter(Boolean)
+          .join(', ') ||
+        null
+      );
+    };
+
     // Resolve payment method for delivery boy (COD vs Online)
     let paymentMethod = order.payment?.method || 'razorpay';
     if (paymentMethod !== 'cash') {
@@ -144,7 +158,36 @@ export const getOrderDetails = asyncHandler(async (req, res) => {
         if (paymentRecord?.method === 'cash') paymentMethod = 'cash';
       } catch (e) { /* ignore */ }
     }
-    const orderWithPayment = { ...order, paymentMethod };
+
+    // Ensure restaurant address is always available for delivery UI/digital bill.
+    let restaurantDoc = order.restaurantId && typeof order.restaurantId === 'object' ? order.restaurantId : null;
+    if (!restaurantDoc) {
+      const rawRestaurantRef = order.restaurantId?.toString?.() || order.restaurantId;
+      if (rawRestaurantRef) {
+        const refIsObjectId = mongoose.Types.ObjectId.isValid(String(rawRestaurantRef)) && String(rawRestaurantRef).length === 24;
+        restaurantDoc = await Restaurant.findOne(
+          refIsObjectId
+            ? { _id: rawRestaurantRef }
+            : {
+              $or: [
+                { restaurantId: rawRestaurantRef },
+                { slug: rawRestaurantRef },
+                { name: order.restaurantName || '' },
+              ],
+            }
+        )
+          .select('name slug address location phone ownerPhone')
+          .lean();
+      }
+    }
+
+    const restaurantAddress = pickRestaurantAddress(restaurantDoc);
+    const orderWithPayment = {
+      ...order,
+      paymentMethod,
+      ...(restaurantDoc ? { restaurant: restaurantDoc } : {}),
+      ...(restaurantAddress ? { restaurantAddress } : {}),
+    };
 
     return successResponse(res, 200, 'Order details retrieved successfully', {
       order: orderWithPayment
