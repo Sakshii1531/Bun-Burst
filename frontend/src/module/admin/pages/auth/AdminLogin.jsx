@@ -66,11 +66,11 @@ export default function AdminLogin() {
       // Use admin-specific login endpoint
       const response = await adminAPI.login(email, password)
       const data = response?.data?.data || response?.data
-      
+
       if (data.accessToken && data.admin) {
         // Store admin token and data
         setAuthData("admin", data.accessToken, data.admin)
-        
+
         // Navigate to admin dashboard after successful login
         navigate("/admin", { replace: true })
       } else {
@@ -89,17 +89,17 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-neutral-50 via-gray-100 to-white relative">
+    <div className="min-h-screen relative" style={{ background: "linear-gradient(to bottom right, #fff9f9, #fff5f5, #ffffff)" }}>
       <div className="absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -left-24 -top-24 h-64 w-64 rounded-full bg-neutral-900/5 blur-3xl" />
-        <div className="absolute right-[-80px] bottom-[-80px] h-72 w-72 rounded-full bg-gray-700/5 blur-3xl" />
+        <div className="absolute -left-24 -top-24 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: "rgba(229,57,53,0.07)" }} />
+        <div className="absolute right-[-80px] bottom-[-80px] h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: "rgba(255,196,0,0.07)" }} />
       </div>
 
       <div className="flex min-h-screen items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-lg bg-white/90 backdrop-blur border-neutral-200 shadow-2xl">
+        <Card className="w-full max-w-lg bg-white/90 backdrop-blur shadow-2xl" style={{ borderColor: "#F5F5F5" }}>
           <CardHeader className="pb-4">
             <div className="flex w-full items-center gap-4 sm:gap-5">
-              <div className="flex h-14 w-28 shrink-0 items-center justify-center rounded-xl bg-gray-900/5 ring-1 ring-neutral-200">
+              <div className="flex h-14 w-28 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: "#FFF5F5", border: "1px solid #F5F5F5" }}>
                 <img
                   src={logoUrl}
                   alt="Logo"
@@ -114,8 +114,8 @@ export default function AdminLogin() {
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <CardTitle className="text-3xl leading-tight text-gray-900">Admin Login</CardTitle>
-                <CardDescription className="text-base text-gray-600">
+                <CardTitle className="text-3xl leading-tight" style={{ color: "#1E1E1E" }}>Admin Login</CardTitle>
+                <CardDescription className="text-base" style={{ color: "#1E1E1E", opacity: 0.6 }}>
                   Sign in to access the admin dashboard.
                 </CardDescription>
               </div>
@@ -131,7 +131,7 @@ export default function AdminLogin() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-base font-medium text-gray-900">Email</Label>
+                <Label htmlFor="email" className="text-base font-medium" style={{ color: "#1E1E1E" }}>Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -146,7 +146,7 @@ export default function AdminLogin() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-base font-medium text-gray-900">Password</Label>
+                <Label htmlFor="password" className="text-base font-medium" style={{ color: "#1E1E1E" }}>Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -162,7 +162,7 @@ export default function AdminLogin() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 transition-colors hover:text-gray-800"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors" style={{ color: "#1E1E1E", opacity: 0.5 }}
                     disabled={isLoading}
                   >
                     {showPassword ? (
@@ -175,11 +175,12 @@ export default function AdminLogin() {
               </div>
 
               <div className="flex items-center justify-between text-sm">
-                <div className="text-gray-600">Use your admin credentials to continue.</div>
+                <div style={{ color: "#1E1E1E", opacity: 0.6 }}>Use your admin credentials to continue.</div>
                 <button
                   type="button"
                   onClick={() => navigate("/admin/forgot-password")}
-                  className="font-medium text-gray-900 underline-offset-4 transition-colors hover:text-black hover:underline"
+                  className="font-medium underline-offset-4 transition-colors hover:underline"
+                  style={{ color: "#FFC400" }}
                   disabled={isLoading}
                 >
                   Forgot password?
@@ -188,7 +189,10 @@ export default function AdminLogin() {
 
               <Button
                 type="submit"
-                className="h-12 w-full bg-black text-white transition-colors hover:bg-neutral-900 focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2"
+                className="h-12 w-full text-white transition-colors focus-visible:ring-2 focus-visible:ring-offset-2"
+                style={{ backgroundColor: "#e53935", focusRingColor: "#e53935" }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = "#c62828"}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = "#e53935"}
                 disabled={isLoading}
               >
                 {isLoading ? "Logging in..." : "Login"}
@@ -196,11 +200,12 @@ export default function AdminLogin() {
             </form>
           </CardContent>
 
-          <CardFooter className="flex-col items-start gap-2 text-sm text-gray-500">
+          <CardFooter className="flex-col items-start gap-2 text-sm" style={{ borderTop: "1px solid #F5F5F5", color: "rgba(30,30,30,0.55)" }}>
             <span>Don't have an account?{" "}
               <button
                 onClick={() => navigate("/admin/signup")}
-                className="text-black hover:underline font-medium"
+                className="hover:underline font-medium"
+                style={{ color: "#e53935" }}
               >
                 Sign up
               </button>

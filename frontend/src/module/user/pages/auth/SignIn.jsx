@@ -887,11 +887,9 @@ export default function SignIn() {
               By continuing, you agree to our
             </p>
             <div className="flex justify-center gap-2 flex-wrap">
-              <a href="#" className="underline hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Terms of Service</a>
+              <a href="/admin/pages-social-media/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Terms of Service</a>
               <span>•</span>
-              <a href="#" className="underline hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Privacy Policy</a>
-              <span>•</span>
-              <a href="#" className="underline hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Content Policy</a>
+              <a href="/admin/pages-social-media/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Privacy Policy</a>
             </div>
           </div>
         </div>
