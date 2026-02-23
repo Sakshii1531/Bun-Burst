@@ -21,7 +21,13 @@ import {
   Settings as SettingsIcon,
   Power,
   ShoppingCart,
-  UtensilsCrossed
+  UtensilsCrossed,
+  Camera,
+  Image as ImageIcon,
+  Loader2,
+  X as CloseIcon,
+  RefreshCw,
+  CheckCircle2
 } from "lucide-react"
 
 import AnimatedPage from "../../components/AnimatedPage"
@@ -38,9 +44,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { authAPI } from "@/lib/api"
+import { authAPI, userAPI } from "@/lib/api"
 import { firebaseAuth } from "@/lib/firebase"
 import { clearModuleAuth } from "@/lib/utils/auth"
+import { toast } from "sonner"
+import { useRef } from "react"
 
 export default function Profile() {
   const { userProfile, vegMode, setVegMode } = useProfile()
@@ -51,6 +59,16 @@ export default function Profile() {
   const [vegModeOpen, setVegModeOpen] = useState(false)
   const [appearanceOpen, setAppearanceOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [photoSourceOpen, setPhotoSourceOpen] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [isLiveCameraOpen, setIsLiveCameraOpen] = useState(false)
+  const [capturedImage, setCapturedImage] = useState(null)
+  const [cameraStream, setCameraStream] = useState(null)
+
+  // Refs for file inputs and camera
+  const galleryInputRef = useRef(null)
+  const videoRef = useRef(null)
+  const canvasRef = useRef(null)
 
   // Settings states
   const [appearance, setAppearance] = useState(() => {
@@ -241,6 +259,116 @@ export default function Profile() {
     }
   }
 
+  // Handle Photo Upload
+  const handlePhotoUpload = async (file) => {
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please select an image file")
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB")
+      return
+    }
+
+    setIsUploading(true)
+    setPhotoSourceOpen(false)
+
+    try {
+      const response = await userAPI.uploadProfileImage(file)
+
+      if (response?.data?.success) {
+        toast.success("Profile photo updated successfully")
+        // The ProfileContext will automatically update when the user profile changes or we can manually update it
+        // Since we are using ProfileContext, we should refresh the user data
+        const profileRes = await authAPI.getCurrentUser()
+        const userData = profileRes?.data?.data?.user || profileRes?.data?.user || profileRes?.data
+        if (userData) {
+          // This will trigger update in ProfileContext if it's listening to auth changes
+          window.dispatchEvent(new Event("userAuthChanged"))
+        }
+      }
+    } catch (error) {
+      console.error("Error uploading profile photo:", error)
+      toast.error(error?.response?.data?.message || "Failed to upload profile photo")
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  // Live Camera Functions
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false
+      })
+      setCameraStream(stream)
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+      }
+    } catch (err) {
+      console.error("Error accessing camera:", err)
+      toast.error("Could not access camera. Please check permissions.")
+      setIsLiveCameraOpen(false)
+    }
+  }
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop())
+      setCameraStream(null)
+    }
+  }
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      const context = canvas.getContext('2d')
+
+      // Set canvas size to video size
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+
+      // Draw video frame to canvas
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+      // Convert to blob
+      canvas.toBlob((blob) => {
+        const file = new File([blob], "profile-photo.jpg", { type: "image/jpeg" })
+        setCapturedImage({
+          file,
+          preview: canvas.toDataURL('image/jpeg')
+        })
+      }, 'image/jpeg', 0.9)
+    }
+  }
+
+  const handleLiveCameraClose = () => {
+    stopCamera()
+    setIsLiveCameraOpen(false)
+    setCapturedImage(null)
+  }
+
+  const handleUploadCaptured = async () => {
+    if (capturedImage?.file) {
+      await handlePhotoUpload(capturedImage.file)
+      handleLiveCameraClose()
+    }
+  }
+
+  useEffect(() => {
+    if (isLiveCameraOpen && !capturedImage) {
+      startCamera()
+    }
+    return () => stopCamera()
+  }, [isLiveCameraOpen, capturedImage])
+
   return (
     <AnimatedPage className="min-h-screen bg-background">
       <div className="max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-4 sm:py-6 md:py-8 lg:py-10 pb-24">
@@ -257,22 +385,47 @@ export default function Profile() {
         <Card className="bg-card rounded-2xl py-0 pt-1 shadow-sm mb-0 border border-border overflow-hidden">
           <CardContent className="p-4 py-0 pt-2">
             <div className="flex items-start gap-4 mb-4">
-              <motion.div
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
-              >
-                <Avatar className="h-16 w-16 bg-muted border-0">
-                  {userProfile?.profileImage && (
-                    <AvatarImage
-                      src={userProfile.profileImage && userProfile.profileImage.trim() ? userProfile.profileImage : undefined}
-                      alt={displayName}
-                    />
+              <div className="relative group">
+                {/* Avatar wrapper for Gallery/Dialog */}
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="cursor-pointer"
+                  onClick={() => setPhotoSourceOpen(true)}
+                >
+                  <Avatar className="h-20 w-20 bg-muted border-2 border-border/50">
+                    {userProfile?.profileImage && (
+                      <AvatarImage
+                        src={userProfile.profileImage && userProfile.profileImage.trim() ? userProfile.profileImage : undefined}
+                        alt={displayName}
+                      />
+                    )}
+                    <AvatarFallback className="bg-muted text-foreground text-3xl font-semibold">
+                      {avatarInitial}
+                    </AvatarFallback>
+                  </Avatar>
+                </motion.div>
+
+                {/* Direct Camera Button */}
+                <motion.button
+                  whileTap={{ scale: 0.8 }}
+                  type="button"
+                  className="absolute bottom-0 right-0 bg-primary text-primary-foreground p-2 rounded-full shadow-lg border-2 border-background cursor-pointer hover:bg-primary/90 transition-all z-20 flex items-center justify-center"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsLiveCameraOpen(true);
+                  }}
+                  title="Take Photo"
+                >
+                  {isUploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
                   )}
-                  <AvatarFallback className="bg-muted text-foreground text-2xl font-semibold">
-                    {avatarInitial}
-                  </AvatarFallback>
-                </Avatar>
-              </motion.div>
+                </motion.button>
+              </div>
               <div className="flex-1 pt-1">
                 <h2 className="text-xl font-bold text-foreground mb-1">{displayName}</h2>
                 {hasValidEmail && (
@@ -901,6 +1054,175 @@ export default function Profile() {
         </DialogContent>
       </Dialog>
 
+      {/* Profile Photo Source Dialog */}
+      <Dialog open={photoSourceOpen} onOpenChange={setPhotoSourceOpen}>
+        <DialogContent className="max-w-sm w-[calc(100%-2rem)] rounded-2xl p-6 bg-card border-border">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-xl font-bold text-foreground text-center">Update Profile Photo</DialogTitle>
+            <DialogDescription className="text-center">
+              Choose a source to upload your photo
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Button
+              variant="outline"
+              className="flex flex-col items-center gap-3 h-28 rounded-2xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-foreground"
+              onClick={() => {
+                setPhotoSourceOpen(false);
+                setIsLiveCameraOpen(true);
+              }}
+            >
+              <div className="p-3 bg-primary/10 rounded-full">
+                <Camera className="h-6 w-6 text-primary" />
+              </div>
+              <span className="font-semibold">Camera</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="flex flex-col items-center gap-3 h-28 rounded-2xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-foreground"
+              onClick={() => galleryInputRef.current?.click()}
+            >
+              <div className="p-3 bg-primary/10 rounded-full">
+                <ImageIcon className="h-6 w-6 text-primary" />
+              </div>
+              <span className="font-semibold">Gallery</span>
+            </Button>
+          </div>
+
+          <input
+            type="file"
+            ref={galleryInputRef}
+            className="hidden"
+            accept="image/*"
+            onChange={(e) => {
+              if (e.target.files && e.target.files[0]) {
+                handlePhotoUpload(e.target.files[0]);
+                e.target.value = ''; // Reset to allow re-selection
+              }
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Live Camera Dialog */}
+      <Dialog open={isLiveCameraOpen} onOpenChange={handleLiveCameraClose}>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] rounded-[2.5rem] p-0 overflow-hidden bg-neutral-950 border-none shadow-2xl ring-1 ring-white/10">
+          <div className="relative aspect-[3/4] bg-neutral-900 flex items-center justify-center overflow-hidden">
+            {!capturedImage ? (
+              <>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-cover scale-x-[-1] transition-opacity duration-300"
+                />
+
+                {/* Header Controls */}
+                <div className="absolute top-6 left-0 right-0 px-6 flex justify-between items-center z-30">
+                  <div className="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                    <span className="text-[10px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                      Live Preview
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-black/40 backdrop-blur-md hover:bg-black/60 text-white rounded-full h-10 w-10 p-0 border border-white/10 transition-all hover:scale-110 active:scale-95"
+                    onClick={handleLiveCameraClose}
+                  >
+                    <CloseIcon className="h-5 w-5" />
+                  </Button>
+                </div>
+
+                {/* Face Guide Overlay */}
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+                  <div className="w-64 h-80 border-2 border-dashed border-white/20 rounded-[100px] flex items-center justify-center">
+                    <div className="w-[calc(100%-20px)] h-[calc(100%-20px)] border border-white/5 rounded-[100px]" />
+                  </div>
+                </div>
+
+                {/* Shutter Button Section */}
+                <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-4 z-30">
+                  <p className="text-white/60 text-xs font-medium tracking-wide drop-shadow-md">
+                    Position your face in the guide
+                  </p>
+                  <div className="relative flex items-center justify-center">
+                    <div className="absolute w-24 h-24 rounded-full bg-white/10 animate-ping opacity-20" />
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={capturePhoto}
+                      className="w-20 h-20 bg-white rounded-full p-1.5 shadow-[0_0_20px_rgba(255,255,255,0.3)] flex items-center justify-center relative z-20"
+                    >
+                      <div className="w-full h-full rounded-full border-[3px] border-neutral-800 transition-colors" />
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Bottom Gradient Fade */}
+                <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-0" />
+              </>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 1.1 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative w-full h-full"
+              >
+                <img
+                  src={capturedImage.preview}
+                  alt="Preview"
+                  className="w-full h-full object-cover scale-x-[-1]"
+                />
+
+                {/* Result Overlay */}
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-10" />
+
+                <div className="absolute inset-0 flex flex-col justify-end p-8 gap-6 z-30">
+                  <div className="space-y-2 mb-2">
+                    <h4 className="text-white text-2xl font-bold tracking-tight">Looking Good!</h4>
+                    <p className="text-white/70 text-sm">Do you want to use this photo?</p>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        className="w-full h-14 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl shadow-primary/20 font-bold text-lg flex items-center justify-center gap-3 border-none transition-all"
+                        onClick={handleUploadCaptured}
+                        disabled={isUploading}
+                      >
+                        {isUploading ? (
+                          <Loader2 className="animate-spin h-5 w-5" />
+                        ) : (
+                          <>
+                            <CheckCircle2 className="h-6 w-6" />
+                            Upload Profile Photo
+                          </>
+                        )}
+                      </Button>
+                    </motion.div>
+
+                    <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        variant="outline"
+                        className="w-full h-14 rounded-2xl bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 font-semibold text-lg flex items-center justify-center gap-2 transition-colors"
+                        onClick={() => setCapturedImage(null)}
+                        disabled={isUploading}
+                      >
+                        <RefreshCw className="h-5 w-5" />
+                        Retake Photo
+                      </Button>
+                    </motion.div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+          <canvas ref={canvasRef} className="hidden" />
+        </DialogContent>
+      </Dialog>
     </AnimatedPage >
   )
 }

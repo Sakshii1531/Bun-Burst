@@ -134,30 +134,33 @@ export default function DeliverySignIn() {
     <div className="max-h-screen h-screen bg-white flex flex-col">
       {/* Top Section - Logo and Badge */}
       <div className="flex flex-col items-center pt-8 pb-6 px-6">
-        {/* Appzeto Logo */}
+        {/* Company Logo */}
         <div>
-          <h1 className="text-3xl text-black font-extrabold italic lowercase tracking-tight">
+          <h1 className="text-3xl font-extrabold italic lowercase tracking-tight" style={{ color: '#1E1E1E' }}>
             {companyName.toLowerCase()}
           </h1>
         </div>
-        
+
         {/* DELIVERY Badge */}
-        <div className="bg-black px-6 py-2 rounded mt-2">
+        <div className="px-6 py-2 rounded mt-2" style={{ backgroundColor: '#e53935' }}>
           <span className="text-white font-semibold text-sm uppercase tracking-wide">
             DELIVERY
           </span>
         </div>
       </div>
 
+      {/* Divider */}
+      <div className="w-full h-px" style={{ backgroundColor: '#F5F5F5' }} />
+
       {/* Main Content - Form Section */}
-      <div className="flex-1 flex flex-col px-6">
+      <div className="flex-1 flex flex-col px-6 pt-6">
         <div className="w-full max-w-md mx-auto space-y-6">
           {/* Sign In Heading */}
           <div className="space-y-2 text-center">
-            <h2 className="text-2xl font-bold text-black">
+            <h2 className="text-2xl font-bold" style={{ color: '#1E1E1E' }}>
               Sign in to your account
             </h2>
-            <p className="text-base text-gray-600">
+            <p className="text-base" style={{ color: '#1E1E1E', opacity: 0.6 }}>
               Login or create an account
             </p>
           </div>
@@ -169,11 +172,15 @@ export default function DeliverySignIn() {
                 value={formData.countryCode}
                 onValueChange={handleCountryCodeChange}
               >
-                <SelectTrigger className="w-[100px] !h-12 border-gray-300 rounded-lg flex items-center shrink-0" size="default">
+                <SelectTrigger
+                  className="w-[100px] !h-12 rounded-lg flex items-center shrink-0"
+                  style={{ borderColor: '#F5F5F5', color: '#1E1E1E' }}
+                  size="default"
+                >
                   <SelectValue>
                     <span className="flex items-center gap-2">
                       <span>{selectedCountry.flag}</span>
-                      <span>{selectedCountry.code}</span>
+                      <span style={{ color: '#e53935' }}>{selectedCountry.code}</span>
                     </span>
                   </SelectValue>
                 </SelectTrigger>
@@ -196,25 +203,30 @@ export default function DeliverySignIn() {
                 onChange={handlePhoneChange}
                 autoComplete="off"
                 autoFocus={false}
-                className={`flex-1 h-12 px-4 text-gray-900 placeholder-gray-400 focus:outline-none text-base border rounded-lg min-w-0 ${
-                  error ? "border-red-500" : "border-gray-300"
-                }`}
+                className="flex-1 h-12 px-4 placeholder-gray-400 focus:outline-none text-base rounded-lg min-w-0"
+                style={{
+                  color: '#1E1E1E',
+                  border: `1.5px solid ${error ? '#e53935' : '#F5F5F5'}`,
+                }}
               />
             </div>
 
             {/* Hint Text */}
-            <p className="text-sm text-gray-500">
+            <p className="text-sm" style={{ color: '#1E1E1E', opacity: 0.5 }}>
               Enter a valid 10 digit mobile number
             </p>
 
             {error && (
-              <p className="text-sm text-red-500">
+              <p className="text-sm font-medium" style={{ color: '#e53935' }}>
                 {error}
               </p>
             )}
           </div>
         </div>
       </div>
+
+      {/* Divider */}
+      <div className="w-full h-px" style={{ backgroundColor: '#F5F5F5' }} />
 
       {/* Bottom Section - Continue Button and Terms */}
       <div className="px-6 pb-8 pt-4">
@@ -223,19 +235,26 @@ export default function DeliverySignIn() {
           <button
             onClick={handleSendOTP}
             disabled={!isValid || isSending}
-            className={`w-full py-4 rounded-lg font-bold text-base transition-colors ${
-              isValid && !isSending
-                ? "bg-[#00B761] hover:bg-[#00A055] active:bg-[#009049] text-white"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
+            className="w-full py-4 rounded-lg font-bold text-base transition-all duration-200"
+            style={{
+              backgroundColor: isValid && !isSending ? '#e53935' : '#F5F5F5',
+              color: isValid && !isSending ? '#ffffff' : '#9E9E9E',
+              cursor: isValid && !isSending ? 'pointer' : 'not-allowed',
+            }}
           >
             {isSending ? "Sending OTP..." : "Continue"}
           </button>
 
           {/* Terms and Conditions */}
-          <p className="text-xs text-center text-gray-600 px-4">
+          <p className="text-xs text-center px-4" style={{ color: '#1E1E1E', opacity: 0.6 }}>
             By continuing, you agree to our{" "}
-            <a href="#" className="text-blue-600 hover:underline">
+            <a
+              href="/admin/pages-social-media/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline font-semibold"
+              style={{ color: '#FFC400' }}
+            >
               Terms and Conditions
             </a>
           </p>

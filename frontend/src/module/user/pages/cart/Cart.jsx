@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react"
+﻿import { useState, useEffect, useRef, useMemo } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Plus, Minus, ArrowLeft, ChevronRight, Clock, MapPin, Phone, FileText, Utensils, Tag, Percent, Truck, Leaf, Share2, ChevronUp, ChevronDown, X, Check, Settings, CreditCard, Wallet, Building2, Sparkles, Loader2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -132,24 +132,24 @@ export default function Cart() {
     const bySlug = new Map()
     const entries = []
 
-    ;(publicCategories || []).forEach((category) => {
-      const resolvedId = category?._id || category?.id
-      if (!resolvedId) return
-      const normalizedId = String(resolvedId)
-      byId.set(normalizedId, normalizedId)
+      ; (publicCategories || []).forEach((category) => {
+        const resolvedId = category?._id || category?.id
+        if (!resolvedId) return
+        const normalizedId = String(resolvedId)
+        byId.set(normalizedId, normalizedId)
 
-      if (category?.name) {
-        byName.set(normalizeCategoryKey(category.name), normalizedId)
-      }
-      if (category?.slug) {
-        bySlug.set(normalizeCategoryKey(category.slug), normalizedId)
-      }
-      entries.push({
-        id: normalizedId,
-        name: category?.name || "",
-        slug: category?.slug || "",
+        if (category?.name) {
+          byName.set(normalizeCategoryKey(category.name), normalizedId)
+        }
+        if (category?.slug) {
+          bySlug.set(normalizeCategoryKey(category.slug), normalizedId)
+        }
+        entries.push({
+          id: normalizedId,
+          name: category?.name || "",
+          slug: category?.slug || "",
+        })
       })
-    })
 
     return { byId, byName, bySlug, entries }
   }, [publicCategories])
@@ -405,6 +405,29 @@ export default function Cart() {
   }, [cart, categoryLookup])
 
 
+
+  // â”€â”€ Share cart via native OS share sheet (WhatsApp, Instagram, etc.) â”€â”€
+  const handleShareCart = async () => {
+    const restaurantSlug = restaurantData?.slug || restaurantName || 'restaurant'
+    const shareUrl = `${window.location.origin}/user/restaurants/${restaurantSlug}`
+    const itemNames = cart.map(i => i.name).join(', ')
+    const shareTitle = `Check out my order from ${restaurantData?.name || restaurantSlug}!`
+    const shareText = `I'm ordering ${itemNames} from ${restaurantData?.name || restaurantSlug}. Try it too! 🍽️`
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: shareTitle, text: shareText, url: shareUrl })
+      } catch (err) {
+        if (err?.name !== 'AbortError') console.error('Share failed:', err)
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${shareUrl}\n${shareText}`)
+        toast.success('Link copied to clipboard!')
+      } catch {
+        toast.error('Unable to share. Please copy the link manually.')
+      }
+    }
+  }
 
   // Lock body scroll and scroll to top when any full-screen modal opens
   useEffect(() => {
@@ -1438,7 +1461,7 @@ export default function Cart() {
                 </p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8 flex-shrink-0">
+            <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8 flex-shrink-0" onClick={handleShareCart}>
               <Share2 className="h-4 w-4 md:h-5 md:w-5 text-foreground" />
             </Button>
           </div>
@@ -1468,60 +1491,61 @@ export default function Cart() {
                   {cart.map((item) => {
                     const resolvedCategoryId = resolveCategoryIdForItem(item)
                     return (
-                    <div key={item.id} className="flex items-start gap-3 md:gap-4">
-                      {/* Veg/Non-veg indicator */}
-                      <div className={`w-4 h-4 md:w-5 md:h-5 border-2 ${item.isVeg !== false ? 'border-green-600' : 'border-red-600'} flex items-center justify-center mt-1 flex-shrink-0`}>
-                        <div className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full ${item.isVeg !== false ? 'bg-green-600' : 'bg-red-600'}`} />
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm md:text-base font-medium text-foreground leading-tight">{item.name}</p>
-                        {(item.selectedAddons || item.addons) && (item.selectedAddons || item.addons).length > 0 && (
-                          <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">
-                            {(item.selectedAddons || item.addons).map(a => a.name).join(", ")}
-                          </p>
-                        )}
-                        {resolvedCategoryId ? (
-                          <button
-                            onClick={() => handleOpenAddons(item, resolvedCategoryId)}
-                            className="text-[10px] md:text-xs text-orange-600 font-bold flex items-center gap-1 mt-1.5 hover:text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 transition-all active:scale-95"
-                          >
-                            <Sparkles className="h-3 w-3" />
-                            Customize
-                          </button>
-                        ) : (
-                          <button className="text-xs md:text-sm text-primary font-medium flex items-center gap-0.5 mt-0.5 opacity-50 cursor-not-allowed">
-                            Edit <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-3 md:gap-4">
-                        {/* Quantity controls */}
-                        <div className="flex items-center border border-primary rounded">
-                          <button
-                            className="px-2 md:px-3 py-1 text-primary hover:bg-primary/10"
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          >
-                            <Minus className="h-3 w-3 md:h-4 md:w-4" />
-                          </button>
-                          <span className="px-2 md:px-3 text-sm md:text-base font-semibold text-primary min-w-[20px] md:min-w-[24px] text-center">
-                            {item.quantity}
-                          </span>
-                          <button
-                            className="px-2 md:px-3 py-1 text-primary hover:bg-primary/10"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          >
-                            <Plus className="h-3 w-3 md:h-4 md:w-4" />
-                          </button>
+                      <div key={item.id} className="flex items-start gap-3 md:gap-4">
+                        {/* Veg/Non-veg indicator */}
+                        <div className={`w-4 h-4 md:w-5 md:h-5 border-2 ${item.isVeg !== false ? 'border-green-600' : 'border-red-600'} flex items-center justify-center mt-1 flex-shrink-0`}>
+                          <div className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full ${item.isVeg !== false ? 'bg-green-600' : 'bg-red-600'}`} />
                         </div>
 
-                        <p className="text-sm md:text-base font-medium text-foreground min-w-[50px] md:min-w-[70px] text-right">
-                          ₹{formatAmount((item.price || 0) * (item.quantity || 1))}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm md:text-base font-medium text-foreground leading-tight">{item.name}</p>
+                          {(item.selectedAddons || item.addons) && (item.selectedAddons || item.addons).length > 0 && (
+                            <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">
+                              {(item.selectedAddons || item.addons).map(a => a.name).join(", ")}
+                            </p>
+                          )}
+                          {resolvedCategoryId ? (
+                            <button
+                              onClick={() => handleOpenAddons(item, resolvedCategoryId)}
+                              className="text-[10px] md:text-xs text-orange-600 font-bold flex items-center gap-1 mt-1.5 hover:text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 transition-all active:scale-95"
+                            >
+                              <Sparkles className="h-3 w-3" />
+                              Customize
+                            </button>
+                          ) : (
+                            <button className="text-xs md:text-sm text-primary font-medium flex items-center gap-0.5 mt-0.5 opacity-50 cursor-not-allowed">
+                              Edit <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3 md:gap-4">
+                          {/* Quantity controls */}
+                          <div className="flex items-center border border-primary rounded">
+                            <button
+                              className="px-2 md:px-3 py-1 text-primary hover:bg-primary/10"
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            >
+                              <Minus className="h-3 w-3 md:h-4 md:w-4" />
+                            </button>
+                            <span className="px-2 md:px-3 text-sm md:text-base font-semibold text-primary min-w-[20px] md:min-w-[24px] text-center">
+                              {item.quantity}
+                            </span>
+                            <button
+                              className="px-2 md:px-3 py-1 text-primary hover:bg-primary/10"
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            >
+                              <Plus className="h-3 w-3 md:h-4 md:w-4" />
+                            </button>
+                          </div>
+
+                          <p className="text-sm md:text-base font-medium text-foreground min-w-[50px] md:min-w-[70px] text-right">
+                            ₹{formatAmount((item.price || 0) * (item.quantity || 1))}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  )})}
+                    )
+                  })}
                 </div>
 
                 {/* Add more items */}

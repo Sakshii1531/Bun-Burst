@@ -901,13 +901,14 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen bg-background pb-28 md:pb-24">
-      {/* NEW: Mobile Header Above Everything */}
-      {/* Unified Top Header - Reusable Section */}
-      <UserTopHeader
-        vegMode={vegMode}
-        onVegModeChange={handleVegModeChange}
-        showVegToggle={true}
-      />
+      {/* Mobile-only Top Header — DesktopNavbar handles md+ screens */}
+      <div className="md:hidden">
+        <UserTopHeader
+          vegMode={vegMode}
+          onVegModeChange={handleVegModeChange}
+          showVegToggle={true}
+        />
+      </div>
 
       {/* Unified Background for Entire Page - Vibrant Food Theme */}
       <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none overflow-hidden z-0">

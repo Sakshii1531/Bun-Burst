@@ -152,23 +152,24 @@ export default function UserTopHeader({
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                             onFocus={handleSearchFocus}
+                                            placeholder=" "
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter' && searchQuery.trim()) {
                                                     navigate(`/user/search?q=${encodeURIComponent(searchQuery.trim())}`)
                                                 }
                                             }}
-                                            className="h-6 px-0 border-0 bg-transparent text-sm font-medium text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground"
+                                            className="h-6 px-0 border-0 bg-transparent text-sm font-medium text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-transparent"
                                         />
                                         {!searchQuery && (
-                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none h-5 overflow-hidden">
+                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none">
                                                 <AnimatePresence mode="wait">
                                                     <motion.span
                                                         key={placeholderIndex}
-                                                        initial={{ y: 16, opacity: 0 }}
-                                                        animate={{ y: 0, opacity: 1 }}
-                                                        exit={{ y: -16, opacity: 0 }}
-                                                        transition={{ duration: 0.3 }}
-                                                        className="text-sm font-medium text-muted-foreground inline-block text-nowrap"
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        exit={{ opacity: 0 }}
+                                                        transition={{ duration: 0.4 }}
+                                                        className="text-sm font-medium text-muted-foreground whitespace-nowrap"
                                                     >
                                                         {placeholders[placeholderIndex]}
                                                     </motion.span>
@@ -257,31 +258,33 @@ export default function UserTopHeader({
 
                 {/* Search Bar Row (Visible on Mobile/Tablet, hidden on Desktop if search is in header) */}
                 <div className="md:hidden pb-3 px-1 flex items-center gap-3">
-                    <div className="flex-1 relative bg-muted rounded-2xl border-2 border-border hover:border-primary transition-all duration-200 shadow-sm hover:shadow-md">
+                    <div className="flex-1 relative bg-muted rounded-2xl transition-all duration-200 shadow-sm">
                         <div className="flex items-center gap-2.5 px-4 py-2.5">
                             <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <div className="flex-1 relative">
-                                <Input
+                                <input
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     onFocus={handleSearchFocus}
+                                    placeholder=" "
+                                    autoComplete="off"
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' && searchQuery.trim()) {
                                             navigate(`/user/search?q=${encodeURIComponent(searchQuery.trim())}`)
                                         }
                                     }}
-                                    className="h-6 px-0 border-0 bg-transparent text-sm font-medium text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground"
+                                    className="h-6 w-full px-0 border-0 outline-none ring-0 bg-transparent text-sm font-medium text-foreground placeholder:text-transparent"
                                 />
                                 {!searchQuery && (
-                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none h-5 overflow-hidden">
+                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none">
                                         <AnimatePresence mode="wait">
                                             <motion.span
                                                 key={placeholderIndex}
-                                                initial={{ y: 16, opacity: 0 }}
-                                                animate={{ y: 0, opacity: 1 }}
-                                                exit={{ y: -16, opacity: 0 }}
-                                                transition={{ duration: 0.3 }}
-                                                className="text-sm font-medium text-muted-foreground inline-block"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.4 }}
+                                                className="text-sm font-medium text-muted-foreground whitespace-nowrap"
                                             >
                                                 {placeholders[placeholderIndex]}
                                             </motion.span>

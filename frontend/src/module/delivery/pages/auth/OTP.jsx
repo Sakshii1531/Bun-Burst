@@ -26,7 +26,7 @@ export default function DeliveryOTP() {
     // Only redirect if token exists and is valid - don't redirect during OTP flow
     const token = localStorage.getItem("delivery_accessToken")
     const authenticated = localStorage.getItem("delivery_authenticated") === "true"
-    
+
     // Only redirect if both token and authenticated flag exist (user is fully logged in)
     if (token && authenticated) {
       // Check if token is not expired
@@ -158,7 +158,7 @@ export default function DeliveryOTP() {
     if (!showNameInput && digits.length === 6) {
       handleVerify(newOtp.join(""))
       return
-    } 
+    }
     inputRefs.current[digits.length]?.focus()
   }
 
@@ -169,7 +169,7 @@ export default function DeliveryOTP() {
     }
 
     const code = otpValue || otp.join("")
-    
+
     if (code.length !== 6) {
       return
     }
@@ -258,9 +258,9 @@ export default function DeliveryOTP() {
       const verifyAndNavigate = () => {
         const storedToken = localStorage.getItem("delivery_accessToken")
         const storedAuth = localStorage.getItem("delivery_authenticated")
-        
+
         console.log("Verifying token storage:", { hasToken: !!storedToken, authenticated: storedAuth, retryCount })
-        
+
         if (storedToken && storedAuth === "true") {
           // Token is stored, navigate to delivery home
           console.log("Token verified, navigating to /delivery")
@@ -353,9 +353,9 @@ export default function DeliveryOTP() {
       const verifyAndNavigate = () => {
         const storedToken = localStorage.getItem("delivery_accessToken")
         const storedAuth = localStorage.getItem("delivery_authenticated")
-        
+
         console.log("Verifying token storage (with name):", { hasToken: !!storedToken, authenticated: storedAuth, retryCount })
-        
+
         if (storedToken && storedAuth === "true") {
           // Token is stored, navigate to delivery home
           console.log("Token verified, navigating to /delivery")
@@ -465,7 +465,7 @@ export default function DeliveryOTP() {
           <ArrowLeft className="h-5 w-5 text-black" />
         </button>
         <h1 className="text-lg font-bold text-black">OTP Verification</h1>
-      </div> 
+      </div>
 
       {/* Main Content */}
       <div className="flex flex-col justify-center px-6 pt-8 pb-12">
@@ -553,9 +553,8 @@ export default function DeliveryOTP() {
                   }}
                   disabled={isLoading}
                   placeholder="Enter your name"
-                  className={`h-11 border ${
-                    nameError ? "border-red-500" : "border-gray-300"
-                  }`}
+                  className={`h-11 border ${nameError ? "border-red-500" : "border-gray-300"
+                    }`}
                 />
                 {nameError && (
                   <p className="text-xs text-red-500 text-left">
