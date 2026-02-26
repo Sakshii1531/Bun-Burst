@@ -263,9 +263,7 @@ export const getOrders = asyncHandler(async (req, res) => {
       }
 
       // Determine delivery type
-      const deliveryType = order.deliveryFleet === 'standard' ?
-        'Home Delivery' :
-        (order.deliveryFleet === 'fast' ? 'Fast Delivery' : 'Home Delivery');
+      const deliveryType = 'Home Delivery';
 
       // Calculate report-specific fields
       const subtotal = order.pricing?.subtotal || 0;
@@ -583,9 +581,7 @@ export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
       const orderStatusDisplay = statusMap[order.status] || 'Pending';
 
       // Determine delivery type
-      const deliveryType = order.deliveryFleet === 'standard' ?
-        'Home Delivery' :
-        (order.deliveryFleet === 'fast' ? 'Fast Delivery' : 'Home Delivery');
+      const deliveryType = 'Home Delivery';
 
       // Format total amount
       const totalAmount = order.pricing?.total || 0;
@@ -778,9 +774,7 @@ export const getOngoingOrders = asyncHandler(async (req, res) => {
       }
 
       // Determine delivery type
-      const deliveryType = order.deliveryFleet === 'standard' ?
-        'Home Delivery' :
-        (order.deliveryFleet === 'fast' ? 'Fast Delivery' : 'Home Delivery');
+      const deliveryType = 'Home Delivery';
 
       // Format total amount
       const totalAmount = order.pricing?.total || 0;
@@ -1492,7 +1486,7 @@ export const getRefundRequests = asyncHandler(async (req, res) => {
         totalAmount: order.pricing?.total || 0,
         paymentStatus: order.payment?.status === 'completed' ? 'Paid' : 'Pending',
         orderStatus: 'Refund Requested',
-        deliveryType: order.deliveryFleet === 'standard' ? 'Home Delivery' : 'Fast Delivery',
+        deliveryType: 'Home Delivery',
         cancellationReason: order.cancellationReason || 'Rejected by restaurant',
         cancelledAt: order.cancelledAt,
         refundStatus: refundStatus,
@@ -1673,10 +1667,8 @@ export const processRefund = asyncHandler(async (req, res) => {
 
     // For wallet payments, allow refund regardless of delivery type (no Razorpay involved)
     // For other payments (Razorpay), only allow refund for Home Delivery orders
-    // Note: Order model uses deliveryFleet, not deliveryType
     if (paymentMethod !== 'wallet') {
-      // Check deliveryFleet - 'standard' and 'fast' are home delivery types
-      const isHomeDelivery = order.deliveryFleet === 'standard' || order.deliveryFleet === 'fast';
+      const isHomeDelivery = true;
       if (!isHomeDelivery) {
         return errorResponse(res, 400, 'Refund can only be processed for Home Delivery orders');
       }

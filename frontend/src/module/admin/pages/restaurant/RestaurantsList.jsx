@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Search, Download, ChevronDown, Eye, Settings, ArrowUpDown, Loader2, X, MapPin, Phone, Mail, Clock, Star, Building2, User, FileText, CreditCard, Calendar, Image as ImageIcon, ExternalLink, ShieldX, AlertTriangle, Trash2, Plus, Utensils, Edit } from "lucide-react"
 import { adminAPI, restaurantAPI } from "../../../../lib/api"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu"
 import { exportRestaurantsToPDF } from "../../components/restaurants/restaurantsExportUtils"
 
 // Import icons from Dashboard-icons
@@ -29,6 +29,15 @@ export default function RestaurantsList() {
   const [zones, setZones] = useState([])
   const [loadingZones, setLoadingZones] = useState(false)
   const [updatingZone, setUpdatingZone] = useState(false)
+  const [visibleColumns, setVisibleColumns] = useState({
+    sl: true,
+    restaurantInfo: true,
+    ownerInfo: true,
+    zone: true,
+    cuisine: true,
+    status: true,
+    action: true,
+  })
 
   // Format Restaurant ID to REST format (e.g., REST422829)
   const formatRestaurantId = (id) => {
@@ -473,6 +482,24 @@ export default function RestaurantsList() {
     exportRestaurantsToPDF(dataToExport, filename)
   }
 
+  const onboardingStep3 =
+    restaurantDetails?.onboarding?.step3 ||
+    restaurantDetails?.onboarding?.step_3 ||
+    restaurantDetails?.onboarding?.stepThree ||
+    restaurantDetails?.onboarding?.documents ||
+    restaurantDetails?.onboarding?.registrationDocuments ||
+    null
+
+  const handleToggleColumn = (columnKey) => {
+    setVisibleColumns((prev) => {
+      const enabledCount = Object.values(prev).filter(Boolean).length
+      if (prev[columnKey] && enabledCount <= 1) return prev
+      return { ...prev, [columnKey]: !prev[columnKey] }
+    })
+  }
+
+  const tableVisibleColumnCount = Object.values(visibleColumns).filter(Boolean).length
+
   return (
     <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
@@ -570,9 +597,38 @@ export default function RestaurantsList() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <button className="p-2.5 rounded-lg border border-[#F5F5F5] bg-white hover:bg-slate-50 text-[#1E1E1E] transition-all">
-                <Settings className="w-4 h-4" />
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-2.5 rounded-lg border border-[#F5F5F5] bg-white hover:bg-slate-50 text-[#1E1E1E] transition-all">
+                    <Settings className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+                  <DropdownMenuLabel>Table Columns</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem checked={visibleColumns.sl} onCheckedChange={() => handleToggleColumn("sl")}>
+                    SL
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={visibleColumns.restaurantInfo} onCheckedChange={() => handleToggleColumn("restaurantInfo")}>
+                    Restaurant Info
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={visibleColumns.ownerInfo} onCheckedChange={() => handleToggleColumn("ownerInfo")}>
+                    Owner Info
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={visibleColumns.zone} onCheckedChange={() => handleToggleColumn("zone")}>
+                    Zone
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={visibleColumns.cuisine} onCheckedChange={() => handleToggleColumn("cuisine")}>
+                    Cuisine
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={visibleColumns.status} onCheckedChange={() => handleToggleColumn("status")}>
+                    Status
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={visibleColumns.action} onCheckedChange={() => handleToggleColumn("action")}>
+                    Action
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -592,49 +648,49 @@ export default function RestaurantsList() {
               <table className="w-full">
                 <thead className="bg-[#FAFAFA] border-b border-[#F5F5F5]">
                   <tr>
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
+                    {visibleColumns.sl && <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         <span>SL</span>
                         <ArrowUpDown className="w-3 h-3 text-slate-400" />
                       </div>
-                    </th>
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
+                    </th>}
+                    {visibleColumns.restaurantInfo && <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         <span>Restaurant Info</span>
                         <ArrowUpDown className="w-3 h-3 text-slate-400" />
                       </div>
-                    </th>
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
+                    </th>}
+                    {visibleColumns.ownerInfo && <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         <span>Owner Info</span>
                         <ArrowUpDown className="w-3 h-3 text-slate-400" />
                       </div>
-                    </th>
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
+                    </th>}
+                    {visibleColumns.zone && <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         <span>Zone</span>
                         <ArrowUpDown className="w-3 h-3 text-slate-400" />
                       </div>
-                    </th>
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
+                    </th>}
+                    {visibleColumns.cuisine && <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         <span>Cuisine</span>
                         <ArrowUpDown className="w-3 h-3 text-slate-400" />
                       </div>
-                    </th>
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
+                    </th>}
+                    {visibleColumns.status && <th className="px-6 py-4 text-left text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         <span>Status</span>
                         <ArrowUpDown className="w-3 h-3 text-slate-400" />
                       </div>
-                    </th>
-                    <th className="px-6 py-4 text-center text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">Action</th>
+                    </th>}
+                    {visibleColumns.action && <th className="px-6 py-4 text-center text-[10px] font-bold text-[#1E1E1E] uppercase tracking-wider">Action</th>}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-[#F5F5F5]">
                   {filteredRestaurants.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-20 text-center">
+                      <td colSpan={tableVisibleColumnCount} className="px-6 py-20 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <p className="text-lg font-semibold text-[#1E1E1E] mb-1">No Data Found</p>
                           <p className="text-sm text-slate-500">No restaurants match your search</p>
@@ -647,10 +703,10 @@ export default function RestaurantsList() {
                         key={restaurant.id}
                         className="hover:bg-slate-50 transition-colors"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        {visibleColumns.sl && <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm font-medium text-[#1E1E1E]">{index + 1}</span>
-                        </td>
-                        <td className="px-6 py-4">
+                        </td>}
+                        {visibleColumns.restaurantInfo && <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center flex-shrink-0">
                               <img
@@ -668,14 +724,14 @@ export default function RestaurantsList() {
                               <span className="text-xs text-slate-500">{renderStars(restaurant.rating)}</span>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
+                        </td>}
+                        {visibleColumns.ownerInfo && <td className="px-6 py-4">
                           <div className="flex flex-col">
                             <span className="text-sm font-medium text-[#1E1E1E]">{restaurant.ownerName}</span>
                             <span className="text-xs text-slate-500">{formatPhone(restaurant.ownerPhone)}</span>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        </td>}
+                        {visibleColumns.zone && <td className="px-6 py-4 whitespace-nowrap">
                           {/* <span className="text-sm text-[#1E1E1E]">{restaurant.zone}</span> */}
                           <button
                             onClick={() => handleSetZone(restaurant)}
@@ -686,11 +742,11 @@ export default function RestaurantsList() {
                               {restaurant.zone && restaurant.zone !== "N/A" ? restaurant.zone : "Set Zone"}
                             </span>
                           </button>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        </td>}
+                        {visibleColumns.cuisine && <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm text-[#1E1E1E]">{restaurant.cuisine}</span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        </td>}
+                        {visibleColumns.status && <td className="px-6 py-4 whitespace-nowrap">
                           <button
                             onClick={() => handleToggleStatus(restaurant.id)}
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#e53935] focus:ring-offset-2 ${restaurant.status ? "bg-[#e53935]" : "bg-slate-300"
@@ -701,8 +757,8 @@ export default function RestaurantsList() {
                                 }`}
                             />
                           </button>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                        </td>}
+                        {visibleColumns.action && <td className="px-6 py-4 whitespace-nowrap text-center">
                           <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => navigate("/admin/food/menu-add", { state: { restaurantId: restaurant._id || restaurant.id } })}
@@ -743,7 +799,7 @@ export default function RestaurantsList() {
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
-                        </td>
+                        </td>}
                       </tr>
                     ))
                   )}
@@ -756,7 +812,7 @@ export default function RestaurantsList() {
 
       {/* Restaurant Details Modal */}
       {selectedRestaurant && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={closeDetailsModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white/10 backdrop-blur-sm" onClick={closeDetailsModal}>
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="sticky top-0 bg-white border-b border-[#F5F5F5] px-6 py-4 flex items-center justify-between">
@@ -994,10 +1050,10 @@ export default function RestaurantsList() {
                             <p className="font-medium text-slate-900">{formatRestaurantId(restaurantDetails.restaurantId)}</p>
                           </div>
                         )}
-                        {restaurantDetails.slug && (
+                        {(restaurantDetails?.name || selectedRestaurant?.name) && (
                           <div>
-                            <p className="text-xs text-slate-500 mb-1">Slug</p>
-                            <p className="font-medium text-slate-900">{restaurantDetails.slug}</p>
+                            <p className="text-xs text-slate-500 mb-1">Current Name</p>
+                            <p className="font-medium text-slate-900">{restaurantDetails?.name || selectedRestaurant?.name}</p>
                           </div>
                         )}
                         {restaurantDetails.phoneVerified !== undefined && (
@@ -1010,187 +1066,6 @@ export default function RestaurantsList() {
                           <div>
                             <p className="text-xs text-slate-500 mb-1">Signup Method</p>
                             <p className="font-medium text-slate-900 capitalize">{restaurantDetails.signupMethod}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Registration Documents - PAN, GST, FSSAI, Bank */}
-                  {restaurantDetails?.onboarding?.step3 && (
-                    <div className="pt-6 border-t border-slate-200">
-                      <h4 className="text-lg font-semibold text-slate-900 mb-4">Registration Documents</h4>
-                      <div className="space-y-6">
-                        {/* PAN Details */}
-                        {restaurantDetails.onboarding.step3.pan && (
-                          <div className="bg-slate-50 rounded-lg p-4">
-                            <h5 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                              <FileText className="w-4 h-4" />
-                              PAN Details
-                            </h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                              {restaurantDetails.onboarding.step3.pan.panNumber && (
-                                <div>
-                                  <p className="text-xs text-slate-500 mb-1">PAN Number</p>
-                                  <p className="font-medium text-slate-900">{restaurantDetails.onboarding.step3.pan.panNumber}</p>
-                                </div>
-                              )}
-                              {restaurantDetails.onboarding.step3.pan.nameOnPan && (
-                                <div>
-                                  <p className="text-xs text-slate-500 mb-1">Name on PAN</p>
-                                  <p className="font-medium text-slate-900">{restaurantDetails.onboarding.step3.pan.nameOnPan}</p>
-                                </div>
-                              )}
-                              {restaurantDetails.onboarding.step3.pan.image?.url && (
-                                <div className="md:col-span-2">
-                                  <p className="text-xs text-slate-500 mb-2">PAN Document</p>
-                                  <a
-                                    href={restaurantDetails.onboarding.step3.pan.image.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700"
-                                  >
-                                    <ImageIcon className="w-4 h-4" />
-                                    <span>View PAN Document</span>
-                                    <ExternalLink className="w-3 h-3" />
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* GST Details */}
-                        {restaurantDetails.onboarding.step3.gst && (
-                          <div className="bg-slate-50 rounded-lg p-4">
-                            <h5 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                              <FileText className="w-4 h-4" />
-                              GST Details
-                            </h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <p className="text-xs text-slate-500 mb-1">GST Registered</p>
-                                <p className="font-medium text-slate-900">
-                                  {restaurantDetails.onboarding.step3.gst.isRegistered ? "Yes" : "No"}
-                                </p>
-                              </div>
-                              {restaurantDetails.onboarding.step3.gst.gstNumber && (
-                                <div>
-                                  <p className="text-xs text-slate-500 mb-1">GST Number</p>
-                                  <p className="font-medium text-slate-900">{restaurantDetails.onboarding.step3.gst.gstNumber}</p>
-                                </div>
-                              )}
-                              {restaurantDetails.onboarding.step3.gst.legalName && (
-                                <div>
-                                  <p className="text-xs text-slate-500 mb-1">Legal Name</p>
-                                  <p className="font-medium text-slate-900">{restaurantDetails.onboarding.step3.gst.legalName}</p>
-                                </div>
-                              )}
-                              {restaurantDetails.onboarding.step3.gst.address && (
-                                <div>
-                                  <p className="text-xs text-slate-500 mb-1">GST Address</p>
-                                  <p className="font-medium text-slate-900">{restaurantDetails.onboarding.step3.gst.address}</p>
-                                </div>
-                              )}
-                              {restaurantDetails.onboarding.step3.gst.image?.url && (
-                                <div className="md:col-span-2">
-                                  <p className="text-xs text-slate-500 mb-2">GST Document</p>
-                                  <a
-                                    href={restaurantDetails.onboarding.step3.gst.image.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700"
-                                  >
-                                    <ImageIcon className="w-4 h-4" />
-                                    <span>View GST Document</span>
-                                    <ExternalLink className="w-3 h-3" />
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* FSSAI Details */}
-                        {restaurantDetails.onboarding.step3.fssai && (
-                          <div className="bg-slate-50 rounded-lg p-4">
-                            <h5 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                              <FileText className="w-4 h-4" />
-                              FSSAI Details
-                            </h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                              {restaurantDetails.onboarding.step3.fssai.registrationNumber && (
-                                <div>
-                                  <p className="text-xs text-slate-500 mb-1">FSSAI Registration Number</p>
-                                  <p className="font-medium text-slate-900">{restaurantDetails.onboarding.step3.fssai.registrationNumber}</p>
-                                </div>
-                              )}
-                              {restaurantDetails.onboarding.step3.fssai.expiryDate && (
-                                <div>
-                                  <p className="text-xs text-slate-500 mb-1">FSSAI Expiry Date</p>
-                                  <p className="font-medium text-slate-900">
-                                    {new Date(restaurantDetails.onboarding.step3.fssai.expiryDate).toLocaleDateString('en-IN', {
-                                      year: 'numeric',
-                                      month: 'long',
-                                      day: 'numeric'
-                                    })}
-                                  </p>
-                                </div>
-                              )}
-                              {restaurantDetails.onboarding.step3.fssai.image?.url && (
-                                <div className="md:col-span-2">
-                                  <p className="text-xs text-slate-500 mb-2">FSSAI Document</p>
-                                  <a
-                                    href={restaurantDetails.onboarding.step3.fssai.image.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700"
-                                  >
-                                    <ImageIcon className="w-4 h-4" />
-                                    <span>View FSSAI Document</span>
-                                    <ExternalLink className="w-3 h-3" />
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Bank Details */}
-                        {restaurantDetails.onboarding.step3.bank && (
-                          <div className="bg-slate-50 rounded-lg p-4">
-                            <h5 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                              <CreditCard className="w-4 h-4" />
-                              Bank Details
-                            </h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                              {restaurantDetails.onboarding.step3.bank.accountNumber && (
-                                <div>
-                                  <p className="text-xs text-slate-500 mb-1">Account Number</p>
-                                  <p className="font-medium text-slate-900">
-                                    {restaurantDetails.onboarding.step3.bank.accountNumber}
-                                  </p>
-                                </div>
-                              )}
-                              {restaurantDetails.onboarding.step3.bank.ifscCode && (
-                                <div>
-                                  <p className="text-xs text-slate-500 mb-1">IFSC Code</p>
-                                  <p className="font-medium text-slate-900">{restaurantDetails.onboarding.step3.bank.ifscCode}</p>
-                                </div>
-                              )}
-                              {restaurantDetails.onboarding.step3.bank.accountHolderName && (
-                                <div>
-                                  <p className="text-xs text-slate-500 mb-1">Account Holder Name</p>
-                                  <p className="font-medium text-slate-900">{restaurantDetails.onboarding.step3.bank.accountHolderName}</p>
-                                </div>
-                              )}
-                              {restaurantDetails.onboarding.step3.bank.accountType && (
-                                <div>
-                                  <p className="text-xs text-slate-500 mb-1">Account Type</p>
-                                  <p className="font-medium text-slate-900 capitalize">{restaurantDetails.onboarding.step3.bank.accountType}</p>
-                                </div>
-                              )}
-                            </div>
                           </div>
                         )}
                       </div>
@@ -1312,6 +1187,188 @@ export default function RestaurantsList() {
                       </div>
                     </div>
                   )}
+
+                  {/* Registration Documents - PAN, GST, FSSAI, Bank */}
+                  {onboardingStep3 && (
+                    <div className="pt-6 border-t border-slate-200">
+                      <h4 className="text-lg font-semibold text-slate-900 mb-4">Registration Step 3 Details</h4>
+                      <div className="space-y-6">
+                        {/* PAN Details */}
+                        {onboardingStep3.pan && (
+                          <div className="bg-slate-50 rounded-lg p-4">
+                            <h5 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                              <FileText className="w-4 h-4" />
+                              PAN Details
+                            </h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                              {onboardingStep3.pan.panNumber && (
+                                <div>
+                                  <p className="text-xs text-slate-500 mb-1">PAN Number</p>
+                                  <p className="font-medium text-slate-900">{onboardingStep3.pan.panNumber}</p>
+                                </div>
+                              )}
+                              {onboardingStep3.pan.nameOnPan && (
+                                <div>
+                                  <p className="text-xs text-slate-500 mb-1">Name on PAN</p>
+                                  <p className="font-medium text-slate-900">{onboardingStep3.pan.nameOnPan}</p>
+                                </div>
+                              )}
+                              {onboardingStep3.pan.image?.url && (
+                                <div className="md:col-span-2">
+                                  <p className="text-xs text-slate-500 mb-2">PAN Document</p>
+                                  <a
+                                    href={onboardingStep3.pan.image.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700"
+                                  >
+                                    <ImageIcon className="w-4 h-4" />
+                                    <span>View PAN Document</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* GST Details */}
+                        {onboardingStep3.gst && (
+                          <div className="bg-slate-50 rounded-lg p-4">
+                            <h5 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                              <FileText className="w-4 h-4" />
+                              GST Details
+                            </h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                              <div>
+                                  <p className="text-xs text-slate-500 mb-1">GST Registered</p>
+                                  <p className="font-medium text-slate-900">
+                                  {onboardingStep3.gst.isRegistered ? "Yes" : "No"}
+                                  </p>
+                                </div>
+                              {onboardingStep3.gst.gstNumber && (
+                                <div>
+                                  <p className="text-xs text-slate-500 mb-1">GST Number</p>
+                                  <p className="font-medium text-slate-900">{onboardingStep3.gst.gstNumber}</p>
+                                </div>
+                              )}
+                              {onboardingStep3.gst.legalName && (
+                                <div>
+                                  <p className="text-xs text-slate-500 mb-1">Legal Name</p>
+                                  <p className="font-medium text-slate-900">{onboardingStep3.gst.legalName}</p>
+                                </div>
+                              )}
+                              {onboardingStep3.gst.address && (
+                                <div>
+                                  <p className="text-xs text-slate-500 mb-1">GST Address</p>
+                                  <p className="font-medium text-slate-900">{onboardingStep3.gst.address}</p>
+                                </div>
+                              )}
+                              {onboardingStep3.gst.image?.url && (
+                                <div className="md:col-span-2">
+                                  <p className="text-xs text-slate-500 mb-2">GST Document</p>
+                                  <a
+                                    href={onboardingStep3.gst.image.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700"
+                                  >
+                                    <ImageIcon className="w-4 h-4" />
+                                    <span>View GST Document</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* FSSAI Details */}
+                        {onboardingStep3.fssai && (
+                          <div className="bg-slate-50 rounded-lg p-4">
+                            <h5 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                              <FileText className="w-4 h-4" />
+                              FSSAI Details
+                            </h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                              {onboardingStep3.fssai.registrationNumber && (
+                                <div>
+                                  <p className="text-xs text-slate-500 mb-1">FSSAI Registration Number</p>
+                                  <p className="font-medium text-slate-900">{onboardingStep3.fssai.registrationNumber}</p>
+                                </div>
+                              )}
+                              {onboardingStep3.fssai.expiryDate && (
+                                <div>
+                                  <p className="text-xs text-slate-500 mb-1">FSSAI Expiry Date</p>
+                                  <p className="font-medium text-slate-900">
+                                    {new Date(onboardingStep3.fssai.expiryDate).toLocaleDateString('en-IN', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric'
+                                    })}
+                                  </p>
+                                </div>
+                              )}
+                              {onboardingStep3.fssai.image?.url && (
+                                <div className="md:col-span-2">
+                                  <p className="text-xs text-slate-500 mb-2">FSSAI Document</p>
+                                  <a
+                                    href={onboardingStep3.fssai.image.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700"
+                                  >
+                                    <ImageIcon className="w-4 h-4" />
+                                    <span>View FSSAI Document</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Bank Details */}
+                        {onboardingStep3.bank && (
+                          <div className="bg-slate-50 rounded-lg p-4">
+                            <h5 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                              <CreditCard className="w-4 h-4" />
+                              Bank Details
+                            </h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                              {onboardingStep3.bank.accountNumber && (
+                                <div>
+                                  <p className="text-xs text-slate-500 mb-1">Account Number</p>
+                                  <p className="font-medium text-slate-900">
+                                    {onboardingStep3.bank.accountNumber}
+                                  </p>
+                                </div>
+                              )}
+                              {onboardingStep3.bank.ifscCode && (
+                                <div>
+                                  <p className="text-xs text-slate-500 mb-1">IFSC Code</p>
+                                  <p className="font-medium text-slate-900">{onboardingStep3.bank.ifscCode}</p>
+                                </div>
+                              )}
+                              {onboardingStep3.bank.accountHolderName && (
+                                <div>
+                                  <p className="text-xs text-slate-500 mb-1">Account Holder Name</p>
+                                  <p className="font-medium text-slate-900">{onboardingStep3.bank.accountHolderName}</p>
+                                </div>
+                              )}
+                              {onboardingStep3.bank.accountType && (
+                                <div>
+                                  <p className="text-xs text-slate-500 mb-1">Account Type</p>
+                                  <p className="font-medium text-slate-900 capitalize">{onboardingStep3.bank.accountType}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
 
                   {/* Onboarding Step 4 Details */}
                   {restaurantDetails?.onboarding?.step4 && (
@@ -1581,3 +1638,4 @@ export default function RestaurantsList() {
     </div>
   )
 }
+

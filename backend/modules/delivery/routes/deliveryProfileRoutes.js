@@ -8,6 +8,7 @@ import {
   getDeliveryTickets,
   getTicketById
 } from '../../admin/controllers/deliverySupportTicketController.js';
+import { saveDeliveryFcmToken } from '../../notification/controllers/notificationController.js';
 
 const router = express.Router();
 
@@ -18,6 +19,10 @@ router.use(authenticate);
 router.get('/profile', getProfile);
 router.put('/profile', validate(Joi.object({
   name: Joi.string().trim().min(2).max(100).optional(),
+  phone: Joi.string()
+    .trim()
+    .pattern(/^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/)
+    .optional(),
   email: Joi.string().email().lowercase().trim().optional().allow(null, ''),
   dateOfBirth: Joi.date().optional().allow(null),
   gender: Joi.string().valid('male', 'female', 'other', 'prefer-not-to-say').optional(),
@@ -72,6 +77,9 @@ router.post('/support-tickets', validate(Joi.object({
 
 router.get('/support-tickets', getDeliveryTickets);
 router.get('/support-tickets/:id', getTicketById);
+
+// Push notification token route
+router.post('/fcm-token', saveDeliveryFcmToken);
 
 export default router;
 

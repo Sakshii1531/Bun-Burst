@@ -19,7 +19,7 @@ export default function CreateSupportTicket() {
 
   const validateForm = () => {
     const newErrors = {}
-    
+
     if (!formData.subject.trim()) {
       newErrors.subject = "Subject is required"
     } else if (formData.subject.trim().length < 3) {
@@ -52,13 +52,13 @@ export default function CreateSupportTicket() {
 
     try {
       setCreating(true)
-      
+
       // Prepare request data
       const requestData = {
         subject: formData.subject.trim(),
         description: formData.description.trim()
       }
-      
+
       // Only include category and priority if they have valid values
       if (formData.category && formData.category !== '') {
         requestData.category = formData.category
@@ -66,14 +66,14 @@ export default function CreateSupportTicket() {
       if (formData.priority && formData.priority !== '') {
         requestData.priority = formData.priority
       }
-      
+
       console.log('Sending ticket creation request:', requestData)
-      
+
       const response = await deliveryAPI.createSupportTicket(requestData)
 
       if (response?.data?.success) {
         toast.success("Ticket created successfully!")
-        navigate("/delivery/help/tickets")
+        navigate("/delivery/profile")
       } else {
         toast.error(response?.data?.message || "Failed to create ticket")
       }
@@ -86,7 +86,7 @@ export default function CreateSupportTicket() {
         category: formData.category,
         priority: formData.priority
       })
-      
+
       // Show detailed error message
       let errorMessage = "Failed to create ticket"
       if (error?.response?.data?.message) {
@@ -96,12 +96,12 @@ export default function CreateSupportTicket() {
       } else if (error?.message) {
         errorMessage = error.message
       }
-      
+
       // If validation error, show field-specific errors
       if (error?.response?.data?.errors) {
         const validationErrors = error.response.data.errors
         const newErrors = {}
-        
+
         // Handle array format: [{ field: 'subject', message: '...' }]
         if (Array.isArray(validationErrors)) {
           validationErrors.forEach(err => {
@@ -120,13 +120,13 @@ export default function CreateSupportTicket() {
             newErrors.description = validationErrors.description
           }
         }
-        
+
         if (Object.keys(newErrors).length > 0) {
           setErrors(newErrors)
           errorMessage = "Please fix the validation errors"
         }
       }
-      
+
       toast.error(errorMessage)
     } finally {
       setCreating(false)

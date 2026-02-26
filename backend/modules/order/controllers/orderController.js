@@ -38,7 +38,6 @@ export const createOrder = async (req, res) => {
       restaurantId,
       restaurantName,
       pricing,
-      deliveryFleet,
       note,
       sendCutlery,
       paymentMethod: bodyPaymentMethod
@@ -249,7 +248,7 @@ export const createOrder = async (req, res) => {
       const restaurantZoneId = restaurantZone._id.toString();
 
       if (restaurantZoneId !== userZoneId) {
-        logger.warn('⚠️ Zone mismatch - user and restaurant are in different zones:', {
+        logger.warn('âš ï¸ Zone mismatch - user and restaurant are in different zones:', {
           userZoneId,
           restaurantZoneId,
           restaurantId: restaurant._id?.toString() || restaurant.restaurantId,
@@ -261,12 +260,12 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      logger.info('✅ Zone match validated - user and restaurant are in the same zone:', {
+      logger.info('âœ… Zone match validated - user and restaurant are in the same zone:', {
         zoneId: userZoneId,
         restaurantId: restaurant._id?.toString() || restaurant.restaurantId
       });
     } else {
-      logger.warn('⚠️ User zoneId not provided in order request - zone validation skipped');
+      logger.warn('âš ï¸ User zoneId not provided in order request - zone validation skipped');
     }
 
     assignedRestaurantId = restaurant._id?.toString() || restaurant.restaurantId;
@@ -304,7 +303,6 @@ export const createOrder = async (req, res) => {
         ...pricing,
         couponCode: pricing.couponCode || null
       },
-      deliveryFleet: deliveryFleet || 'standard',
       note: note || '',
       sendCutlery: sendCutlery !== false,
       status: 'pending',
@@ -967,7 +965,7 @@ export const getUserOrders = async (req, res) => {
       .limit(parseInt(limit))
       .skip(skip)
       .select('-__v')
-      .populate('restaurantId', 'name slug profileImage address location phone ownerPhone')
+      .populate('restaurantId', 'name slug profileImage address location')
       .populate('userId', 'name phone email')
       .lean();
 
@@ -1177,7 +1175,7 @@ export const cancelOrder = async (req, res) => {
  */
 export const calculateOrder = async (req, res) => {
   try {
-    const { items, restaurantId, deliveryAddress, couponCode, deliveryFleet } = req.body;
+    const { items, restaurantId, deliveryAddress, couponCode } = req.body;
 
     // Validate required fields
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -1192,8 +1190,7 @@ export const calculateOrder = async (req, res) => {
       items,
       restaurantId,
       deliveryAddress,
-      couponCode,
-      deliveryFleet: deliveryFleet || 'standard'
+      couponCode
     });
 
     res.json({
@@ -1439,3 +1436,4 @@ function generateDigitalBillHtml(order) {
     return '<p>Error generating bill. Please contact support.</p>';
   }
 }
+

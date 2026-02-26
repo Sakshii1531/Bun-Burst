@@ -5,6 +5,10 @@ import Zone from '../../admin/models/Zone.js';
 import { validate } from '../../../shared/middleware/validate.js';
 import Joi from 'joi';
 import winston from 'winston';
+import {
+  syncDeliveryPartnerPresence,
+  syncActiveOrderLocation
+} from '../../../config/firebaseRealtime.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -24,13 +28,15 @@ const logger = winston.createLogger({
 const updateLocationSchema = Joi.object({
   latitude: Joi.number().min(-90).max(90).optional(),
   longitude: Joi.number().min(-180).max(180).optional(),
-  isOnline: Joi.boolean().optional()
+  isOnline: Joi.boolean().optional(),
+  activeOrderId: Joi.string().optional(),
+  activeOrderStatus: Joi.string().optional()
 }).min(1); // At least one field must be provided
 
 export const updateLocation = asyncHandler(async (req, res) => {
   try {
     const delivery = req.delivery;
-    const { latitude, longitude, isOnline } = req.body;
+    const { latitude, longitude, isOnline, activeOrderId, activeOrderStatus } = req.body;
 
     // Manual validation: at least one field must be provided
     const hasLatitude = latitude !== undefined && latitude !== null;
@@ -91,6 +97,34 @@ export const updateLocation = asyncHandler(async (req, res) => {
 
     if (!updatedDelivery) {
       return errorResponse(res, 404, 'Delivery partner not found');
+    }
+
+    try {
+      const fallbackCoordinates = updatedDelivery.availability?.currentLocation?.coordinates || [];
+      const resolvedLatitude = typeof latitude === 'number' ? latitude : fallbackCoordinates[1];
+      const resolvedLongitude = typeof longitude === 'number' ? longitude : fallbackCoordinates[0];
+      const resolvedOnlineStatus = typeof isOnline === 'boolean'
+        ? isOnline
+        : !!updatedDelivery.availability?.isOnline;
+
+      await syncDeliveryPartnerPresence({
+        deliveryPartnerId: updatedDelivery._id.toString(),
+        isOnline: resolvedOnlineStatus,
+        latitude: resolvedLatitude,
+        longitude: resolvedLongitude
+      });
+
+      if (activeOrderId && typeof resolvedLatitude === 'number' && typeof resolvedLongitude === 'number') {
+        await syncActiveOrderLocation({
+          orderId: activeOrderId,
+          deliveryPartnerId: updatedDelivery._id.toString(),
+          latitude: resolvedLatitude,
+          longitude: resolvedLongitude,
+          status: activeOrderStatus || 'on_the_way'
+        });
+      }
+    } catch (firebaseSyncError) {
+      logger.warn(`Firebase realtime sync failed: ${firebaseSyncError.message}`);
     }
 
     const currentLocation = updatedDelivery.availability?.currentLocation;

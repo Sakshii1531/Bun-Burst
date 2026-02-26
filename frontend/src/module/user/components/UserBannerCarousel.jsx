@@ -83,7 +83,7 @@ const UserBannerCarousel = ({
 
     if (loading) {
         return (
-            <div className={`relative w-full overflow-hidden min-h-[20vh] lg:min-h-[28vh] px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 pt-4 ${className}`}>
+            <div className={`relative w-full overflow-hidden min-h-[20vh] lg:min-h-[35vh] px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 pt-4 ${className}`}>
                 <div className="absolute top-4 left-3 right-3 sm:left-4 sm:right-4 md:left-6 md:right-6 lg:left-8 lg:right-8 xl:left-12 xl:right-12 bottom-0 z-0 bg-primary flex items-center justify-center rounded-3xl shadow-2xl border-2 border-primary/20">
                     <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 animate-spin text-primary-foreground" />
                 </div>
@@ -93,7 +93,7 @@ const UserBannerCarousel = ({
 
     if (banners.length === 0) {
         return (
-            <div className={`relative w-full overflow-hidden min-h-[20vh] lg:min-h-[28vh] px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 pt-4 ${className}`}>
+            <div className={`relative w-full overflow-hidden min-h-[20vh] lg:min-h-[35vh] px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 pt-4 ${className}`}>
                 <div className="absolute top-4 left-3 right-3 sm:left-4 sm:right-4 md:left-6 md:right-6 lg:left-8 lg:right-8 xl:left-12 xl:right-12 bottom-0 z-0 bg-primary rounded-3xl shadow-2xl border-2 border-primary/20" />
             </div>
         )
@@ -101,12 +101,12 @@ const UserBannerCarousel = ({
 
     return (
         <div
-            className={`relative w-full overflow-hidden min-h-[20vh] lg:min-h-[28vh] px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 pt-4 ${className}`}
+            className={`relative w-full overflow-hidden min-h-[20vh] lg:min-h-[35vh] pt-4 ${className}`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
         >
-            <div className="absolute top-4 left-3 right-3 sm:left-4 sm:right-4 md:left-6 md:right-6 lg:left-8 lg:right-8 xl:left-12 xl:right-12 bottom-0 z-10 rounded-3xl overflow-hidden shadow-2xl ring-2 ring-background/30 hover:ring-background/50 transition-all duration-300">
+            <div className="absolute top-4 left-0 right-0 bottom-0 z-10 rounded-3xl overflow-hidden shadow-2xl ring-2 ring-background/30 hover:ring-background/50 transition-all duration-300">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={currentIndex}

@@ -70,7 +70,7 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
 
   if (!images || images.length === 0) {
     return (
-      <div className="relative h-48 sm:h-56 md:h-60 lg:h-64 xl:h-72 w-full overflow-hidden rounded-t-md flex-shrink-0 bg-gray-200">
+      <div className="relative h-[220px] sm:h-56 md:h-60 lg:h-64 xl:h-72 w-full overflow-hidden rounded-t-md flex-shrink-0 bg-gray-200">
         <OptimizedImage
           src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop"
           alt={restaurant.name}
@@ -125,7 +125,7 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
 
   return (
     <div
-      className="relative h-48 sm:h-56 md:h-60 lg:h-64 xl:h-72 w-full overflow-hidden rounded-t-md flex-shrink-0 group"
+      className="relative h-[220px] sm:h-56 md:h-60 lg:h-64 xl:h-72 w-full overflow-hidden rounded-t-md flex-shrink-0 group"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -357,6 +357,15 @@ export default function Home() {
 
   // PlaceholderIndex for search
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
+
+  // Animated placeholder cycling
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length)
+    }, 2500)
+    return () => clearInterval(interval)
+  }, [])
+
   const [activeFilters, setActiveFilters] = useState(new Set())
   const [sortBy, setSortBy] = useState(null) // null, 'price-low', 'price-high', 'rating-high', 'rating-low'
   const [selectedCuisine, setSelectedCuisine] = useState(null)
@@ -902,13 +911,13 @@ export default function Home() {
   return (
     <div className="relative min-h-screen bg-background pb-28 md:pb-24">
       {/* Mobile-only Top Header — DesktopNavbar handles md+ screens */}
-      <div className="md:hidden">
-        <UserTopHeader
-          vegMode={vegMode}
-          onVegModeChange={handleVegModeChange}
-          showVegToggle={true}
-        />
-      </div>
+      {/* Mobile-only Top Header — DesktopNavbar handles md+ screens */}
+      <UserTopHeader
+        className="md:hidden"
+        vegMode={vegMode}
+        onVegModeChange={handleVegModeChange}
+        showVegToggle={true}
+      />
 
       {/* Unified Background for Entire Page - Vibrant Food Theme */}
       <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none overflow-hidden z-0">
@@ -1020,8 +1029,56 @@ export default function Home() {
         `}</style>
       </div>
 
+      {/* Desktop Search Bar Row (Hidden on Mobile) */}
+      <div className="hidden md:block sticky top-16 z-40 bg-background/95 backdrop-blur-md pt-4 pb-4 mt-16 px-0 border-b border-border shadow-sm transition-all duration-300">
+        <div className="max-w-[1100px] mx-auto flex items-center gap-6">
+          {/* Search Input Container */}
+          <div className="flex-1 relative">
+            <div
+              className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-zinc-900 border border-[#F5F5F5] dark:border-zinc-800 rounded-2xl shadow-md hover:shadow-lg hover:border-[#e53935]/30 transition-all duration-300 group cursor-pointer"
+              onClick={() => openSearch()}
+            >
+              <Search className="h-5 w-5 text-slate-400 group-hover:text-[#e53935] transition-colors" />
+              <div className="flex-1 relative h-6 overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={placeholderIndex}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                    className="absolute inset-0 text-slate-500 font-medium flex items-center"
+                  >
+                    {placeholders[placeholderIndex]}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openSearch(true)
+                }}
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
+              >
+                <Mic className="h-5 w-5 text-[#e53935]" />
+              </button>
+            </div>
+          </div>
+
+          {/* VEG Toggle */}
+          <div className="flex items-center gap-3 pr-2">
+            <span className="text-[11px] font-black text-[#e53935] tracking-widest">VEG</span>
+            <Switch
+              checked={vegMode}
+              onCheckedChange={handleVegModeChange}
+              className="data-[state=checked]:bg-[#e53935] scale-110"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Hero Banner Section - Reusable Carousel matching content width */}
-      <div className="max-w-7xl mx-auto">
+      <div className="w-[92%] sm:w-[95%] md:w-full max-w-[1100px] mx-auto mb-6">
         <UserBannerCarousel
           banners={heroBannersData}
           loading={loadingBanners}
@@ -1030,7 +1087,7 @@ export default function Home() {
 
       {/* Rest of Content - Container Width with Unified Background */}
       <motion.div
-        className="relative max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 space-y-0 pt-2 sm:pt-3 lg:pt-6"
+        className="relative w-[92%] sm:w-[95%] md:w-full max-w-[1100px] mx-auto px-0 space-y-5 sm:space-y-3 md:space-y-0 pt-4 sm:pt-4 lg:pt-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6, delay: 0.4 }}
@@ -1045,7 +1102,7 @@ export default function Home() {
         >
           <div
             ref={categoryScrollRef}
-            className="flex gap-3 sm:gap-4 lg:gap-5 xl:gap-6 overflow-x-auto overflow-y-visible scrollbar-hide scroll-smooth px-2 sm:px-3 lg:px-4 py-2 sm:py-3 lg:py-4"
+            className="flex gap-3 sm:gap-4 lg:gap-5 xl:gap-6 overflow-x-auto overflow-y-visible scrollbar-hide scroll-smooth py-2 sm:py-3 lg:py-4"
             style={{
               scrollbarWidth: "none",
               msOverflowStyle: "none",
@@ -1224,7 +1281,7 @@ export default function Home() {
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <div
-            className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 overflow-x-auto scrollbar-hide pb-1 lg:pb-2"
+            className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 overflow-x-auto scrollbar-hide pb-1 lg:pb-2 px-0"
             style={{
               scrollbarWidth: "none",
               msOverflowStyle: "none",
@@ -1298,7 +1355,7 @@ export default function Home() {
           transition={{ duration: 0.5 }}
         >
           <motion.h2
-            className="text-xs sm:text-sm lg:text-base font-semibold text-muted-foreground tracking-widest uppercase mb-2 sm:mb-3 lg:mb-4 px-1"
+            className="text-xs sm:text-sm lg:text-base font-semibold text-muted-foreground tracking-widest uppercase mb-2 sm:mb-3 lg:mb-4 px-0"
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
@@ -1435,7 +1492,7 @@ export default function Home() {
           transition={{ duration: 0.6 }}
         >
           <motion.div
-            className="px-1 mb-3 lg:mb-4"
+            className="px-0 mb-3 lg:mb-4"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -1466,7 +1523,7 @@ export default function Home() {
                 </motion.div>
               )}
             </AnimatePresence>
-            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  gap-3 sm:gap-4 lg:gap-5 xl:gap-6 pt-1 sm:pt-1.5 lg:pt-2 items-stretch ${isLoadingFilterResults || loadingRestaurants ? 'opacity-50' : 'opacity-100'} transition-opacity duration-300`}>
+            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5 xl:gap-8 pt-1 sm:pt-1.5 lg:pt-2 items-stretch ${isLoadingFilterResults || loadingRestaurants ? 'opacity-50' : 'opacity-100'} transition-opacity duration-300`}>
               {filteredRestaurants.map((restaurant, index) => {
                 const restaurantSlug = restaurant.slug || restaurant.name.toLowerCase().replace(/\s+/g, "-")
                 // Direct favorite check - isFavorite is already memoized in context
@@ -1543,14 +1600,7 @@ export default function Home() {
                               </Button>
                             </div>
 
-                            {/* FREE delivery Badge - Bottom Left (only for first 3 restaurants) */}
-                            {index < 3 && (
-                              <div className="absolute bottom-2 left-0 sm:bottom-2 sm:left-0 z-10 transform transition-all duration-300 group-hover:translate-x-1">
-                                <div className="bg-gradient-to-r from-primary via-primary/80 to-transparent text-primary-foreground px-2.5 py-1 rounded-r-sm text-[10px] sm:text-xs font-bold shadow-lg backdrop-blur-sm">
-                                  FREE delivery
-                                </div>
-                              </div>
-                            )}
+
                           </div>
 
                           {/* Content Section */}
@@ -1563,9 +1613,9 @@ export default function Home() {
                                     {restaurant.name}
                                   </h3>
                                 </div>
-                                <div className="flex-shrink-0 bg-primary text-primary-foreground px-2 py-1 lg:px-3 lg:py-1.5 rounded-lg flex items-center gap-1 transform transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+                                <div className="flex-shrink-0 bg-[#FFC400] text-[#1E1E1E] px-2 py-1 lg:px-3 lg:py-1.5 rounded-lg flex items-center gap-1 transform transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
                                   <span className="text-sm lg:text-base font-bold">{restaurant.rating}</span>
-                                  <Star className="h-3 w-3 lg:h-4 lg:w-4 fill-primary-foreground text-primary-foreground" />
+                                  <Star className="h-3 w-3 lg:h-4 lg:w-4 fill-[#1E1E1E] text-[#1E1E1E]" />
                                 </div>
                               </div>
 
@@ -1767,8 +1817,8 @@ export default function Home() {
                           : 'border-border hover:border-primary'
                           }`}
                       >
-                        <Star className={`h-6 w-6 ${activeFilters.has('rating-35-plus') ? 'text-primary fill-primary' : 'text-muted-foreground'}`} />
-                        <span className={`text-sm font-medium ${activeFilters.has('rating-35-plus') ? 'text-primary' : 'text-foreground'}`}>Rated 3.5+</span>
+                        <Star className={`h-6 w-6 ${activeFilters.has('rating-35-plus') ? 'text-[#FFC400] fill-[#FFC400]' : 'text-muted-foreground'}`} />
+                        <span className={`text-sm font-medium ${activeFilters.has('rating-35-plus') ? 'text-[#FFC400]' : 'text-foreground'}`}>Rated 3.5+</span>
                       </button>
                       <button
                         onClick={() => toggleFilter('rating-4-plus')}
@@ -1777,8 +1827,8 @@ export default function Home() {
                           : 'border-border hover:border-primary'
                           }`}
                       >
-                        <Star className={`h-6 w-6 ${activeFilters.has('rating-4-plus') ? 'text-primary fill-primary' : 'text-muted-foreground'}`} />
-                        <span className={`text-sm font-medium ${activeFilters.has('rating-4-plus') ? 'text-primary' : 'text-foreground'}`}>Rated 4.0+</span>
+                        <Star className={`h-6 w-6 ${activeFilters.has('rating-4-plus') ? 'text-[#FFC400] fill-[#FFC400]' : 'text-muted-foreground'}`} />
+                        <span className={`text-sm font-medium ${activeFilters.has('rating-4-plus') ? 'text-[#FFC400]' : 'text-foreground'}`}>Rated 4.0+</span>
                       </button>
                       <button
                         onClick={() => toggleFilter('rating-45-plus')}
@@ -1787,8 +1837,8 @@ export default function Home() {
                           : 'border-border hover:border-primary'
                           }`}
                       >
-                        <Star className={`h-6 w-6 ${activeFilters.has('rating-45-plus') ? 'text-primary fill-primary' : 'text-muted-foreground'}`} />
-                        <span className={`text-sm font-medium ${activeFilters.has('rating-45-plus') ? 'text-primary' : 'text-foreground'}`}>Rated 4.5+</span>
+                        <Star className={`h-6 w-6 ${activeFilters.has('rating-45-plus') ? 'text-[#FFC400] fill-[#FFC400]' : 'text-muted-foreground'}`} />
+                        <span className={`text-sm font-medium ${activeFilters.has('rating-45-plus') ? 'text-[#FFC400]' : 'text-foreground'}`}>Rated 4.5+</span>
                       </button>
                     </div>
                   </div>

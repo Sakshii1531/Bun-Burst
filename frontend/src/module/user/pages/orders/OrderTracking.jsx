@@ -1,4 +1,4 @@
-import { useParams, Link, useSearchParams } from "react-router-dom"
+import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
@@ -34,6 +34,7 @@ import { useLocation as useUserLocation } from "../../hooks/useLocation"
 import DeliveryTrackingMap from "../../components/DeliveryTrackingMap"
 import { orderAPI, restaurantAPI } from "@/lib/api"
 import circleIcon from "@/assets/circleicon.png"
+import { useLocationSelector } from "../../components/UserLayout"
 
 // Animated checkmark component
 const AnimatedCheckmark = ({ delay = 0 }) => (
@@ -193,9 +194,11 @@ const SectionItem = ({ icon: Icon, title, subtitle, onClick, showArrow = true, r
     className="w-full flex items-center gap-3 p-4 hover:bg-[#fff8f7] transition-colors text-left border-b border-dashed border-[#F5F5F5] last:border-0"
     whileTap={{ scale: 0.99 }}
   >
-    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-      <Icon className="w-5 h-5 text-gray-600" />
-    </div>
+    {Icon && (
+      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+        <Icon className="w-5 h-5 text-gray-600" />
+      </div>
+    )}
     <div className="flex-1 min-w-0">
       <p className="font-medium text-[#1E1E1E] truncate">{title}</p>
       {subtitle && <p className="text-sm text-gray-500 truncate">{subtitle}</p>}
@@ -205,11 +208,13 @@ const SectionItem = ({ icon: Icon, title, subtitle, onClick, showArrow = true, r
 )
 
 export default function OrderTracking() {
+  const navigate = useNavigate()
   const { orderId } = useParams()
   const [searchParams] = useSearchParams()
   const confirmed = searchParams.get("confirmed") === "true"
   const { getOrderById } = useOrders()
   const { profile, getDefaultAddress } = useProfile()
+  const { openLocationSelector } = useLocationSelector()
 
   // State for order data
   const [order, setOrder] = useState(null)
@@ -953,7 +958,7 @@ export default function OrderTracking() {
           )}
 
           <SectionItem
-            icon={Phone}
+            showArrow={false}
             title={`${order?.userName || order?.userId?.fullName || order?.userId?.name || profile?.fullName || profile?.name || 'Customer'} (You)`}
             subtitle={
               order?.userPhone ||
@@ -962,13 +967,11 @@ export default function OrderTracking() {
               defaultAddress?.phone ||
               'Phone number not available'
             }
-            rightContent={
-              <span className="text-[#e53935] font-medium text-sm">Edit</span>
-            }
           />
           <SectionItem
             icon={HomeIcon}
             title="Delivery at Location"
+            onClick={openLocationSelector}
             subtitle={(() => {
               // Priority 1: Use order address formattedAddress (live location address)
               if (order?.address?.formattedAddress && order.address.formattedAddress !== "Select location") {
@@ -1034,16 +1037,14 @@ export default function OrderTracking() {
               <p className="font-semibold text-[#1E1E1E]">{order.restaurant}</p>
               <p className="text-sm text-gray-500">{order.address?.city || 'Local Area'}</p>
             </div>
-            <motion.button
-              className="w-10 h-10 rounded-full bg-[#e53935] flex items-center justify-center"
-              whileTap={{ scale: 0.9 }}
-            >
-              <Phone className="w-5 h-5 text-white" />
-            </motion.button>
           </div>
 
           {/* Order Items */}
-          <div className="p-4 border-b border-dashed border-[#F5F5F5]">
+          <motion.button
+            onClick={() => navigate(`/orders/${orderId}/details`)}
+            className="w-full text-left p-4 border-b border-dashed border-[#F5F5F5] hover:bg-[#fff8f7] transition-colors"
+            whileTap={{ scale: 0.99 }}
+          >
             <div className="flex items-start gap-3">
               <Receipt className="w-5 h-5 text-gray-500 mt-0.5" />
               <div className="flex-1">
@@ -1061,7 +1062,7 @@ export default function OrderTracking() {
               </div>
               <ChevronRight className="w-5 h-5 text-gray-400" />
             </div>
-          </div>
+          </motion.button>
         </motion.div>
 
         {/* Help Section */}

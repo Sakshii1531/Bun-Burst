@@ -2449,6 +2449,7 @@ export default function DeliveryHome() {
                 estimatedEarnings: backendEarnings || selectedRestaurant?.estimatedEarnings || 0,
                 amount: earningsValue, // Also set amount for compatibility
                 customerName: order.userId?.name || selectedRestaurant?.customerName,
+                customerPhone: order.userId?.phone || selectedRestaurant?.customerPhone || null,
                 customerAddress: order.address?.formattedAddress ||
                   (order.address?.street ? `${order.address.street}, ${order.address.city || ''}, ${order.address.state || ''}`.trim() : '') ||
                   selectedRestaurant?.customerAddress,
@@ -3665,6 +3666,7 @@ export default function DeliveryHome() {
                 const updatedRestaurant = {
                   ...selectedRestaurant,
                   customerName: order.userId?.name || selectedRestaurant.customerName,
+                  customerPhone: order.userId?.phone || selectedRestaurant.customerPhone || null,
                   customerAddress: order.address?.formattedAddress ||
                     (order.address?.street ? `${order.address.street}, ${order.address.city || ''}, ${order.address.state || ''}`.trim() : '') ||
                     selectedRestaurant.customerAddress,
@@ -3831,65 +3833,75 @@ export default function DeliveryHome() {
   }
 
   // Handle Start Navigation Button - Opens Google Maps app in navigation mode
-  const handleStartNavigation = () => {
-    // Get customer location from selectedRestaurant
-    const customerLat = selectedRestaurant?.customerLat;
-    const customerLng = selectedRestaurant?.customerLng;
+  const handleStartNavigation = async () => {
+    let customerLat = toFiniteCoordinate(selectedRestaurant?.customerLat)
+    let customerLng = toFiniteCoordinate(selectedRestaurant?.customerLng)
 
-    if (!customerLat || !customerLng) {
-      console.error('❌ Customer location not available');
-      toast.error('Customer location not found');
-      return;
+    if (!hasValidCoordinates(customerLat, customerLng)) {
+      const orderId = selectedRestaurant?.orderId || selectedRestaurant?.id
+      if (orderId) {
+        try {
+          const response = await deliveryAPI.getOrderDetails(orderId)
+          const order = response?.data?.data?.order || response?.data?.data || null
+          const coords = order?.address?.location?.coordinates
+          const fetchedLat = toFiniteCoordinate(coords?.[1] ?? order?.address?.location?.latitude ?? order?.address?.location?.lat)
+          const fetchedLng = toFiniteCoordinate(coords?.[0] ?? order?.address?.location?.longitude ?? order?.address?.location?.lng)
+
+          if (hasValidCoordinates(fetchedLat, fetchedLng)) {
+            customerLat = fetchedLat
+            customerLng = fetchedLng
+            setSelectedRestaurant(prev => prev ? {
+              ...prev,
+              customerLat: fetchedLat,
+              customerLng: fetchedLng
+            } : prev)
+          }
+        } catch (error) {
+          console.warn('Failed to fetch customer coords for map navigation:', error?.response?.data?.message || error.message)
+        }
+      }
     }
 
-    console.log('🗺️ Opening Google Maps navigation to customer:', { lat: customerLat, lng: customerLng });
+    if (!hasValidCoordinates(customerLat, customerLng)) {
+      console.error('Customer location not available', {
+        customerLat: selectedRestaurant?.customerLat,
+        customerLng: selectedRestaurant?.customerLng,
+        selectedRestaurant
+      })
+      toast.error('Customer location not found')
+      return
+    }
 
-    // Get current rider location for origin (optional, Google Maps will use current location if not provided)
-    const originLat = riderLocation?.[0];
-    const originLng = riderLocation?.[1];
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera
+    const isAndroid = /android/i.test(userAgent)
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream
+    const isLocalDevHost = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${customerLat},${customerLng}&travelmode=bicycling`
 
-    // Detect platform (Android or iOS)
-    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-    const isAndroid = /android/i.test(userAgent);
-    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
-
-    let mapsUrl = '';
+    if (isLocalDevHost) {
+      const opened = window.open(webUrl, '_blank')
+      if (!opened) window.location.href = webUrl
+      toast.success('Opening Google Maps navigation', { duration: 2000 })
+      return
+    }
 
     if (isAndroid) {
-      // Android: Use google.navigation: scheme (opens directly in navigation mode)
-      // Fallback to web URL if app not installed
-      mapsUrl = `google.navigation:q=${customerLat},${customerLng}&mode=b`;
-
-      // Try to open Google Maps app first
-      window.location.href = mapsUrl;
-
-      // Fallback to web URL after a short delay (in case app is not installed)
+      window.location.href = `google.navigation:q=${customerLat},${customerLng}&mode=b`
       setTimeout(() => {
-        const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${customerLat},${customerLng}&travelmode=bicycling`;
-        window.open(webUrl, '_blank');
-      }, 500);
+        window.open(webUrl, '_blank')
+      }, 500)
     } else if (isIOS) {
-      // iOS: Use comgooglemaps:// scheme (opens Google Maps app)
-      mapsUrl = `comgooglemaps://?daddr=${customerLat},${customerLng}&directionsmode=bicycling`;
-
-      // Try to open Google Maps app first
-      window.location.href = mapsUrl;
-
-      // Fallback to web URL after a short delay (in case app is not installed)
+      window.location.href = `comgooglemaps://?daddr=${customerLat},${customerLng}&directionsmode=bicycling`
       setTimeout(() => {
-        const webUrl = `https://maps.google.com/?daddr=${customerLat},${customerLng}&directionsmode=bicycling`;
-        window.open(webUrl, '_blank');
-      }, 500);
+        const iosWebUrl = `https://maps.google.com/?daddr=${customerLat},${customerLng}&directionsmode=bicycling`
+        window.open(iosWebUrl, '_blank')
+      }, 500)
     } else {
-      // Web/Desktop: Use web URL
-      mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${customerLat},${customerLng}&travelmode=bicycling`;
-      window.open(mapsUrl, '_blank');
+      const opened = window.open(webUrl, '_blank')
+      if (!opened) window.location.href = webUrl
     }
 
-    // Show success message
-    toast.success('Opening Google Maps navigation 🗺️', {
-      duration: 2000
-    });
+    toast.success('Opening Google Maps navigation', { duration: 2000 })
   }
 
   // Handle Order Delivered button swipe
@@ -4206,7 +4218,11 @@ export default function DeliveryHome() {
 
       // Use calculated earnings if available, otherwise fallback to deliveryFee
       const effectiveEarnings = earnedValue > 0 ? earned : (deliveryFee > 0 ? deliveryFee : 0);
-      const newOrderRestaurantCoords = extractLatLng(newOrder.restaurantLocation || newOrder.restaurant?.location)
+      const extractedRestaurantCoords = extractLatLng(newOrder.restaurantLocation || newOrder.restaurant?.location)
+      const newOrderRestaurantCoords = {
+        lat: extractedRestaurantCoords.lat ?? toFiniteCoordinate(newOrder.restaurantLat),
+        lng: extractedRestaurantCoords.lng ?? toFiniteCoordinate(newOrder.restaurantLng)
+      }
 
       console.log('💰 Earnings from notification:', {
         earned,
@@ -4218,7 +4234,12 @@ export default function DeliveryHome() {
 
       // Calculate pickup distance if not provided
       let pickupDistance = newOrder.pickupDistance;
-      if (!pickupDistance || pickupDistance === '0 km') {
+      if (
+        !pickupDistance ||
+        pickupDistance === '0 km' ||
+        pickupDistance === 'Distance not available' ||
+        pickupDistance === 'Calculating...'
+      ) {
         // Try to calculate from driver's current location to restaurant
         const currentLocation = riderLocation || lastLocationRef.current;
         const restaurantLat = newOrderRestaurantCoords.lat;
@@ -4240,7 +4261,11 @@ export default function DeliveryHome() {
       }
 
       // Default to 'Calculating...' if still no distance
-      if (!pickupDistance || pickupDistance === '0 km') {
+      if (
+        !pickupDistance ||
+        pickupDistance === '0 km' ||
+        pickupDistance === 'Distance not available'
+      ) {
         pickupDistance = 'Calculating...';
       }
 
@@ -4253,12 +4278,16 @@ export default function DeliveryHome() {
         lng: newOrderRestaurantCoords.lng,
         distance: pickupDistance,
         timeAway: pickupDistance !== 'Calculating...' ? calculateTimeAway(pickupDistance) : 'Calculating...',
-        dropDistance: newOrder.deliveryDistance || 'Calculating...',
+        dropDistance: newOrder.deliveryDistance ||
+          (typeof newOrder.deliveryDistanceRaw === 'number' && Number.isFinite(newOrder.deliveryDistanceRaw)
+            ? `${newOrder.deliveryDistanceRaw.toFixed(2)} km`
+            : 'Calculating...'),
         pickupDistance: pickupDistance,
         estimatedEarnings: effectiveEarnings,
         deliveryFee,
         amount: earnedValue > 0 ? earnedValue : (deliveryFee > 0 ? deliveryFee : 0),
         customerName: newOrder.customerName,
+        customerPhone: newOrder.customerPhone || newOrder.customer?.phone || null,
         customerAddress: newOrder.customerLocation?.address || 'Customer address',
         customerLat: newOrder.customerLocation?.latitude,
         customerLng: newOrder.customerLocation?.longitude,
@@ -4599,6 +4628,10 @@ export default function DeliveryHome() {
             hasLocation: !!firstOrder.restaurantId?.location
           });
 
+          const assignedRestaurantCoords = extractLatLng(
+            firstOrder.restaurantId?.location || firstOrder.restaurantLocation
+          );
+
           // Calculate pickup distance if not provided
           let pickupDistance = null;
           if (firstOrder.assignmentInfo?.distance) {
@@ -4606,12 +4639,11 @@ export default function DeliveryHome() {
           } else {
             // Try to calculate from driver's current location to restaurant
             const currentLocation = riderLocation || lastLocationRef.current;
-            const restaurantLat = firstOrder.restaurantId?.location?.coordinates?.[1];
-            const restaurantLng = firstOrder.restaurantId?.location?.coordinates?.[0];
+            const restaurantLat = assignedRestaurantCoords.lat;
+            const restaurantLng = assignedRestaurantCoords.lng;
 
             if (currentLocation && currentLocation.length === 2 &&
-              restaurantLat && restaurantLng &&
-              !isNaN(restaurantLat) && !isNaN(restaurantLng)) {
+              hasValidCoordinates(restaurantLat, restaurantLng)) {
               // Calculate distance in meters, then convert to km
               const distanceInMeters = calculateDistance(
                 currentLocation[0],
@@ -4635,8 +4667,8 @@ export default function DeliveryHome() {
             orderId: firstOrder.orderId,
             name: firstOrder.restaurantId?.name || 'Restaurant',
             address: restaurantAddress,
-            lat: firstOrder.restaurantId?.location?.coordinates?.[1],
-            lng: firstOrder.restaurantId?.location?.coordinates?.[0],
+            lat: assignedRestaurantCoords.lat,
+            lng: assignedRestaurantCoords.lng,
             distance: pickupDistance,
             timeAway: pickupDistance !== 'Calculating...' ? calculateTimeAway(pickupDistance) : 'Calculating...',
             dropDistance: firstOrder.address?.location?.coordinates
@@ -4645,6 +4677,7 @@ export default function DeliveryHome() {
             pickupDistance: pickupDistance,
             estimatedEarnings: firstOrder.pricing?.deliveryFee || 0,
             customerName: firstOrder.userId?.name || 'Customer',
+            customerPhone: firstOrder.userId?.phone || firstOrder.customerPhone || null,
             customerAddress: firstOrder.address?.formattedAddress ||
               (firstOrder.address?.street
                 ? `${firstOrder.address.street}, ${firstOrder.address.city || ''}, ${firstOrder.address.state || ''}`.trim()
@@ -6587,6 +6620,40 @@ export default function DeliveryHome() {
   }, [selectedRestaurant])
 
   // Utility function to clear order data when order is deleted or cancelled
+  const handleCallCustomer = useCallback(async () => {
+    let customerPhone = selectedRestaurant?.customerPhone ||
+      selectedRestaurant?.customer?.phone ||
+      selectedRestaurant?.userId?.phone ||
+      null
+
+    if (!customerPhone && selectedRestaurant?.orderId) {
+      try {
+        const response = await deliveryAPI.getOrderDetails(selectedRestaurant.orderId || selectedRestaurant.id)
+        const order = response?.data?.data?.order || response?.data?.order || response?.data?.data || null
+        customerPhone = order?.customerPhone || order?.userId?.phone || order?.customer?.phone || null
+
+        if (customerPhone) {
+          setSelectedRestaurant(prev => prev ? ({
+            ...prev,
+            customerPhone,
+            customerName: prev.customerName || order?.userId?.name || prev.customerName,
+            customerAddress: prev.customerAddress || order?.address?.formattedAddress || prev.customerAddress
+          }) : prev)
+        }
+      } catch (error) {
+        console.error('❌ [CUSTOMER CALL] Error fetching order details:', error)
+      }
+    }
+
+    if (!customerPhone) {
+      toast.error('Customer phone number not available.')
+      return
+    }
+
+    const cleanPhone = String(customerPhone).replace(/[^\d+]/g, '')
+    window.location.href = `tel:${cleanPhone}`
+  }, [selectedRestaurant])
+
   const clearOrderData = useCallback(() => {
     console.log('🧹 Clearing order data...');
     localStorage.removeItem('deliveryActiveOrder');
@@ -6781,6 +6848,7 @@ export default function DeliveryHome() {
         address: restaurantAddress,
         lat: order.restaurantId?.location?.coordinates?.[1] || orderReady.restaurantLat || selectedRestaurant?.lat,
         lng: order.restaurantId?.location?.coordinates?.[0] || orderReady.restaurantLng || selectedRestaurant?.lng,
+        customerPhone: order.userId?.phone || orderReady.customerPhone || selectedRestaurant?.customerPhone || null,
         orderStatus: 'ready'
       }
       setSelectedRestaurant(restaurantInfo)
@@ -9216,7 +9284,7 @@ export default function DeliveryHome() {
                         strokeDasharray="450"
                         initial={{ strokeDashoffset: 0 }}
                         animate={{
-                          strokeDashoffset: `${450 * (1 - countdownSeconds / 300)}`
+                          strokeDashoffset: 450 * (1 - countdownSeconds / 300)
                         }}
                         transition={{ duration: 1, ease: "linear" }}
                       />
@@ -9674,11 +9742,47 @@ export default function DeliveryHome() {
             </button>
             <button
               onClick={() => {
-                // Get restaurant location coordinates
-                const restaurantLat = selectedRestaurant?.lat
-                const restaurantLng = selectedRestaurant?.lng
+                // Get restaurant coordinates with robust fallbacks
+                const locationCandidates = [
+                  selectedRestaurant?.restaurant?.location,
+                  selectedRestaurant?.restaurantLocation,
+                  selectedRestaurant?.location,
+                  selectedRestaurant?.restaurantId?.location,
+                  selectedRestaurant?.fullOrder?.restaurantId?.location,
+                  selectedRestaurant?.order?.restaurantId?.location
+                ]
 
-                if (!restaurantLat || !restaurantLng) {
+                let extractedRestaurantCoords = { lat: null, lng: null }
+                for (const candidate of locationCandidates) {
+                  const parsed = extractLatLng(candidate)
+                  if (hasValidCoordinates(parsed.lat, parsed.lng)) {
+                    extractedRestaurantCoords = parsed
+                    break
+                  }
+                }
+
+                // Last fallback: use routeToPickup last coordinate [lat, lng]
+                let routeRestaurantLat = null
+                let routeRestaurantLng = null
+                const routeCoords = selectedRestaurant?.deliveryState?.routeToPickup?.coordinates
+                if (Array.isArray(routeCoords) && routeCoords.length > 0) {
+                  const lastPoint = routeCoords[routeCoords.length - 1]
+                  if (Array.isArray(lastPoint) && lastPoint.length >= 2) {
+                    routeRestaurantLat = toFiniteCoordinate(lastPoint[0])
+                    routeRestaurantLng = toFiniteCoordinate(lastPoint[1])
+                  }
+                }
+
+                const restaurantLat = toFiniteCoordinate(selectedRestaurant?.lat) ??
+                  extractedRestaurantCoords.lat ??
+                  toFiniteCoordinate(selectedRestaurant?.restaurantLat) ??
+                  routeRestaurantLat
+                const restaurantLng = toFiniteCoordinate(selectedRestaurant?.lng) ??
+                  extractedRestaurantCoords.lng ??
+                  toFiniteCoordinate(selectedRestaurant?.restaurantLng) ??
+                  routeRestaurantLng
+
+                if (!hasValidCoordinates(restaurantLat, restaurantLng)) {
                   toast.error('Restaurant location not available')
                   console.error('❌ Restaurant coordinates not found:', {
                     lat: restaurantLat,
@@ -9698,8 +9802,20 @@ export default function DeliveryHome() {
                 const userAgent = navigator.userAgent || navigator.vendor || window.opera
                 const isAndroid = /android/i.test(userAgent)
                 const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream
+                const isLocalDevHost = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+                const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${restaurantLat},${restaurantLng}&travelmode=bicycling`
 
                 let mapsUrl = ''
+
+                // In local dev browser, app URI schemes like google.navigation:// are usually unavailable.
+                // Open web URL directly to avoid handler errors in console.
+                if (isLocalDevHost) {
+                  window.open(webUrl, '_blank')
+                  toast.success('Opening Google Maps navigation 🗺️', {
+                    duration: 2000
+                  })
+                  return
+                }
 
                 if (isAndroid) {
                   // Android: Use google.navigation: scheme (opens directly in navigation mode)
@@ -9710,7 +9826,6 @@ export default function DeliveryHome() {
 
                   // Fallback to web URL after a short delay (in case app is not installed)
                   setTimeout(() => {
-                    const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${restaurantLat},${restaurantLng}&travelmode=bicycling`
                     window.open(webUrl, '_blank')
                   }, 500)
                 } else if (isIOS) {
@@ -9727,7 +9842,7 @@ export default function DeliveryHome() {
                   }, 500)
                 } else {
                   // Web/Desktop: Use web URL with navigation
-                  mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${restaurantLat},${restaurantLng}&travelmode=bicycling`
+                  mapsUrl = webUrl
                   window.open(mapsUrl, '_blank')
                 }
 
@@ -10232,7 +10347,13 @@ export default function DeliveryHome() {
 
               {/* Start Navigation Button */}
               <button
+                type="button"
                 onClick={handleStartNavigation}
+                onTouchEnd={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleStartNavigation()
+                }}
                 className="w-full bg-[#e53935] hover:bg-[#c62828] text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 active:scale-95"
               >
                 <svg
@@ -10289,7 +10410,10 @@ export default function DeliveryHome() {
 
           {/* Action Buttons */}
           <div className="flex gap-3 mb-6">
-            <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-[#F5F5F5] rounded-lg hover:bg-[#fff8f7] transition-colors">
+            <button
+              onClick={handleCallCustomer}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-[#F5F5F5] rounded-lg hover:bg-[#fff8f7] transition-colors"
+            >
               <Phone className="w-5 h-5 text-gray-700" />
               <span className="text-gray-700 font-medium">Call</span>
             </button>
@@ -10297,7 +10421,16 @@ export default function DeliveryHome() {
               <MapPin className="w-5 h-5 text-gray-700" />
               <span className="text-gray-700 font-medium">Chat</span>
             </button>
-            <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
+            <button
+              type="button"
+              onClick={handleStartNavigation}
+              onTouchEnd={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                handleStartNavigation()
+              }}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+            >
               <MapPin className="w-5 h-5 text-white" />
               <span className="text-white font-medium">Map</span>
             </button>
@@ -10958,6 +11091,7 @@ export default function DeliveryHome() {
     </div >
   )
 }
+
 
 
 

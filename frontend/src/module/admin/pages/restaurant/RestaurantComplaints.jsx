@@ -30,9 +30,16 @@ const COMPLAINT_TYPE_OPTIONS = [
   { value: 'other', label: 'Other' },
 ]
 
+const normalizeSearchValue = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .trim()
+
 export default function RestaurantComplaints() {
   const [complaints, setComplaints] = useState([])
   const [loading, setLoading] = useState(true)
+  const [updatingComplaintId, setUpdatingComplaintId] = useState(null)
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -67,7 +74,8 @@ export default function RestaurantComplaints() {
       }
       if (filters.status && filters.status !== 'all') params.status = filters.status
       if (filters.complaintType && filters.complaintType !== 'all') params.complaintType = filters.complaintType
-      if (filters.search) params.search = filters.search
+      const normalizedSearch = normalizeSearchValue(filters.search)
+      if (normalizedSearch) params.search = normalizedSearch
 
       const response = await adminAPI.getRestaurantComplaints(params)
       if (response?.data?.success) {
@@ -110,6 +118,25 @@ export default function RestaurantComplaints() {
         return 'bg-red-100 text-red-800'
       default:
         return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const handleStatusUpdate = async (complaintId, nextStatus) => {
+    try {
+      setUpdatingComplaintId(complaintId)
+      const response = await adminAPI.updateRestaurantComplaintStatus(complaintId, nextStatus)
+
+      if (response?.data?.success) {
+        toast.success('Complaint status updated')
+        fetchComplaints()
+      } else {
+        toast.error(response?.data?.message || 'Failed to update complaint status')
+      }
+    } catch (error) {
+      console.error('Error updating complaint status:', error)
+      toast.error(error?.response?.data?.message || 'Failed to update complaint status')
+    } finally {
+      setUpdatingComplaintId(null)
     }
   }
 
@@ -179,6 +206,29 @@ export default function RestaurantComplaints() {
                     <div className="flex items-center gap-3 mb-2">
                       {getStatusIcon(complaint.status)}
                       <h3 className="font-semibold text-gray-900">{complaint.subject}</h3>
+                    </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(complaint.status)}`}>
+                        {complaint.status?.replace('_', ' ')}
+                      </span>
+                      <div className="w-[160px]">
+                        <Select
+                          value={complaint.status}
+                          onValueChange={(value) => handleStatusUpdate(complaint._id, value)}
+                          disabled={updatingComplaintId === complaint._id}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Update status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUS_OPTIONS.filter((option) => option.value !== 'all').map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
                       <div>

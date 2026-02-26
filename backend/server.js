@@ -9,9 +9,13 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cron from 'node-cron';
 import mongoose from 'mongoose';
+import { initializeFirebaseRealtime, syncActiveOrderLocation } from './config/firebaseRealtime.js';
 
 // Load environment variables
 dotenv.config();
+
+// Initialize Firebase Realtime Database before routes/socket setup
+initializeFirebaseRealtime();
 
 // Import configurations
 import { connectDB } from './config/database.js';
@@ -470,6 +474,17 @@ io.on('connection', (socket) => {
       // Send to specific order room
       io.to(`order:${data.orderId}`).emit(`location-receive-${data.orderId}`, locationData);
 
+      // Best-effort Firebase sync (no throw on failure)
+      syncActiveOrderLocation({
+        orderId: data.orderId,
+        deliveryPartnerId: data.deliveryPartnerId || data.deliveryId || null,
+        latitude: data.lat,
+        longitude: data.lng,
+        status: data.status || 'on_the_way'
+      }).catch((firebaseSyncError) => {
+        console.warn(`⚠️ Firebase active order sync failed: ${firebaseSyncError.message}`);
+      });
+
       console.log(`📍 Location broadcasted to order room ${data.orderId}:`, {
         lat: locationData.lat,
         lng: locationData.lng,
@@ -497,7 +512,12 @@ io.on('connection', (socket) => {
         // Dynamic import to avoid circular dependencies
         const { default: Order } = await import('./modules/order/models/Order.js');
 
-        const order = await Order.findById(orderId)
+        const orderLookupValue = String(orderId).trim();
+        const orderQuery = mongoose.Types.ObjectId.isValid(orderLookupValue)
+          ? { $or: [{ _id: orderLookupValue }, { orderId: orderLookupValue }] }
+          : { orderId: orderLookupValue };
+
+        const order = await Order.findOne(orderQuery)
           .populate({
             path: 'deliveryPartnerId',
             select: 'availability',
@@ -535,7 +555,12 @@ io.on('connection', (socket) => {
       // Dynamic import to avoid circular dependencies
       const { default: Order } = await import('./modules/order/models/Order.js');
 
-      const order = await Order.findById(orderId)
+      const orderLookupValue = String(orderId).trim();
+      const orderQuery = mongoose.Types.ObjectId.isValid(orderLookupValue)
+        ? { $or: [{ _id: orderLookupValue }, { orderId: orderLookupValue }] }
+        : { orderId: orderLookupValue };
+
+      const order = await Order.findOne(orderQuery)
         .populate({
           path: 'deliveryPartnerId',
           select: 'availability'

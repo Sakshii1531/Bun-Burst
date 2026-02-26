@@ -226,9 +226,6 @@ export default function OrdersTable({ orders, visibleColumns, onViewOrder, onPri
                     <div className="text-sm font-medium text-[#1E1E1E]">
                       ₹{order.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
-                    <div className={`text-xs mt-0.5 ${getPaymentStatusColor(order.paymentStatus)}`}>
-                      {order.paymentStatus}
-                    </div>
                   </td>
                 )}
                 {(visibleColumns.paymentType !== false) && (

@@ -144,6 +144,7 @@
 
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-orange: var(--primary);
 
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);

@@ -184,123 +184,169 @@ export default function UserOrderDetails() {
     (pricing.originalItemTotal || 0) -
     (pricing.subtotal || 0)
 
-  // Restaurant phone (multiple fallbacks) - use fetched restaurant data first
-  const restaurantPhone =
-    restaurantObj.primaryContactNumber ||
-    restaurantObj.phone ||
-    restaurantObj.contactNumber ||
-    order.restaurantPhone ||
-    ""
-
-  const handleCallRestaurant = () => {
-    if (!restaurantPhone) {
-      toast.error("Restaurant phone number not available")
-      return
-    }
-    window.location.href = `tel:${restaurantPhone}`
-  }
-
   const handleDownloadSummary = async () => {
     try {
       const companyName = await getCompanyNameAsync()
-      // Create new PDF document
       const doc = new jsPDF()
+      const primaryColor = [226, 55, 68] // #E23744
 
-      // Title
-      doc.setFontSize(16)
+      // 1. Header with Branding Bar
+      doc.setFillColor(...primaryColor)
+      doc.rect(0, 0, 210, 15, 'F')
+
+      // 2. Main Title
       doc.setFont('helvetica', 'bold')
-      doc.text(`${companyName} Order: Summary and Receipt`, 105, 20, { align: 'center' })
+      doc.setFontSize(22)
+      doc.setTextColor(50, 50, 50)
+      doc.text(companyName, 20, 30)
 
-      // Order details section
-      let yPos = 35
       doc.setFontSize(10)
       doc.setFont('helvetica', 'normal')
+      doc.setTextColor(120, 120, 120)
+      doc.text('ORDER SUMMARY & INVOICE', 20, 36)
 
-      // Order ID
-      doc.setFont('helvetica', 'bold')
-      doc.text('Order ID:', 20, yPos)
-      doc.setFont('helvetica', 'normal')
-      doc.text(orderIdDisplay, 60, yPos)
-      yPos += 7
+      // 3. Info Sections Header
+      let yPos = 50
 
-      // Order Time
-      doc.setFont('helvetica', 'bold')
-      doc.text('Order Time:', 20, yPos)
-      doc.setFont('helvetica', 'normal')
-      const orderTimeLines = doc.splitTextToSize(paymentDate || 'N/A', 130)
-      doc.text(orderTimeLines, 60, yPos)
-      yPos += orderTimeLines.length * 7
+      // Helper to draw section header
+      const drawSectionHeader = (title, x, y) => {
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(11)
+        doc.setTextColor(...primaryColor)
+        doc.text(title.toUpperCase(), x, y)
+        doc.setDrawColor(230, 230, 230)
+        doc.line(x, y + 2, x + 80, y + 2)
+      }
 
-      // Customer Name
-      doc.setFont('helvetica', 'bold')
-      doc.text('Customer Name:', 20, yPos)
-      doc.setFont('helvetica', 'normal')
-      doc.text(userName || 'Customer', 60, yPos)
-      yPos += 7
+      // Column 1: Order & Customer Info
+      drawSectionHeader('Order Information', 20, yPos)
+      yPos += 10
 
-      // Delivery Address
-      doc.setFont('helvetica', 'bold')
-      doc.text('Delivery Address:', 20, yPos)
-      doc.setFont('helvetica', 'normal')
-      const addressLines = doc.splitTextToSize(addressText || 'N/A', 130)
-      doc.text(addressLines, 60, yPos)
-      yPos += addressLines.length * 7
+      doc.setFontSize(9)
+      doc.setTextColor(80, 80, 80)
 
-      // Restaurant Name
-      doc.setFont('helvetica', 'bold')
-      doc.text('Restaurant Name:', 20, yPos)
-      doc.setFont('helvetica', 'normal')
-      doc.text(restaurantName, 60, yPos)
-      yPos += 7
+      const infoLabels = [
+        ['Order ID:', orderIdDisplay],
+        ['Order Date:', paymentDate || 'N/A'],
+        ['Customer:', userName || 'Customer'],
+        ['Phone:', userPhone || 'N/A']
+      ]
 
-      // Restaurant Address
-      doc.setFont('helvetica', 'bold')
-      doc.text('Restaurant Address:', 20, yPos)
-      doc.setFont('helvetica', 'normal')
-      const restaurantAddressLines = doc.splitTextToSize(restaurantLocation || 'N/A', 130)
-      doc.text(restaurantAddressLines, 60, yPos)
-      yPos += restaurantAddressLines.length * 7 + 5
+      infoLabels.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold')
+        doc.text(label, 20, yPos)
+        doc.setFont('helvetica', 'normal')
+        const wrappedValue = doc.splitTextToSize(String(value), 50)
+        doc.text(wrappedValue, 45, yPos)
+        yPos += (wrappedValue.length * 5)
+      })
 
-      // Items table
+      // Column 2: Restaurant & Delivery (Right Side)
+      let rightY = 50
+      drawSectionHeader('Restaurant & Delivery', 110, rightY)
+      rightY += 10
+
+      const deliveryLabels = [
+        ['Restaurant:', restaurantName],
+        ['Address:', restaurantLocation || 'N/A'],
+        ['Deliver to:', addressText || 'N/A']
+      ]
+
+      deliveryLabels.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold')
+        doc.text(label, 110, rightY)
+        doc.setFont('helvetica', 'normal')
+        const wrappedValue = doc.splitTextToSize(String(value), 65)
+        doc.text(wrappedValue, 132, rightY)
+        rightY += (wrappedValue.length * 5)
+      })
+
+      yPos = Math.max(yPos, rightY) + 10
+
+      // 4. Items Table
       const tableData = items.map(item => [
         item.name || 'Item',
         String(item.quantity || item.qty || 1),
-        `₹${Number(item.price || 0).toFixed(2)}`,
-        `₹${Number((item.price || 0) * (item.quantity || item.qty || 1)).toFixed(2)}`
+        `INR ${Number(item.price || 0).toFixed(2)}`,
+        `INR ${Number((item.price || 0) * (item.quantity || item.qty || 1)).toFixed(2)}`
       ])
 
       autoTable(doc, {
         startY: yPos,
-        head: [['Item', 'Quantity', 'Unit Price', 'Total Price']],
+        head: [['Item Description', 'Qty', 'Unit Price', 'Amount']],
         body: tableData,
-        theme: 'striped',
-        headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: 'bold', fontSize: 10 },
-        styles: { fontSize: 9 },
+        theme: 'grid',
+        headStyles: {
+          fillColor: primaryColor,
+          textColor: 255,
+          fontStyle: 'bold',
+          fontSize: 10,
+          halign: 'center'
+        },
+        styles: { fontSize: 9, cellPadding: 4 },
         columnStyles: {
-          0: { cellWidth: 80 },
-          1: { cellWidth: 30, halign: 'center' },
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 20, halign: 'center' },
           2: { cellWidth: 35, halign: 'right' },
-          3: { cellWidth: 35, halign: 'right', fontStyle: 'bold' }
+          3: { cellWidth: 35, halign: 'right' }
         }
       })
 
-      // Get final Y position after table (autoTable adds lastAutoTable property)
-      const finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY : yPos + (tableData.length * 8) + 20
+      // 5. Pricing Summary Section
+      let finalY = doc.lastAutoTable.finalY + 10
+      const summaryX = 140
+      const valueX = 195
 
-      // Total
-      doc.setFontSize(12)
+      doc.setFontSize(9)
+      doc.setTextColor(100, 100, 100)
+
+      const pricingRows = [
+        ['Subtotal:', pricing.subtotal || pricing.total || 0],
+        ['GST / Taxes:', pricing.tax || 0],
+        ['Delivery Fee:', pricing.deliveryFee || 0],
+        ['Platform Fee:', pricing.platformFee || 0]
+      ]
+
+      if (pricing.discount > 0) {
+        pricingRows.push(['Discount:', -pricing.discount])
+      }
+
+      pricingRows.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'normal')
+        doc.text(label, summaryX, finalY)
+        doc.text(`INR ${Number(value).toFixed(2)}`, valueX, finalY, { align: 'right' })
+        finalY += 6
+      })
+
+      // Grand Total
+      finalY += 2
+      doc.setDrawColor(200, 200, 200)
+      doc.line(summaryX, finalY - 4, valueX, finalY - 4)
+
       doc.setFont('helvetica', 'bold')
-      doc.text('Total:', 145, finalY + 10, { align: 'right' })
-      doc.text(`₹${Number(pricing.total || 0).toFixed(2)}`, 195, finalY + 10, { align: 'right' })
+      doc.setFontSize(12)
+      doc.setTextColor(0, 0, 0)
+      doc.text('Grand Total:', summaryX, finalY)
+      doc.text(`INR ${Number(pricing.total || 0).toFixed(2)}`, valueX, finalY, { align: 'right' })
 
-      // Save PDF instantly
-      const fileName = `Order_Summary_${orderIdDisplay}_${Date.now()}.pdf`
+      // 6. Footer
+      const pageHeight = doc.internal.pageSize.height
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'italic')
+      doc.setTextColor(150, 150, 150)
+      doc.text(`Thank you for ordering with ${companyName}!`, 105, pageHeight - 20, { align: 'center' })
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.text('This is a computer generated invoice and does not require a signature.', 105, pageHeight - 15, { align: 'center' })
+
+      // Save PDF
+      const fileName = `Invoice_${orderIdDisplay}.pdf`
       doc.save(fileName)
-
-      toast.success("Summary downloaded successfully!")
+      toast.success("Bill downloaded successfully!")
     } catch (error) {
       console.error("Error generating PDF:", error)
-      toast.error("Failed to download summary")
+      toast.error("Failed to download bill")
     }
   }
 
@@ -357,14 +403,6 @@ export default function UserOrderDetails() {
                 <p className="text-xs text-gray-500">{restaurantLocation}</p>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={handleCallRestaurant}
-              className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-[#E23744] hover:bg-red-50"
-            >
-              <Phone className="w-4 h-4" />
-            </button>
           </div>
 
           <div className="flex items-center gap-2 mb-4">
@@ -530,7 +568,17 @@ export default function UserOrderDetails() {
                 Payment method
               </h4>
               <p className="text-gray-500 text-xs mt-0.5">
-                Paid via: {paymentMethod.toUpperCase()}
+                Paid via: {(() => {
+                  const method = order.payment?.method || order.paymentMethod || "Online";
+                  const methods = {
+                    razorpay: "RazorPay",
+                    cash: "Cash on Delivery",
+                    wallet: "Wallet",
+                    upi: "UPI",
+                    card: "Card"
+                  };
+                  return methods[method.toLowerCase()] || method.toUpperCase();
+                })()}
               </p>
             </div>
           </div>
@@ -622,5 +670,3 @@ export default function UserOrderDetails() {
     </div>
   )
 }
-
-

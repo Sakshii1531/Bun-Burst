@@ -82,6 +82,44 @@ curl -X POST http://localhost:5000/api/auth/verify-otp \
   -d '{"phone": "+919876543210", "otp": "123456", "purpose": "login"}'
 ```
 
+## Firebase Realtime Setup (Delivery Tracking)
+
+Add these values in `backend/.env`:
+
+```env
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxx@your-project-id.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+FIREBASE_DATABASE_URL=https://your-project-id-default-rtdb.firebaseio.com
+FIREBASE_SERVICE_ACCOUNT_PATH=config/serviceAccountKey.json
+```
+
+Notes:
+- `FIREBASE_SERVICE_ACCOUNT_PATH` is optional if you already pass project/email/private key via env.
+- Service account JSON file should be in `backend/config/serviceAccountKey.json` (already ignored by git).
+- On startup you should see `✅ Firebase Realtime Database initialized` before normal API/socket usage.
+
+Realtime Database Rules (production-safe starter):
+
+```json
+{
+  "rules": {
+    "delivery_boys": {
+      ".read": "auth != null",
+      "$deliveryBoyId": {
+        ".write": "auth != null"
+      }
+    },
+    "active_orders": {
+      ".read": "auth != null",
+      "$orderId": {
+        ".write": "auth != null"
+      }
+    }
+  }
+}
+```
+
 ## Database Setup
 
 ### MongoDB Collections:

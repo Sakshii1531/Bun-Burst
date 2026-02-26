@@ -15,6 +15,10 @@ export default function ProfileDetails() {
   const [selectedDocument, setSelectedDocument] = useState(null)
   const [showDocumentModal, setShowDocumentModal] = useState(false)
   const [showBankDetailsPopup, setShowBankDetailsPopup] = useState(false)
+  const [showPersonalDetailsPopup, setShowPersonalDetailsPopup] = useState(false)
+  const [personalDetails, setPersonalDetails] = useState({ phone: "", email: "" })
+  const [personalErrors, setPersonalErrors] = useState({})
+  const [isUpdatingPersonalDetails, setIsUpdatingPersonalDetails] = useState(false)
   const [bankDetails, setBankDetails] = useState({
     accountHolderName: "",
     accountNumber: "",
@@ -25,12 +29,14 @@ export default function ProfileDetails() {
   const [isUpdatingBankDetails, setIsUpdatingBankDetails] = useState(false)
 
   // Note: All alternate phone related code has been removed
+  const isEmailLocked = String(profile?.signupMethod || "").toLowerCase() === "email"
 
   // Fetch profile data
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         setLoading(true)
+        setProfile(null)
         const response = await deliveryAPI.getProfile()
         if (response?.data?.success && response?.data?.data?.profile) {
           const profileData = response.data.data.profile
@@ -66,6 +72,16 @@ export default function ProfileDetails() {
     }
 
     fetchProfile()
+
+    const handleAuthChange = () => {
+      fetchProfile()
+    }
+
+    window.addEventListener("deliveryAuthChanged", handleAuthChange)
+
+    return () => {
+      window.removeEventListener("deliveryAuthChanged", handleAuthChange)
+    }
   }, [navigate])
 
   return (
@@ -82,12 +98,18 @@ export default function ProfileDetails() {
       </div>
 
       {/* Profile Picture Area */}
-      <div className="relative w-full bg-[#F5F5F5] overflow-hidden flex items-center justify-center">
-        <img
-          src={profile?.profileImage?.url || profile?.documents?.photo || "https://i.pravatar.cc/400?img=12"}
-          alt="Profile"
-          className="w-full h-auto max-h-96 object-contain"
-        />
+      <div className="relative w-full bg-[#F5F5F5] overflow-hidden flex items-center justify-center min-h-[300px]">
+        {loading ? (
+          <div className="w-full h-80 bg-gray-200 animate-pulse flex items-center justify-center">
+            <div className="w-20 h-20 rounded-full bg-gray-300" />
+          </div>
+        ) : (
+          <img
+            src={profile?.profileImage?.url || profile?.documents?.photo || "https://i.pravatar.cc/400?img=12"}
+            alt="Profile"
+            className="w-full h-auto max-h-96 object-contain"
+          />
+        )}
       </div>
 
       {/* Content */}
@@ -184,7 +206,7 @@ export default function ProfileDetails() {
               <div className="flex-1">
                 <p className="text-base font-medium text-gray-900">Aadhar Card</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {profile?.documents?.aadhar?.verified ? "Verified" : profile?.documents?.aadhar?.document ? "Not verified" : "Not uploaded"}
+                  {(profile?.documents?.aadhar?.verified || profile?.status === 'approved' || profile?.status === 'active') ? "Verified" : profile?.documents?.aadhar?.document ? "Not verified" : "Not uploaded"}
                 </p>
               </div>
               {profile?.documents?.aadhar?.document && (
@@ -208,7 +230,7 @@ export default function ProfileDetails() {
               <div className="flex-1">
                 <p className="text-base font-medium text-gray-900">PAN Card</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {profile?.documents?.pan?.verified ? "Verified" : profile?.documents?.pan?.document ? "Not verified" : "Not uploaded"}
+                  {(profile?.documents?.pan?.verified || profile?.status === 'approved' || profile?.status === 'active') ? "Verified" : profile?.documents?.pan?.document ? "Not verified" : "Not uploaded"}
                 </p>
               </div>
               {profile?.documents?.pan?.document && (
@@ -232,7 +254,7 @@ export default function ProfileDetails() {
               <div className="flex-1">
                 <p className="text-base font-medium text-gray-900">Driving License</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {profile?.documents?.drivingLicense?.verified ? "Verified" : profile?.documents?.drivingLicense?.document ? "Not verified" : "Not uploaded"}
+                  {(profile?.documents?.drivingLicense?.verified || profile?.status === 'approved' || profile?.status === 'active') ? "Verified" : profile?.documents?.drivingLicense?.document ? "Not verified" : "Not uploaded"}
                 </p>
               </div>
               {profile?.documents?.drivingLicense?.document && (
@@ -255,7 +277,23 @@ export default function ProfileDetails() {
 
         {/* Personal Details Section */}
         <div>
-          <h2 className="text-base font-medium text-[#1E1E1E] mb-3">Personal details</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-medium text-[#1E1E1E]">Personal details</h2>
+            <button
+              onClick={() => {
+                setPersonalDetails({
+                  phone: profile?.phone || "",
+                  email: profile?.email || ""
+                })
+                setPersonalErrors({})
+                setShowPersonalDetailsPopup(true)
+              }}
+              className="text-[#e53935] font-medium text-sm flex items-center gap-1 hover:text-[#c62828]"
+            >
+              <Edit2 className="w-4 h-4" />
+              <span>Edit</span>
+            </button>
+          </div>
           <div className="bg-white rounded-lg shadow-sm divide-y divide-[#F5F5F5] border border-[#F5F5F5]">
             <div className="p-2 px-3 flex items-center justify-between">
               <div className="w-full align-center flex content-center justify-between">
@@ -459,6 +497,120 @@ export default function ProfileDetails() {
         </div>
       )}
 
+      {/* Personal Details Edit Popup */}
+      <BottomPopup
+        isOpen={showPersonalDetailsPopup}
+        onClose={() => {
+          setShowPersonalDetailsPopup(false)
+          setPersonalErrors({})
+        }}
+        title="Edit Personal Details"
+        showCloseButton={true}
+        closeOnBackdropClick={true}
+        maxHeight="70vh"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[#1E1E1E] mb-1">
+              Mobile Number <span className="text-[#e53935]">*</span>
+            </label>
+            <input
+              type="tel"
+              value={personalDetails.phone}
+              onChange={(e) => {
+                setPersonalDetails(prev => ({ ...prev, phone: e.target.value }))
+                setPersonalErrors(prev => ({ ...prev, phone: "" }))
+              }}
+              placeholder="Enter mobile number"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935] ${personalErrors.phone ? "border-[#e53935]" : "border-[#F5F5F5]"
+                }`}
+            />
+            {personalErrors.phone && (
+              <p className="text-[#e53935] text-xs mt-1">{personalErrors.phone}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#1E1E1E] mb-1">
+              Email Address
+            </label>
+            <input
+              type="email"
+              value={personalDetails.email}
+              onChange={(e) => {
+                setPersonalDetails(prev => ({ ...prev, email: e.target.value }))
+                setPersonalErrors(prev => ({ ...prev, email: "" }))
+              }}
+              placeholder="Enter email address"
+              disabled={isEmailLocked}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e53935] ${personalErrors.email ? "border-[#e53935]" : "border-[#F5F5F5]"} ${isEmailLocked ? "bg-[#F5F5F5] text-[#1E1E1E]/60 cursor-not-allowed" : ""}`}
+            />
+            {isEmailLocked && (
+              <p className="text-xs mt-1 text-[#1E1E1E]/65">Email cannot be changed for email login users.</p>
+            )}
+            {personalErrors.email && (
+              <p className="text-[#e53935] text-xs mt-1">{personalErrors.email}</p>
+            )}
+          </div>
+
+          <button
+            onClick={async () => {
+              const errors = {}
+              const trimmedPhone = String(personalDetails.phone || "").trim()
+              const phoneDigits = trimmedPhone.replace(/\D/g, "")
+              const trimmedEmail = String(personalDetails.email || "").trim()
+
+              if (!trimmedPhone) {
+                errors.phone = "Mobile number is required"
+              } else if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+                errors.phone = "Mobile number must be 7 to 15 digits"
+              }
+
+              if (!isEmailLocked && trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+                errors.email = "Invalid email format"
+              }
+
+              if (Object.keys(errors).length > 0) {
+                setPersonalErrors(errors)
+                toast.error("Please fill personal details correctly")
+                return
+              }
+
+              setIsUpdatingPersonalDetails(true)
+              try {
+                const updatePayload = {
+                  phone: trimmedPhone.replace(/\s+/g, " ")
+                }
+                if (!isEmailLocked) {
+                  updatePayload.email = trimmedEmail
+                }
+
+                await deliveryAPI.updateProfile(updatePayload)
+                toast.success("Personal details updated successfully")
+                setShowPersonalDetailsPopup(false)
+
+                const response = await deliveryAPI.getProfile()
+                if (response?.data?.success && response?.data?.data?.profile) {
+                  setProfile(response.data.data.profile)
+                }
+              } catch (error) {
+                console.error("Error updating personal details:", error)
+                toast.error(error?.response?.data?.message || "Failed to update personal details")
+              } finally {
+                setIsUpdatingPersonalDetails(false)
+              }
+            }}
+            disabled={isUpdatingPersonalDetails}
+            className={`w-full py-3 rounded-lg font-medium text-white transition-colors ${isUpdatingPersonalDetails
+              ? "bg-[#1E1E1E]/35 cursor-not-allowed"
+              : "bg-[#e53935] hover:bg-[#c62828]"
+              }`}
+          >
+            {isUpdatingPersonalDetails ? "Updating..." : "Save Personal Details"}
+          </button>
+        </div>
+      </BottomPopup>
+
       {/* Bank Details Edit Popup */}
       <BottomPopup
         isOpen={showBankDetailsPopup}
@@ -617,8 +769,8 @@ export default function ProfileDetails() {
             }}
             disabled={isUpdatingBankDetails}
             className={`w-full py-3 rounded-lg font-medium text-white transition-colors ${isUpdatingBankDetails
-                ? "bg-[#1E1E1E]/35 cursor-not-allowed"
-                : "bg-[#e53935] hover:bg-[#c62828]"
+              ? "bg-[#1E1E1E]/35 cursor-not-allowed"
+              : "bg-[#e53935] hover:bg-[#c62828]"
               }`}
           >
             {isUpdatingBankDetails ? "Updating..." : "Save Bank Details"}

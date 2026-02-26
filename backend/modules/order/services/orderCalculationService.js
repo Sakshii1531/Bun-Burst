@@ -252,8 +252,7 @@ export const calculateOrderPricing = async ({
   items,
   restaurantId,
   deliveryAddress = null,
-  couponCode = null,
-  deliveryFleet = 'standard'
+  couponCode = null
 }) => {
   try {
     // Calculate subtotal from items
@@ -406,4 +405,3 @@ export const calculateOrderPricing = async ({
     throw new Error(`Failed to calculate order pricing: ${error.message}`);
   }
 };
-

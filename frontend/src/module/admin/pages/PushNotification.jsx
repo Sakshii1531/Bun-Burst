@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, Bell, Edit, Trash2, Upload, Settings, Image as ImageIcon } from "lucide-react"
 import { pushNotificationsDummy } from "../data/pushNotificationsDummy"
+import { adminAPI } from "@/lib/api"
 // Using placeholders for notification images
 const notificationImage1 = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&h=400&fit=crop"
 const notificationImage2 = "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=800&h=400&fit=crop"
@@ -21,6 +22,7 @@ export default function PushNotification() {
   })
   const [searchQuery, setSearchQuery] = useState("")
   const [notifications, setNotifications] = useState(pushNotificationsDummy)
+  const [sending, setSending] = useState(false)
 
   const filteredNotifications = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -38,10 +40,26 @@ export default function PushNotification() {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log("Notification sent:", formData)
-    alert("Notification sent successfully!")
+    if (!formData.title.trim() || !formData.description.trim()) {
+      alert("Title and Description are required")
+      return
+    }
+
+    try {
+      setSending(true)
+      const response = await adminAPI.sendPushNotification(formData)
+      const data = response?.data?.data || {}
+      alert(
+        `Push notification sent.\nDelivered: ${data.sentCount || 0}\nFailed: ${data.failedCount || 0}\nTotal Tokens: ${data.totalTokens || 0}`
+      )
+    } catch (error) {
+      const message = error?.response?.data?.message || error?.message || "Failed to send notification"
+      alert(message)
+    } finally {
+      setSending(false)
+    }
   }
 
   const handleReset = () => {
@@ -116,7 +134,6 @@ export default function PushNotification() {
                 >
                   <option value="Customer">Customer</option>
                   <option value="Delivery Man">Delivery Man</option>
-                  <option value="Restaurant">Restaurant</option>
                 </select>
               </div>
             </div>
@@ -158,9 +175,10 @@ export default function PushNotification() {
               <div className="flex items-center gap-2">
                 <button
                   type="submit"
+                  disabled={sending}
                   className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md"
                 >
-                  Send Notification
+                  {sending ? "Sending..." : "Send Notification"}
                 </button>
                 <button className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all">
                   <Settings className="w-5 h-5" />

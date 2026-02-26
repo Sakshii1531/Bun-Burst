@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { MapPin, SlidersHorizontal, Star, X, ArrowDownUp, Timer, IndianRupee, UtensilsCrossed, BadgePercent, ShieldCheck, Clock, Bookmark, Check } from "lucide-react"
+import { MapPin, SlidersHorizontal, Star, X, ArrowDownUp, Timer, IndianRupee, UtensilsCrossed, BadgePercent, ShieldCheck, Clock, Bookmark, Check, Search, Mic } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
 import OptimizedImage from "@/components/OptimizedImage"
 import AnimatedPage from "../components/AnimatedPage"
 import { useSearchOverlay, useLocationSelector } from "../components/UserLayout"
@@ -47,6 +48,18 @@ const bankOffers = []
 const MOCK_BANK_OFFERS = bankOffers
 
 const popularRestaurants = []
+// Animated placeholder for search - shared with home page
+const placeholders = [
+  "Search \"burger\"",
+  "Search \"biryani\"",
+  "Search \"pizza\"",
+  "Search \"desserts\"",
+  "Search \"chinese\"",
+  "Search \"thali\"",
+  "Search \"momos\"",
+  "Search \"dosa\""
+]
+
 // Static data removed in favor of dynamic fetching
 const MOCK_CATEGORIES = diningCategories
 const MOCK_LIMELIGHT = limelightRestaurants
@@ -62,6 +75,8 @@ export default function Dining() {
   const [sortBy, setSortBy] = useState(null)
   const [selectedCuisine, setSelectedCuisine] = useState(null)
   const [selectedBankOffer, setSelectedBankOffer] = useState(null)
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
+  const [vegMode, setVegMode] = useState(false)
   const filterSectionRefs = useRef({})
   const rightContentRef = useRef(null)
   const { openSearch, closeSearch, setSearchValue } = useSearchOverlay()
@@ -93,6 +108,19 @@ export default function Dining() {
     }
     fetchDiningHeroBanner()
   }, [])
+
+  // Animated placeholder cycling
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length)
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleVegModeChange = (checked) => {
+    setVegMode(checked)
+    // You might want to trigger a filter update here if your dining data supports veg filtering
+  }
 
   useEffect(() => {
     const fetchDiningData = async () => {
@@ -201,22 +229,63 @@ export default function Dining() {
 
   return (
     <AnimatedPage className="bg-background" style={{ minHeight: '100vh', paddingBottom: '80px', overflow: 'visible' }}>
-      {/* Unified Top Header - Shared with Home Page */}
+      {/* Mobile-only Top Header — DesktopNavbar handles md+ screens */}
       <UserTopHeader
-        showSearchAlways={true}
-        placeholders={['Search "biryani"', 'Search "burger"', 'Search "thali"']}
+        className="md:hidden"
+        vegMode={vegMode}
+        onVegModeChange={handleVegModeChange}
         showVegToggle={false}
       />
+      {/* Desktop Search Bar Row (Hidden on Mobile) */}
+      <div className="hidden md:block sticky top-16 z-40 bg-background/95 backdrop-blur-md pt-4 pb-4 mt-16 px-0 border-b border-border shadow-sm transition-all duration-300">
+        <div className="max-w-[1100px] mx-auto flex items-center gap-6">
+          {/* Search Input Container */}
+          <div className="flex-1 relative">
+            <div
+              className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-zinc-900 border border-[#F5F5F5] dark:border-zinc-800 rounded-2xl shadow-md hover:shadow-lg hover:border-[#e53935]/30 transition-all duration-300 group cursor-pointer"
+              onClick={() => openSearch()}
+            >
+              <Search className="h-5 w-5 text-slate-400 group-hover:text-[#e53935] transition-colors" />
+              <div className="flex-1 relative h-6 overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={placeholderIndex}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                    className="absolute inset-0 text-slate-500 font-medium flex items-center"
+                  >
+                    {placeholders[placeholderIndex]}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openSearch(true)
+                }}
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
+              >
+                <Mic className="h-5 w-5 text-[#e53935]" />
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
 
       {/* Hero Banner Section - Shared Carousel */}
-      <UserBannerCarousel
-        banners={diningHeroBanner ? [diningHeroBanner] : []}
-        loading={loading && !diningHeroBanner}
-        className="mb-4"
-      />
+      <div className="w-[92%] sm:w-[95%] md:w-full max-w-[1100px] mx-auto px-0">
+        <UserBannerCarousel
+          banners={diningHeroBanner ? [diningHeroBanner] : []}
+          loading={loading && !diningHeroBanner}
+          className="mb-4"
+        />
+      </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 pt-6 sm:pt-8 md:pt-10 lg:pt-12 pb-6 md:pb-8 lg:pb-10">
+      <div className="max-w-[1100px] mx-auto px-4 sm:px-0 pt-6 sm:pt-8 md:pt-10 lg:pt-12 pb-6 md:pb-8 lg:pb-10">
         {/* Categories Section */}
         <div className="mb-6">
           <div className="mb-6">

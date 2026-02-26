@@ -206,6 +206,32 @@ export const approveDeliveryPartner = asyncHandler(async (req, res) => {
     delivery.verifiedBy = adminId;
     delivery.isActive = true;
 
+    // Auto-verify all uploaded documents when account is approved
+    if (!delivery.documents) {
+      delivery.documents = {};
+    }
+
+    // Verify Aadhar if uploaded
+    if (delivery.documents.aadhar?.document) {
+      delivery.documents.aadhar.verified = true;
+    }
+
+    // Verify PAN if uploaded
+    if (delivery.documents.pan?.document) {
+      delivery.documents.pan.verified = true;
+    }
+
+    // Verify Driving License if uploaded
+    if (delivery.documents.drivingLicense?.document) {
+      delivery.documents.drivingLicense.verified = true;
+    }
+
+    // Verify Vehicle RC if uploaded
+    if (delivery.documents.vehicleRC?.document) {
+      delivery.documents.vehicleRC.verified = true;
+    }
+
+    delivery.markModified('documents');
     await delivery.save();
 
     logger.info(`Delivery partner approved: ${id}`, {

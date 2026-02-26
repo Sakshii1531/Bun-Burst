@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useRef, useMemo } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Plus, Minus, ArrowLeft, ChevronRight, Clock, MapPin, Phone, FileText, Utensils, Tag, Percent, Truck, Leaf, Share2, ChevronUp, ChevronDown, X, Check, Settings, CreditCard, Wallet, Building2, Sparkles, Loader2 } from "lucide-react"
+import { Plus, Minus, ArrowLeft, ChevronRight, Clock, MapPin, Phone, FileText, Utensils, Tag, Percent, Truck, Share2, ChevronUp, ChevronDown, X, Check, Settings, CreditCard, Wallet, Building2, Sparkles, Loader2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import confetti from "canvas-confetti"
 
@@ -16,6 +16,7 @@ import { API_BASE_URL } from "@/lib/api/config"
 import { initRazorpayPayment } from "@/lib/utils/razorpay"
 import { toast } from "sonner"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
+import { useLocationSelector } from "../../components/UserLayout"
 
 
 // Removed hardcoded suggested items - now fetching approved addons from backend
@@ -91,6 +92,7 @@ export default function Cart() {
   const { cart, updateQuantity, updateCartItem, addToCart, getCartCount, clearCart, cleanCartForRestaurant } = cartContext;
   const { getDefaultAddress, getDefaultPaymentMethod, addresses, paymentMethods, userProfile } = useProfile()
   const { createOrder } = useOrders()
+  const { openLocationSelector } = useLocationSelector()
 
   // Custom addon states
   const [selectedItemForAddons, setSelectedItemForAddons] = useState(null)
@@ -331,8 +333,6 @@ export default function Cart() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("razorpay") // razorpay | cash | wallet
   const [walletBalance, setWalletBalance] = useState(0)
   const [isLoadingWallet, setIsLoadingWallet] = useState(false)
-  const [deliveryFleet, setDeliveryFleet] = useState("standard")
-  const [showFleetOptions, setShowFleetOptions] = useState(false)
   const [note, setNote] = useState("")
   const [showNoteInput, setShowNoteInput] = useState(false)
   const [sendCutlery, setSendCutlery] = useState(true)
@@ -747,8 +747,7 @@ export default function Cart() {
           items,
           restaurantId: restaurantData?.restaurantId || restaurantData?._id || restaurantId || null,
           deliveryAddress: defaultAddress,
-          couponCode: appliedCoupon?.code || couponCode || null,
-          deliveryFleet: deliveryFleet || 'standard'
+          couponCode: appliedCoupon?.code || couponCode || null
         })
 
         if (response?.data?.success && response?.data?.data?.pricing) {
@@ -775,7 +774,7 @@ export default function Cart() {
     }
 
     calculatePricing()
-  }, [cart, defaultAddress, appliedCoupon, couponCode, deliveryFleet, restaurantId])
+  }, [cart, defaultAddress, appliedCoupon, couponCode, restaurantId])
 
   // Fetch wallet balance
   useEffect(() => {
@@ -912,8 +911,7 @@ export default function Cart() {
             items,
             restaurantId: restaurantData?.restaurantId || restaurantData?._id || restaurantId || null,
             deliveryAddress: defaultAddress,
-            couponCode: coupon.code,
-            deliveryFleet: deliveryFleet || 'standard'
+            couponCode: coupon.code
           })
 
           if (response?.data?.success && response?.data?.data?.pricing) {
@@ -948,8 +946,7 @@ export default function Cart() {
           items,
           restaurantId: restaurantData?.restaurantId || restaurantData?._id || restaurantId || null,
           deliveryAddress: defaultAddress,
-          couponCode: null,
-          deliveryFleet: deliveryFleet || 'standard'
+          couponCode: null
         })
 
         if (response?.data?.success && response?.data?.data?.pricing) {
@@ -1184,7 +1181,6 @@ export default function Cart() {
         restaurantId: finalRestaurantId,
         restaurantName: finalRestaurantName,
         pricing: orderPricing,
-        deliveryFleet: deliveryFleet || 'standard',
         note: note || "",
         sendCutlery: sendCutlery !== false,
         paymentMethod: selectedPaymentMethod,
@@ -1433,7 +1429,7 @@ export default function Cart() {
           </div>
           <h2 className="text-lg font-semibold text-foreground mb-1">Your cart is empty</h2>
           <p className="text-sm text-muted-foreground mb-4 text-center">Add items from a restaurant to start a new order</p>
-          <Link>
+          <Link to="/">
             <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">Browse Restaurants</Button>
           </Link>
         </div>
@@ -1760,59 +1756,23 @@ export default function Cart() {
                 </div>
               </div>
 
-              {/* Delivery Fleet Type */}
-              <div className="bg-card px-4 md:px-6 py-3 md:py-4 rounded-lg md:rounded-xl">
-                <button
-                  onClick={() => setShowFleetOptions(!showFleetOptions)}
-                  className="flex items-center justify-between w-full"
-                >
-                  <div className="flex items-center gap-3 md:gap-4">
-                    <Truck className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
-                    <span className="text-sm md:text-base text-foreground">Choose delivery fleet type</span>
-                  </div>
-                  {showFleetOptions ? <ChevronUp className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />}
-                </button>
-
-                {showFleetOptions && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mt-3 md:mt-4">
-                    <button
-                      onClick={() => setDeliveryFleet("standard")}
-                      className={`p-3 md:p-4 rounded-lg md:rounded-xl border-2 text-left transition-colors ${deliveryFleet === "standard" ? "border-primary bg-primary/10" : "border-border"}`}
-                    >
-                      <div className="flex items-center justify-between mb-1 md:mb-2">
-                        <span className="text-sm md:text-base font-semibold text-foreground">Standard Fleet</span>
-                        <div className="w-8 h-8 md:w-10 md:h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                          <Truck className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-                        </div>
-                      </div>
-                      <p className="text-xs md:text-sm text-muted-foreground">Our standard food delivery experience</p>
-                    </button>
-                    <button
-                      onClick={() => setDeliveryFleet("veg")}
-                      className={`p-3 md:p-4 rounded-lg md:rounded-xl border-2 text-left transition-colors ${deliveryFleet === "veg" ? "border-primary bg-primary/10" : "border-border"}`}
-                    >
-                      <div className="flex items-center justify-between mb-1 md:mb-2">
-                        <span className="text-sm md:text-base font-semibold text-foreground">Special Veg-only Fleet</span>
-                        <div className="w-8 h-8 md:w-10 md:h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                          <Leaf className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-                        </div>
-                      </div>
-                      <p className="text-xs md:text-sm text-muted-foreground">Fleet delivering only from Pure Veg restaurants</p>
-                    </button>
-                  </div>
-                )}
-              </div>
 
               {/* Delivery Address */}
-              <div className="bg-card px-4 md:px-6 py-3 md:py-4 rounded-lg md:rounded-xl">
-                <Link className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 md:gap-4">
+              <div
+                className="bg-card px-4 md:px-6 py-3 md:py-4 rounded-lg md:rounded-xl cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={openLocationSelector}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 md:gap-4 w-full">
                     <MapPin className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
-                    <div className="flex-1">
-                      <p className="text-sm md:text-base text-foreground">
-                        Delivery at <span className="font-semibold">Location</span>
-                      </p>
-                      <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between w-full">
+                        <p className="text-sm md:text-base text-foreground">
+                          Delivery at <span className="font-semibold">Location</span>
+                        </p>
+                        <span className="text-primary font-medium text-xs md:text-sm">Edit</span>
+                      </div>
+                      <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 mt-0.5">
                         {defaultAddress ? (formatFullAddress(defaultAddress) || defaultAddress?.formattedAddress || defaultAddress?.address || "Add delivery address") : "Add delivery address"}
                       </p>
                       {/* Address Selection Buttons */}
@@ -1840,8 +1800,7 @@ export default function Cart() {
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
-                </Link>
+                </div>
               </div>
 
               {/* Contact */}

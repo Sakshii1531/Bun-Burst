@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate, useLocation as useRouteLocation } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { ChevronDown, ShoppingCart, Search, Mic, MapPin, User, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -42,6 +42,12 @@ export default function UserTopHeader({
     const [companyName, setCompanyName] = useState(null)
     const [searchQuery, setSearchQuery] = useState("")
     const [placeholderIndex, setPlaceholderIndex] = useState(0)
+    const routeLocation = useRouteLocation()
+
+    const isDining = routeLocation.pathname.startsWith("/dining") || routeLocation.pathname.startsWith("/user/dining")
+    const isUnder250 = routeLocation.pathname.startsWith("/under-250") || routeLocation.pathname.startsWith("/user/under-250")
+    const isProfile = routeLocation.pathname.startsWith("/profile") || routeLocation.pathname.startsWith("/user/profile")
+    const useNarrowWidth = isDining || isUnder250 || isProfile || routeLocation.pathname === "/" || routeLocation.pathname === "/user"
 
     // Load business settings logo
     useEffect(() => {
@@ -114,12 +120,12 @@ export default function UserTopHeader({
     return (
         <header
             className={cn(
-                "w-full bg-background/95 backdrop-blur-md border-b-2 border-border shadow-md z-50 transition-colors duration-300",
-                sticky && "sticky top-0",
+                "w-full bg-background/95 backdrop-blur-md border-b-2 border-border shadow-md z-[60] transition-colors duration-300",
+                "sticky top-0",
                 className
             )}
         >
-            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+            <div className={cn("mx-auto", useNarrowWidth ? "max-w-[1100px] px-3 sm:px-0" : "max-w-7xl px-3 sm:px-4 lg:px-6")}>
                 {/* Main Header Row */}
                 <div className="flex items-center justify-between gap-3 py-3 sm:py-4">
                     {/* Left: Logo */}

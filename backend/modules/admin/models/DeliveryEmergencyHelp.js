@@ -49,11 +49,11 @@ deliveryEmergencyHelpSchema.index({ status: 1 });
 deliveryEmergencyHelpSchema.index({ createdAt: -1 });
 
 // Static method to get active emergency help numbers
-deliveryEmergencyHelpSchema.statics.getActive = async function() {
+deliveryEmergencyHelpSchema.statics.getActive = async function () {
   const emergencyHelp = await this.findOne({ status: true })
     .sort({ updatedAt: -1 })
     .lean();
-  
+
   return emergencyHelp || {
     medicalEmergency: '',
     accidentHelpline: '',

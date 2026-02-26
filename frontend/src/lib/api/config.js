@@ -431,6 +431,12 @@ export const API_ENDPOINTS = {
     TOP_10_PUBLIC: "/hero-banners/top-10/public",
     GOURMET_PUBLIC: "/hero-banners/gourmet/public",
   },
+  // Notification endpoints
+  NOTIFICATION: {
+    ADMIN_SEND: "/notification/admin/send",
+    USER_FCM_TOKEN: "/notification/user/token",
+    DELIVERY_FCM_TOKEN: "/notification/delivery/token",
+  },
   // Dining endpoints
   DINING: {
     RESTAURANTS: "/dining/restaurants",

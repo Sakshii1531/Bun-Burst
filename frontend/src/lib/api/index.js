@@ -232,6 +232,14 @@ export const userAPI = {
   updateLocation: (locationData) => {
     return apiClient.put(API_ENDPOINTS.USER.LOCATION, locationData);
   },
+
+  // Save user FCM token
+  saveFcmToken: (token, platform = "web") => {
+    return apiClient.post(API_ENDPOINTS.NOTIFICATION.USER_FCM_TOKEN, {
+      token,
+      platform,
+    });
+  },
 };
 
 // Export location API helper functions
@@ -798,6 +806,14 @@ export const deliveryAPI = {
     return apiClient.get(API_ENDPOINTS.DELIVERY.AUTH.ME);
   },
 
+  // Save delivery FCM token
+  saveFcmToken: (token, platform = "web") => {
+    return apiClient.post(API_ENDPOINTS.NOTIFICATION.DELIVERY_FCM_TOKEN, {
+      token,
+      platform,
+    });
+  },
+
   // Dashboard
   getDashboard: () => {
     return apiClient.get(API_ENDPOINTS.DELIVERY.DASHBOARD);
@@ -1043,6 +1059,11 @@ export const adminAPI = {
   // Get dashboard stats
   getDashboardStats: () => {
     return apiClient.get(API_ENDPOINTS.ADMIN.DASHBOARD_STATS);
+  },
+
+  // Send push notification
+  sendPushNotification: (payload) => {
+    return apiClient.post(API_ENDPOINTS.NOTIFICATION.ADMIN_SEND, payload);
   },
 
   // Get users

@@ -36,6 +36,7 @@ export default function AddRestaurant() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formErrors, setFormErrors] = useState({})
   const mapRef = useRef(null)
+  const mainContentRef = useRef(null)
   const mapInstanceRef = useRef(null)
   const markerRef = useRef(null)
   const zonePolygonRef = useRef(null)
@@ -194,7 +195,7 @@ export default function AddRestaurant() {
 
             // Populate Step 2
             setStep2({
-              menuImages: data.menuImages || data.onboarding?.step2?.menuImageUrls || [],
+              menuImages: (data.menuImages || data.onboarding?.step2?.menuImageUrls || []).slice(0, 1),
               profileImage: data.profileImage || data.onboarding?.step2?.profileImageUrl || null,
               cuisines: data.cuisines || data.onboarding?.step2?.cuisines || [],
               openingTime:
@@ -358,6 +359,29 @@ export default function AddRestaurant() {
   useEffect(() => {
     step1Ref.current = step1
   }, [step1])
+
+  // Reset map instances when route context changes between add/edit (or different edit ids).
+  // This prevents stale refs from blocking map initialization on client-side navigation.
+  useEffect(() => {
+    if (markerRef.current) {
+      markerRef.current.setMap(null)
+      markerRef.current = null
+    }
+    if (zonePolygonRef.current) {
+      zonePolygonRef.current.setMap(null)
+      zonePolygonRef.current = null
+    }
+    mapInstanceRef.current = null
+    setMapError("")
+    setMapLoading(true)
+  }, [id, isEditMode])
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" })
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTop = 0
+    }
+  }, [step, id])
 
   const getZonePath = (google, zone) => {
     if (!zone?.coordinates || zone.coordinates.length < 3) return []
@@ -1010,7 +1034,7 @@ export default function AddRestaurant() {
         <div className="space-y-2">
           <Label className="text-xs font-medium text-gray-700">Menu images*</Label>
           <div className="mt-1 border border-dashed border-gray-300 rounded-md bg-gray-50/70 px-4 py-3">
-            <label htmlFor="menuImagesInput" className="inline-flex justify-center items-center gap-1.5 px-3 py-1.5 rounded-sm bg-white text-black border-black text-xs font-medium cursor-pointer w-full items-center">
+            <label htmlFor="menuImagesInput" onClick={step2.menuImages.length > 0 ? (e) => e.preventDefault() : undefined} className={`inline-flex justify-center items-center gap-1.5 px-3 py-1.5 rounded-sm bg-white text-black border-black text-xs font-medium w-full items-center ${step2.menuImages.length > 0 ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
               <Upload className="w-4.5 h-4.5" />
               <span>Choose files</span>
             </label>
@@ -1382,7 +1406,7 @@ export default function AddRestaurant() {
         <div className="text-xs text-gray-600">Step {step} of 5</div>
       </header>
 
-      <main className="flex-1 px-4 sm:px-6 py-4 space-y-4">
+      <main ref={mainContentRef} className="flex-1 px-4 sm:px-6 py-4 space-y-4">
         {renderStep()}
       </main>
 

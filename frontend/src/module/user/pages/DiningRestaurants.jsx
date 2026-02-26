@@ -203,7 +203,7 @@ export default function DiningRestaurants() {
   return (
     <AnimatedPage className="bg-background" style={{ minHeight: '100vh', paddingBottom: '80px', overflow: 'visible' }}>
       {/* Banner Section with Back Button and Location */}
-      <div className="relative w-full overflow-hidden min-h-[39vh] lg:min-h-[50vh] md:pt-16">
+      <div className="max-w-[1100px] mx-auto relative w-full overflow-hidden min-h-[39vh] lg:min-h-[50vh] md:pt-16">
         {/* Background with dining banner */}
         <div className="absolute top-0 left-0 right-0 bottom-0 z-0">
           <img
@@ -245,8 +245,8 @@ export default function DiningRestaurants() {
       </div>
 
       {/* Content */}
-      <div className="px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
-        <div className="max-w-7xl mx-auto">
+      <div className="max-w-[1100px] mx-auto px-4 sm:px-0 pt-6 sm:pt-8">
+        <div>
           {/* Search Bar */}
           <div className="mb-6">
             <div className="relative max-w-3xl mx-auto">

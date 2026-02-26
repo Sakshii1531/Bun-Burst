@@ -6,6 +6,8 @@ import { useLocation as useLocationHook } from "../hooks/useLocation"
 import { useCart } from "../context/CartContext"
 import { useLocationSelector } from "./UserLayout"
 import { FaLocationDot } from "react-icons/fa6"
+import { getCachedSettings, loadBusinessSettings } from "@/lib/utils/businessSettings"
+import appzetoFoodLogo from "@/assets/appzetologo.png"
 
 export default function DesktopNavbar() {
   const location = useLocation()
@@ -15,6 +17,44 @@ export default function DesktopNavbar() {
   const cartCount = getCartCount()
   const [isVisible, setIsVisible] = useState(true)
   const lastScrollY = useRef(0)
+  const [logoUrl, setLogoUrl] = useState(appzetoFoodLogo)
+  const [companyName, setCompanyName] = useState("")
+
+  // Load business settings logo
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        let cached = getCachedSettings()
+        if (cached) {
+          if (cached.logo?.url) setLogoUrl(cached.logo.url)
+          if (cached.companyName) setCompanyName(cached.companyName)
+        }
+
+        const settings = await loadBusinessSettings()
+        if (settings) {
+          if (settings.logo?.url) setLogoUrl(settings.logo.url)
+          if (settings.companyName) setCompanyName(settings.companyName)
+        }
+      } catch (error) {
+        console.error('Error loading logo:', error)
+      }
+    }
+
+    loadLogo()
+
+    const handleSettingsUpdate = () => {
+      const cached = getCachedSettings()
+      if (cached) {
+        if (cached.logo?.url) setLogoUrl(cached.logo.url)
+        if (cached.companyName) setCompanyName(cached.companyName)
+      }
+    }
+    window.addEventListener('businessSettingsUpdated', handleSettingsUpdate)
+
+    return () => {
+      window.removeEventListener('businessSettingsUpdated', handleSettingsUpdate)
+    }
+  }, [])
 
   // Show area if available, otherwise show city
   // Priority: area > city > "Select"
@@ -34,7 +74,7 @@ export default function DesktopNavbar() {
   }
 
   // Check active routes - support both /user/* and /* paths
-  const isDining = location.pathname === "/dining" || location.pathname === "/user/dining"
+  const isDining = location.pathname === "/dining" || location.pathname === "/user/dining" || location.pathname.startsWith("/dining/") || location.pathname.startsWith("/user/dining/")
   const isUnder250 = location.pathname === "/under-250" || location.pathname === "/user/under-250"
   const isProfile = location.pathname.startsWith("/profile") || location.pathname.startsWith("/user/profile")
   const isDelivery = !isDining && !isUnder250 && !isProfile && (location.pathname === "/" || location.pathname === "/user" || (location.pathname.startsWith("/") && !location.pathname.startsWith("/restaurant") && !location.pathname.startsWith("/delivery") && !location.pathname.startsWith("/admin") && !location.pathname.startsWith("/usermain")))
@@ -42,56 +82,29 @@ export default function DesktopNavbar() {
   // Reset visibility and scroll position when route changes
   useEffect(() => {
     setIsVisible(true)
-    lastScrollY.current = window.scrollY
-  }, [location.pathname])
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY
-      const scrollDifference = Math.abs(currentScrollY - lastScrollY.current)
-
-      // Show navigation when at the top
-      if (currentScrollY < 10) {
-        setIsVisible(true)
-        lastScrollY.current = currentScrollY
-        return
-      }
-
-      // Only update if scroll difference is significant (avoid flickering on tiny movements)
-      if (scrollDifference < 5) {
-        return
-      }
-
-      // Show when scrolling up, hide when scrolling down
-      if (currentScrollY < lastScrollY.current) {
-        // Scrolling up - show navigation
-        setIsVisible(true)
-      } else if (currentScrollY > lastScrollY.current) {
-        // Scrolling down - hide navigation
-        setIsVisible(false)
-      }
-
-      lastScrollY.current = currentScrollY
-    }
-
-    window.addEventListener("scroll", handleScroll, { passive: true })
-    return () => window.removeEventListener("scroll", handleScroll)
   }, [location.pathname])
 
   return (
     <nav
-      className={`hidden md:block fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out ${isVisible ? "translate-y-0" : "-translate-y-full"
-        }`}
+      className="hidden md:block fixed top-0 left-0 right-0 z-50 transition-all duration-300"
     >
       {/* Background */}
       <div className="absolute inset-0 bg-background/95 backdrop-blur-md border-b border-border shadow-sm" />
 
       {/* Content */}
       <div className="relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={`${location.pathname === "/" || location.pathname === "/user" || isUnder250 || isDining || isProfile ? "max-w-[1100px] px-0" : "max-w-7xl px-4 sm:px-6 lg:px-8"} mx-auto`}>
           <div className="flex items-center justify-between h-16">
-            {/* Left: Location */}
-            <div className="flex items-center gap-3 lg:gap-4 min-w-0">
+            {/* Left: Logo and Location */}
+            <div className="flex items-center gap-8 lg:gap-12 min-w-0">
+              <Link to="/user" className="flex-shrink-0">
+                <img
+                  src={logoUrl}
+                  alt={companyName || "Logo"}
+                  className="h-10 w-auto object-contain"
+                  onError={(e) => { e.target.src = appzetoFoodLogo }}
+                />
+              </Link>
               <Button
                 variant="ghost"
                 onClick={handleLocationClick}
@@ -106,16 +119,16 @@ export default function DesktopNavbar() {
                   <div className="flex flex-col items-start min-w-0">
                     <div className="flex items-center gap-1.5 lg:gap-2">
                       <FaLocationDot
-                        className="h-5 w-5 lg:h-6 lg:w-6 text-primary flex-shrink-0"
+                        className="h-5 w-5 lg:h-6 lg:w-6 text-[#e53935] flex-shrink-0"
                         strokeWidth={2.5}
                       />
-                      <span className="text-sm lg:text-base font-bold text-foreground whitespace-nowrap">
+                      <span className="text-sm lg:text-base font-bold text-[#1E1E1E] whitespace-nowrap">
                         {mainLocationName}
                       </span>
-                      <ChevronDown className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground flex-shrink-0" strokeWidth={2.5} />
+                      <ChevronDown className="h-4 w-4 lg:h-5 lg:w-5 text-[#1E1E1E]/60 flex-shrink-0" strokeWidth={2.5} />
                     </div>
                     {secondaryLocation && (
-                      <span className="text-xs lg:text-sm font-bold text-muted-foreground mt-0.5 whitespace-nowrap">
+                      <span className="text-[10px] lg:text-[11px] font-medium text-[#1E1E1E]/50 whitespace-nowrap">
                         {secondaryLocation}
                       </span>
                     )}
@@ -129,65 +142,65 @@ export default function DesktopNavbar() {
               {/* Delivery Tab */}
               <Link
                 to="/user"
-                className={`px-6 py-2.5 text-sm font-medium transition-all duration-200 relative ${isDelivery
-                  ? "text-primary shadow-sm"
-                  : "text-muted-foreground hover:text-primary transition-colors"
+                className={`px-4 lg:px-6 py-2.5 text-sm lg:text-base font-medium transition-all duration-200 relative ${isDelivery
+                  ? "text-[#e53935]"
+                  : "text-[#1E1E1E]/60 hover:text-[#e53935] transition-colors"
                   }`}
               >
                 <span className="relative z-10">Delivery</span>
                 {isDelivery && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+                  <div className="absolute bottom-[-11px] left-0 right-0 h-0.5 bg-[#e53935] rounded-t-full" />
                 )}
               </Link>
 
               {/* Divider */}
-              <div className="h-6 w-px bg-gray-300 dark:bg-gray-700" />
+              <div className="h-6 w-px bg-[#F5F5F5]" />
 
               {/* Under 250 Tab */}
               <Link
                 to="/user/under-250"
-                className={`px-6 py-2.5 text-sm font-medium transition-all duration-200 relative ${isUnder250
-                  ? "text-primary shadow-sm"
-                  : "text-muted-foreground hover:text-primary transition-colors"
+                className={`px-4 lg:px-6 py-2.5 text-sm lg:text-base font-medium transition-all duration-200 relative ${isUnder250
+                  ? "text-[#e53935]"
+                  : "text-[#1E1E1E]/60 hover:text-[#e53935] transition-colors"
                   }`}
               >
                 <span className="relative z-10">Under 250</span>
                 {isUnder250 && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+                  <div className="absolute bottom-[-11px] left-0 right-0 h-0.5 bg-[#e53935] rounded-t-full" />
                 )}
               </Link>
 
               {/* Divider */}
-              <div className="h-6 w-px bg-gray-300 dark:bg-gray-700" />
+              <div className="h-6 w-px bg-[#F5F5F5]" />
 
               {/* Dining Tab */}
               <Link
                 to="/user/dining"
-                className={`px-6 py-2.5 text-sm font-medium transition-all duration-200 relative ${isDining
-                  ? "text-primary shadow-sm"
-                  : "text-muted-foreground hover:text-primary transition-colors"
+                className={`px-4 lg:px-6 py-2.5 text-sm lg:text-base font-medium transition-all duration-200 relative ${isDining
+                  ? "text-[#e53935]"
+                  : "text-[#1E1E1E]/60 hover:text-[#e53935] transition-colors"
                   }`}
               >
                 <span className="relative z-10">Dining</span>
                 {isDining && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+                  <div className="absolute bottom-[-11px] left-0 right-0 h-0.5 bg-[#e53935] rounded-t-full" />
                 )}
               </Link>
 
               {/* Divider */}
-              <div className="h-6 w-px bg-gray-300 dark:bg-gray-700" />
+              <div className="h-6 w-px bg-[#F5F5F5]" />
 
               {/* Profile Tab */}
               <Link
                 to="/user/profile"
-                className={`px-6 py-2.5 text-sm font-medium transition-all duration-200 relative ${isProfile
-                  ? "text-primary shadow-sm"
-                  : "text-muted-foreground hover:text-primary transition-colors"
+                className={`px-4 lg:px-6 py-2.5 text-sm lg:text-base font-medium transition-all duration-200 relative ${isProfile
+                  ? "text-[#e53935]"
+                  : "text-[#1E1E1E]/60 hover:text-[#e53935] transition-colors"
                   }`}
               >
                 <span className="relative z-10">Profile</span>
                 {isProfile && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+                  <div className="absolute bottom-[-11px] left-0 right-0 h-0.5 bg-[#e53935] rounded-t-full" />
                 )}
               </Link>
             </div>

@@ -13,6 +13,11 @@ import {
   clearRouteCache
 } from '../services/locationProcessingService.js';
 import Order from '../../order/models/Order.js';
+import {
+  syncActiveOrderLocation,
+  syncActiveOrderRoute,
+  removeActiveOrderRealtime
+} from '../../../config/firebaseRealtime.js';
 
 /**
  * Receive GPS update from delivery app
@@ -79,6 +84,18 @@ export const receiveLocationUpdate = asyncHandler(async (req, res) => {
         }
       }
     );
+
+    try {
+      await syncActiveOrderLocation({
+        orderId,
+        deliveryPartnerId: deliveryBoyId,
+        latitude: processedLocation.lat,
+        longitude: processedLocation.lng,
+        status: 'on_the_way'
+      });
+    } catch (firebaseSyncError) {
+      console.warn(`⚠️ Failed syncing active order location to Firebase: ${firebaseSyncError.message}`);
+    }
     
     // Broadcast via WebSocket (handled by socket.io in server.js)
     const io = req.app.get('io');
@@ -167,6 +184,22 @@ export const initializeRoute = asyncHandler(async (req, res) => {
     
     // Cache route
     cacheRoutePolyline(orderId, route);
+
+    try {
+      await syncActiveOrderRoute({
+        orderId,
+        deliveryPartnerId: order.deliveryPartnerId?.toString?.() || order.deliveryPartnerId || null,
+        polyline: route.polyline,
+        restaurantLat: restaurantCoords.lat,
+        restaurantLng: restaurantCoords.lng,
+        customerLat: customerCoords.lat,
+        customerLng: customerCoords.lng,
+        distance: typeof route.totalDistance === 'number' ? Math.round((route.totalDistance / 1000) * 1000) / 1000 : undefined,
+        duration: typeof route.duration === 'number' ? Math.round((route.duration / 60) * 1000) / 1000 : undefined
+      });
+    } catch (firebaseSyncError) {
+      console.warn(`⚠️ Failed syncing route polyline to Firebase: ${firebaseSyncError.message}`);
+    }
     
     // Broadcast route to connected clients
     const io = req.app.get('io');
@@ -207,6 +240,11 @@ export const clearLocationData = asyncHandler(async (req, res) => {
     
     if (orderId) {
       clearRouteCache(orderId);
+      try {
+        await removeActiveOrderRealtime(orderId);
+      } catch (firebaseSyncError) {
+        console.warn(`⚠️ Failed removing active order realtime node: ${firebaseSyncError.message}`);
+      }
     }
     
     return successResponse(res, 200, 'Location data cleared successfully');

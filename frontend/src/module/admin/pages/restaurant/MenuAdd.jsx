@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import {
     ArrowLeft,
@@ -36,6 +36,13 @@ export default function MenuAdd() {
     const [creatingCategory, setCreatingCategory] = useState(false)
     const [editingDish, setEditingDish] = useState(null) // { dish, section }
     const [deletingDish, setDeletingDish] = useState(false)
+    const dishSectionRef = useRef(null)
+
+    const normalizeSearchValue = (value) =>
+        String(value ?? "")
+            .toLowerCase()
+            .replace(/\s+/g, "")
+            .trim()
 
     // Preparation time options
     const preparationTimeOptions = [
@@ -100,6 +107,20 @@ export default function MenuAdd() {
         }
     }, [selectedRestaurant])
 
+    // Auto-scroll to dish management section when restaurant is selected
+    useEffect(() => {
+        if (!selectedRestaurant || !dishSectionRef.current) return
+
+        const timer = setTimeout(() => {
+            dishSectionRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            })
+        }, 120)
+
+        return () => clearTimeout(timer)
+    }, [selectedRestaurant])
+
     const fetchRestaurants = async () => {
         try {
             setLoading(true)
@@ -143,8 +164,27 @@ export default function MenuAdd() {
     }
 
     const handleRestaurantSelect = (restaurant) => {
+        // Always scroll to dish section on restaurant card click, even if same restaurant is clicked again.
+        const scrollToDishSection = () => {
+            if (!dishSectionRef.current) return
+            dishSectionRef.current.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            })
+        }
+
+        const selectedId = selectedRestaurant?._id || selectedRestaurant?.id
+        const nextId = restaurant?._id || restaurant?.id
+
+        if (selectedId && nextId && String(selectedId) === String(nextId)) {
+            setTimeout(scrollToDishSection, 80)
+            return
+        }
+
         setSelectedRestaurant(restaurant)
         setMenu(null)
+
+        setTimeout(scrollToDishSection, 120)
     }
 
     const toggleSection = (sectionId) => {
@@ -545,9 +585,10 @@ export default function MenuAdd() {
         }
     }
 
-    const filteredRestaurants = restaurants.filter(restaurant =>
-        restaurant.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        restaurant.ownerName?.toLowerCase().includes(searchQuery.toLowerCase())
+    const normalizedRestaurantQuery = normalizeSearchValue(searchQuery)
+    const filteredRestaurants = restaurants.filter((restaurant) =>
+        normalizeSearchValue(restaurant.name).includes(normalizedRestaurantQuery) ||
+        normalizeSearchValue(restaurant.ownerName).includes(normalizedRestaurantQuery)
     )
 
     return (
@@ -618,7 +659,7 @@ export default function MenuAdd() {
 
                 {/* Menu Sections */}
                 {selectedRestaurant && (
-                    <div className="bg-white rounded-lg shadow-sm border border-[#F5F5F5] p-4">
+                    <div ref={dishSectionRef} className="bg-white rounded-lg shadow-sm border border-[#F5F5F5] p-4">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-lg font-semibold text-[#1E1E1E]">
                                 Menu for {selectedRestaurant.name}

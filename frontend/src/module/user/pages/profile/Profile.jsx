@@ -371,7 +371,7 @@ export default function Profile() {
 
   return (
     <AnimatedPage className="min-h-screen bg-background">
-      <div className="max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-4 sm:py-6 md:py-8 lg:py-10 pb-24">
+      <div className="max-w-[1100px] mx-auto px-4 sm:px-0 py-4 sm:py-6 md:py-8 lg:py-10 pb-24">
         {/* Back Arrow */}
         <div className="mb-4">
           <Link to="/user">

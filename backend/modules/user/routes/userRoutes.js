@@ -14,6 +14,7 @@ import { authenticate } from '../../auth/middleware/auth.js';
 import { uploadMiddleware } from '../../../shared/utils/cloudinaryService.js';
 import userWalletRoutes from './userWalletRoutes.js';
 import complaintRoutes from './complaintRoutes.js';
+import { saveUserFcmToken } from '../../notification/controllers/notificationController.js';
 
 const router = express.Router();
 
@@ -40,6 +41,9 @@ router.get('/addresses', getUserAddresses);
 router.post('/addresses', addUserAddress);
 router.put('/addresses/:id', updateUserAddress);
 router.delete('/addresses/:id', deleteUserAddress);
+
+// Push notification token routes
+router.post('/fcm-token', saveUserFcmToken);
 
 // Wallet routes
 router.use('/wallet', userWalletRoutes);

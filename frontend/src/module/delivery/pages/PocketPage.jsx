@@ -390,7 +390,7 @@ export default function PocketPage() {
     ?.filter(t => t.type === 'payment' && t.description?.toLowerCase().includes('tip'))
     .reduce((sum, t) => sum + (t.amount || 0), 0) || 0
 
-  // Payout data - calculate from completed withdrawals in previous week
+  // Payout data - previous week amount (prefer completed withdrawals, fallback to completed earnings)
   const calculatePayoutAmount = () => {
     const now = new Date()
     const lastWeekStart = new Date(now)
@@ -400,14 +400,33 @@ export default function PocketPage() {
     lastWeekEnd.setDate(lastWeekStart.getDate() + 6)
     lastWeekEnd.setHours(23, 59, 59, 999)
 
-    return walletState.transactions
-      ?.filter(t => {
-        if (t.type !== 'withdrawal' || t.status !== 'Completed') return false
-        const transactionDate = t.date ? new Date(t.date) : (t.createdAt ? new Date(t.createdAt) : null)
-        if (!transactionDate) return false
-        return transactionDate >= lastWeekStart && transactionDate <= lastWeekEnd
+    const transactions = Array.isArray(walletState?.transactions) ? walletState.transactions : []
+
+    const isInPreviousWeek = (t) => {
+      const transactionDate = t?.date ? new Date(t.date) : (t?.createdAt ? new Date(t.createdAt) : null)
+      if (!transactionDate || Number.isNaN(transactionDate.getTime())) return false
+      return transactionDate >= lastWeekStart && transactionDate <= lastWeekEnd
+    }
+
+    const completedWithdrawals = transactions
+      .filter(t => {
+        const type = String(t?.type || "").toLowerCase()
+        const status = String(t?.status || "").toLowerCase()
+        return type === "withdrawal" && status === "completed" && isInPreviousWeek(t)
       })
-      .reduce((sum, t) => sum + (t.amount || 0), 0) || 0
+      .reduce((sum, t) => sum + Math.abs(Number(t?.amount) || 0), 0)
+
+    if (completedWithdrawals > 0) return completedWithdrawals
+
+    // Fallback: when no completed withdrawals exist, show previous week's payable earnings dynamically.
+    return transactions
+      .filter(t => {
+        const type = String(t?.type || "").toLowerCase()
+        const status = String(t?.status || "").toLowerCase()
+        const isEarningType = type === "payment" || type === "earning_addon" || type === "bonus"
+        return isEarningType && status === "completed" && isInPreviousWeek(t)
+      })
+      .reduce((sum, t) => sum + (Number(t?.amount) || 0), 0)
   }
 
   const payoutAmount = calculatePayoutAmount()

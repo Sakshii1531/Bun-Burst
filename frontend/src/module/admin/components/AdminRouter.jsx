@@ -309,6 +309,7 @@ export default function AdminRouter() {
           <Route path="addon-activation" element={<AddonActivation />} />
 
           {/* ENV SETUP */}
+          <Route path="env" element={<SystemAddons />} />
           <Route path="system-addons" element={<SystemAddons />} />
           {/* HERO BANNER MANAGEMENT */}
           <Route path="hero-banner-management" element={<LandingPageManagement />} />

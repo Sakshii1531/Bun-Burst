@@ -197,6 +197,14 @@ const userSchema = new mongoose.Schema({
       }
     }
   },
+  fcmTokenWeb: {
+    type: String,
+    trim: true
+  },
+  fcmTokenMobile: {
+    type: String,
+    trim: true
+  },
   isActive: {
     type: Boolean,
     default: true

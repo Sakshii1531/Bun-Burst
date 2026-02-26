@@ -113,6 +113,7 @@ export default function ProfilePage() {
     const fetchProfile = async () => {
       try {
         setLoading(true)
+        setProfile(null)
         const response = await deliveryAPI.getProfile()
         if (response?.data?.success && response?.data?.data?.profile) {
           const profileData = response.data.data.profile
@@ -143,21 +144,31 @@ export default function ProfilePage() {
       // Refetch profile data
       const fetchProfile = async () => {
         try {
+          setLoading(true)
+          setProfile(null)
           const response = await deliveryAPI.getProfile()
           if (response?.data?.success && response?.data?.data?.profile) {
             setProfile(response.data.data.profile)
           }
         } catch (error) {
           console.error("Error fetching profile:", error)
+        } finally {
+          setLoading(false)
         }
       }
       fetchProfile()
     }
 
+    const handleAuthChange = () => {
+      handleProfileRefresh()
+    }
+
     window.addEventListener('deliveryProfileRefresh', handleProfileRefresh)
+    window.addEventListener('deliveryAuthChanged', handleAuthChange)
 
     return () => {
       window.removeEventListener('deliveryProfileRefresh', handleProfileRefresh)
+      window.removeEventListener('deliveryAuthChanged', handleAuthChange)
     }
   }, [])
 
@@ -214,13 +225,6 @@ export default function ProfilePage() {
       {/* Back Button and Profile Section */}
       <div ref={profileRef} className="mb-0">
         <div className="bg-white p-4 w-full shadow-sm border-b border-[#F5F5F5]">
-          {/* Back Button */}
-          <button
-            onClick={() => navigate(-1)}
-            className="mb-6"
-          >
-            <ArrowLeft className="w-6 h-6 text-[#1E1E1E]" />
-          </button>
 
           {/* Profile Information */}
           <div

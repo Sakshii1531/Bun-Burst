@@ -27,6 +27,12 @@ import {
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
+const normalizeSearchValue = (value) =>
+  String(value ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .trim()
+
 export default function Category() {
   const [searchQuery, setSearchQuery] = useState("")
   const [categories, setCategories] = useState([])
@@ -125,7 +131,8 @@ export default function Category() {
     try {
       setLoading(true)
       const params = {}
-      if (searchQuery) params.search = searchQuery
+      const normalizedQuery = normalizeSearchValue(searchQuery)
+      if (normalizedQuery) params.search = normalizedQuery
 
       const response = await adminAPI.getCategories(params)
       if (response.data.success) {
@@ -188,11 +195,11 @@ export default function Category() {
   const filteredCategories = useMemo(() => {
     let result = [...categories]
 
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim()
+    const query = normalizeSearchValue(searchQuery)
+    if (query) {
       result = result.filter(cat =>
-        cat.name?.toLowerCase().includes(query) ||
-        cat.id?.toString().includes(query)
+        normalizeSearchValue(cat.name).includes(query) ||
+        normalizeSearchValue(cat.id).includes(query)
       )
     }
 
@@ -273,62 +280,121 @@ export default function Category() {
   const handleExportPDF = () => {
     try {
       const doc = new jsPDF()
-
-      // Add title
-      doc.setFontSize(18)
-      doc.setTextColor(30, 30, 30)
-      doc.text('Category List', 14, 20)
-
-      // Add date
-      doc.setFontSize(10)
-      doc.setTextColor(100, 100, 100)
-      const date = new Date().toLocaleDateString('en-US', {
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const pageHeight = doc.internal.pageSize.getHeight()
+      const now = new Date()
+      const generatedOn = now.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
       })
-      doc.text(`Generated on: ${date}`, 14, 28)
+      const generatedAt = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+
+      const getCategoryId = (category) =>
+        category?.id ||
+        category?._id ||
+        category?.categoryId ||
+        category?.category_id ||
+        'N/A'
+
+      const getCategoryType = (category) =>
+        category?.type ||
+        category?.categoryType ||
+        category?.category_type ||
+        'N/A'
+
+      const isCategoryActive = (category) => {
+        if (typeof category?.status === 'boolean') return category.status
+        if (typeof category?.isActive === 'boolean') return category.isActive
+        if (typeof category?.status === 'string') {
+          const normalized = category.status.toLowerCase()
+          return normalized === 'active' || normalized === 'true'
+        }
+        return false
+      }
+
+      const totalCount = filteredCategories.length
+      const activeCount = filteredCategories.filter((category) => isCategoryActive(category)).length
+      const inactiveCount = totalCount - activeCount
+
+      // Top accent header
+      doc.setFillColor(229, 57, 53)
+      doc.rect(0, 0, pageWidth, 28, 'F')
+
+      doc.setFontSize(18)
+      doc.setTextColor(255, 255, 255)
+      doc.text('Category Dashboard Export', 14, 18)
+
+      doc.setFontSize(10)
+      doc.setTextColor(245, 245, 245)
+      doc.text(`Generated on ${generatedOn} at ${generatedAt}`, 14, 24)
+
+      // Summary row
+      doc.setFillColor(250, 250, 250)
+      doc.roundedRect(14, 34, pageWidth - 28, 20, 3, 3, 'F')
+      doc.setFontSize(10)
+      doc.setTextColor(55, 65, 81)
+      doc.text(`Total: ${totalCount}`, 20, 46)
+      doc.text(`Active: ${activeCount}`, 60, 46)
+      doc.text(`Inactive: ${inactiveCount}`, 100, 46)
+      doc.text(`Search: ${searchQuery.trim() || 'All categories'}`, 140, 46)
 
       // Prepare table data
       const tableData = filteredCategories.map((category, index) => [
         category.sl || index + 1,
         category.name || 'N/A',
-        category.type || 'N/A',
-        category.status ? 'Active' : 'Inactive',
-        category.id || 'N/A'
+        getCategoryType(category),
+        isCategoryActive(category) ? 'Active' : 'Inactive',
+        getCategoryId(category)
       ])
 
       // Add table
       autoTable(doc, {
-        startY: 35,
+        startY: 60,
         head: [['SL', 'Category Name', 'Type', 'Status', 'ID']],
         body: tableData,
-        theme: 'striped',
+        theme: 'grid',
         headStyles: {
-          fillColor: [59, 130, 246], // Blue color
+          fillColor: [229, 57, 53],
           textColor: 255,
           fontStyle: 'bold',
-          fontSize: 10
+          fontSize: 10,
+          halign: 'left'
         },
         bodyStyles: {
           fontSize: 9,
-          textColor: [30, 30, 30]
+          textColor: [30, 30, 30],
+          cellPadding: { top: 3, right: 3, bottom: 3, left: 3 }
         },
         alternateRowStyles: {
-          fillColor: [245, 247, 250]
+          fillColor: [252, 252, 252]
         },
         styles: {
-          cellPadding: 5,
-          lineColor: [200, 200, 200],
-          lineWidth: 0.5
+          lineColor: [230, 230, 230],
+          lineWidth: 0.25,
+          overflow: 'linebreak'
         },
         columnStyles: {
-          0: { cellWidth: 20 }, // SL
-          1: { cellWidth: 70 }, // Category Name
-          2: { cellWidth: 50 }, // Type
-          3: { cellWidth: 40 }, // Status
-          4: { cellWidth: 50 }  // ID
-        }
+          0: { cellWidth: 14, halign: 'center' },
+          1: { cellWidth: 56 },
+          2: { cellWidth: 34 },
+          3: { cellWidth: 24, halign: 'center' },
+          4: { cellWidth: 62 }
+        },
+        didParseCell: (data) => {
+          if (data.section === 'body' && data.column.index === 3) {
+            const statusValue = String(data.cell.raw || '').toLowerCase()
+            if (statusValue === 'active') {
+              data.cell.styles.textColor = [22, 163, 74]
+            } else if (statusValue === 'inactive') {
+              data.cell.styles.textColor = [220, 38, 38]
+            }
+          }
+        },
+        margin: { left: 14, right: 14 }
       })
 
       // Add footer
@@ -336,13 +402,14 @@ export default function Category() {
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i)
         doc.setFontSize(8)
-        doc.setTextColor(150, 150, 150)
+        doc.setTextColor(120, 120, 120)
         doc.text(
           `Page ${i} of ${pageCount}`,
-          doc.internal.pageSize.getWidth() / 2,
-          doc.internal.pageSize.getHeight() - 10,
+          pageWidth / 2,
+          pageHeight - 8,
           { align: 'center' }
         )
+        doc.text('Bun Burst - Category Report', 14, pageHeight - 8)
       }
 
       // Save PDF

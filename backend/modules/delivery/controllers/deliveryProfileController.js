@@ -15,6 +15,8 @@ const logger = winston.createLogger({
   ]
 });
 
+import DeliveryWallet from '../models/DeliveryWallet.js';
+
 /**
  * Get Delivery Partner Profile
  * GET /api/delivery/profile
@@ -23,13 +25,32 @@ export const getProfile = asyncHandler(async (req, res) => {
   try {
     const delivery = req.delivery; // From authenticate middleware
 
-    // Populate related fields if needed
+    // Get basic profile data
     const profile = await Delivery.findById(delivery._id)
       .select('-password -refreshToken')
       .lean();
 
     if (!profile) {
       return errorResponse(res, 404, 'Delivery partner not found');
+    }
+
+    // Fetch latest wallet balance from DeliveryWallet model
+    const wallet = await DeliveryWallet.findOne({ deliveryId: delivery._id });
+
+    // Attach wallet balance to profile object for frontend compatibility
+    if (wallet) {
+      profile.wallet = {
+        balance: wallet.totalBalance || 0,
+        cashInHand: wallet.cashInHand || 0,
+        totalEarned: wallet.totalEarned || 0,
+        totalWithdrawn: wallet.totalWithdrawn || 0
+      };
+    } else {
+      // Fallback if no wallet exists yet
+      profile.wallet = {
+        balance: 0,
+        cashInHand: 0
+      };
     }
 
     return successResponse(res, 200, 'Profile retrieved successfully', {
@@ -47,6 +68,10 @@ export const getProfile = asyncHandler(async (req, res) => {
  */
 const updateProfileSchema = Joi.object({
   name: Joi.string().trim().min(2).max(100).optional(),
+  phone: Joi.string()
+    .trim()
+    .pattern(/^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/)
+    .optional(),
   email: Joi.string().email().lowercase().trim().optional().allow(null, ''),
   dateOfBirth: Joi.date().optional().allow(null),
   gender: Joi.string().valid('male', 'female', 'other', 'prefer-not-to-say').optional(),
@@ -81,12 +106,28 @@ const updateProfileSchema = Joi.object({
 export const updateProfile = asyncHandler(async (req, res) => {
   try {
     const delivery = req.delivery;
-    const updateData = req.body;
+    const updateData = { ...req.body };
 
     // Validate input
     const { error } = updateProfileSchema.validate(updateData);
     if (error) {
       return errorResponse(res, 400, error.details[0].message);
+    }
+
+    if (typeof updateData.phone === 'string') {
+      updateData.phone = updateData.phone.trim().replace(/\s+/g, ' ');
+    }
+
+    // Email-login users should not be allowed to change email from profile.
+    if (
+      typeof updateData.email !== 'undefined' &&
+      String(delivery?.signupMethod || '').toLowerCase() === 'email'
+    ) {
+      const incomingEmail = String(updateData.email || '').trim().toLowerCase();
+      const currentEmail = String(delivery?.email || '').trim().toLowerCase();
+      if (incomingEmail !== currentEmail) {
+        return errorResponse(res, 400, 'Email cannot be changed for email login users');
+      }
     }
 
     // Handle nested documents.bankDetails update properly
@@ -122,12 +163,15 @@ export const updateProfile = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     logger.error(`Error updating delivery profile: ${error.message}`);
-    
-    // Handle duplicate email error
+
+    // Handle duplicate email/phone errors
     if (error.code === 11000) {
+      if (error?.keyPattern?.phone) {
+        return errorResponse(res, 400, 'Phone number already exists');
+      }
       return errorResponse(res, 400, 'Email already exists');
     }
-    
+
     return errorResponse(res, 500, 'Failed to update profile');
   }
 });

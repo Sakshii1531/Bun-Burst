@@ -1,12 +1,14 @@
 import { Link, useNavigate } from "react-router-dom"
 import { useState, useMemo, useCallback, useEffect, useRef } from "react"
-import { Star, Clock, MapPin, ArrowDownUp, Timer, ArrowRight, ChevronDown, Bookmark, Share2, Plus, Minus, X } from "lucide-react"
+import { Star, Clock, MapPin, ArrowDownUp, Timer, ArrowRight, ChevronDown, Bookmark, Share2, Plus, Minus, X, Search, Mic } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import AnimatedPage from "../components/AnimatedPage"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { useLocationSelector } from "../components/UserLayout"
+import { Switch } from "@/components/ui/switch"
+import { useLocationSelector, useSearchOverlay } from "../components/UserLayout"
+import { useProfile } from "../context/ProfileContext"
 import { useLocation } from "../hooks/useLocation"
 import { useZone } from "../hooks/useZone"
 import { useCart } from "../context/CartContext"
@@ -20,11 +22,25 @@ import api from "@/lib/api"
 import { restaurantAPI } from "@/lib/api"
 import { isModuleAuthenticated } from "@/lib/utils/auth"
 import UserBannerCarousel from "../components/UserBannerCarousel"
+import UserTopHeader from "../components/UserTopHeader"
+
+const placeholders = [
+  "Search \"burger\"",
+  "Search \"biryani\"",
+  "Search \"pizza\"",
+  "Search \"desserts\"",
+  "Search \"chinese\"",
+  "Search \"thali\"",
+  "Search \"momos\"",
+  "Search \"dosa\""
+]
 
 export default function Under250() {
   const { location } = useLocation()
   const { zoneId, zoneStatus, isInService, isOutOfService } = useZone(location)
   const navigate = useNavigate()
+  const { openSearch } = useSearchOverlay()
+  const { vegMode, handleVegModeChange } = useProfile()
   const { addToCart, updateQuantity, removeFromCart, getCartItem, cart } = useCart()
   const [activeCategory, setActiveCategory] = useState(null)
   const [showSortPopup, setShowSortPopup] = useState(false)
@@ -42,6 +58,15 @@ export default function Under250() {
   const [loadingBanner, setLoadingBanner] = useState(true)
   const [under250Restaurants, setUnder250Restaurants] = useState([])
   const [loadingRestaurants, setLoadingRestaurants] = useState(true)
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
+
+  // Animated placeholder cycling
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length)
+    }, 2500)
+    return () => clearInterval(interval)
+  }, [])
 
   const sortOptions = [
     { id: null, label: 'Relevance' },
@@ -383,13 +408,55 @@ export default function Under250() {
   return (
 
     <div className={`relative min-h-screen bg-white dark:bg-[#0a0a0a] ${shouldShowGrayscale ? 'grayscale opacity-75' : ''}`}>
-      {/* Sticky Top Header matching Home Page behavior */}
-      <div className="sticky top-0 z-50 bg-white dark:bg-[#0a0a0a] border-b border-border shadow-sm">
-        <PageNavbar textColor="black" zIndex={20} showProfile={true} />
+      {/* Desktop Search Bar Row (Hidden on Mobile) */}
+      <div className="hidden md:block sticky top-16 z-40 bg-background/95 backdrop-blur-md pt-4 pb-4 mt-16 px-0 border-b border-border shadow-sm transition-all duration-300">
+        <div className="max-w-[1100px] mx-auto flex items-center gap-6">
+          {/* Search Input Container */}
+          <div className="flex-1 relative">
+            <div
+              className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-zinc-900 border border-[#F5F5F5] dark:border-zinc-800 rounded-2xl shadow-md hover:shadow-lg hover:border-[#e53935]/30 transition-all duration-300 group cursor-pointer"
+              onClick={() => openSearch()}
+            >
+              <Search className="h-5 w-5 text-slate-400 group-hover:text-[#e53935] transition-colors" />
+              <div className="flex-1 relative h-6 overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={placeholderIndex}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                    className="absolute inset-0 text-slate-500 font-medium flex items-center"
+                  >
+                    {placeholders[placeholderIndex]}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openSearch(true)
+                }}
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
+              >
+                <Mic className="h-5 w-5 text-[#e53935]" />
+              </button>
+            </div>
+          </div>
+
+        </div>
       </div>
 
+      {/* Mobile-only Top Header — DesktopNavbar handles md+ screens */}
+      <UserTopHeader
+        className="md:hidden"
+        vegMode={vegMode}
+        onVegModeChange={handleVegModeChange}
+        showVegToggle={false}
+      />
+
       {/* Hero Banner Section - Reusable Carousel matching Home Page layout */}
-      <div className="max-w-7xl mx-auto px-0">
+      <div className="w-[92%] sm:w-[95%] md:w-full max-w-[1100px] mx-auto mb-6 px-0">
         <UserBannerCarousel
           banners={bannersData.length > 0 ? bannersData : (bannerImage ? [bannerImage] : [])}
           loading={loadingBanner}
@@ -397,7 +464,7 @@ export default function Under250() {
       </div>
 
       {/* Content Section */}
-      <div className="relative max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 space-y-0 pt-2 sm:pt-3 md:pt-4 lg:pt-6 pb-6 md:pb-8 lg:pb-10">
+      <div className="relative w-[92%] sm:w-[95%] md:w-full max-w-[1100px] mx-auto px-0 space-y-5 sm:space-y-3 md:space-y-0 pt-4 sm:pt-4 lg:pt-6 pb-6 md:pb-8 lg:pb-10">
 
         <section className="space-y-1 sm:space-y-1.5">
           <div
@@ -412,22 +479,22 @@ export default function Under250() {
             {/* All Button */}
             <div className="flex-shrink-0">
               <motion.div
-                className="flex flex-col items-center gap-2 w-[62px] sm:w-24 md:w-28"
+                className="flex flex-col items-center gap-1.5 w-[56px] sm:w-20 md:w-24"
                 whileHover={{ scale: 1.1, y: -4 }}
                 whileTap={{ scale: 0.95 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
               >
-                <div className="w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden shadow-md transition-all">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full overflow-hidden shadow-md transition-all">
                   <OptimizedImage
                     src={offerImage}
                     alt="All"
                     className="w-full h-full bg-white rounded-full"
                     objectFit="cover"
-                    sizes="(max-width: 640px) 62px, (max-width: 768px) 96px, 112px"
+                    sizes="(max-width: 640px) 48px, (max-width: 768px) 64px, 80px"
                     placeholder="blur"
                   />
                 </div>
-                <span className="text-xs sm:text-sm md:text-base font-semibold text-foreground/80 text-center pb-1">
+                <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-foreground/80 text-center pb-1">
                   All
                 </span>
               </motion.div>
@@ -439,23 +506,23 @@ export default function Under250() {
                 <div key={category.id} className="flex-shrink-0">
                   <Link to={`/user/category/${categorySlug}`}>
                     <motion.div
-                      className="flex flex-col items-center gap-2 w-[62px] sm:w-24 md:w-28"
+                      className="flex flex-col items-center gap-1.5 w-[56px] sm:w-20 md:w-24"
                       onClick={() => setActiveCategory(category.id)}
                       whileHover={{ scale: 1.1, y: -4 }}
                       whileTap={{ scale: 0.95 }}
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     >
-                      <div className="w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden shadow-md transition-all">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full overflow-hidden shadow-md transition-all">
                         <OptimizedImage
                           src={category.image}
                           alt={category.name}
                           className="w-full h-full bg-white rounded-full"
                           objectFit="cover"
-                          sizes="(max-width: 640px) 62px, (max-width: 768px) 96px, 112px"
+                          sizes="(max-width: 640px) 48px, (max-width: 768px) 64px, 80px"
                           placeholder="blur"
                         />
                       </div>
-                      <span className={`text-xs sm:text-sm md:text-base font-semibold text-foreground/80 text-center pb-1 ${isActive ? 'border-b-2 border-primary' : ''}`}>
+                      <span className={`text-[10px] sm:text-xs md:text-sm font-semibold text-foreground/80 text-center pb-1 ${isActive ? 'border-b-2 border-primary' : ''}`}>
                         {category.name.length > 7 ? `${category.name.slice(0, 7)}...` : category.name}
                       </span>
                     </motion.div>
@@ -562,8 +629,7 @@ export default function Under250() {
                             whileHover={{ y: -8, scale: 1.02 }}
                             style={{ boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)" }}
                           >
-                            {/* Item Image */}
-                            <div className="relative w-full h-32 sm:h-36 md:h-40 lg:h-48 xl:h-52 overflow-hidden">
+                            <div className="relative w-full h-[160px] sm:h-36 md:h-40 lg:h-48 xl:h-52 overflow-hidden">
                               <motion.div
                                 className="absolute inset-0"
                                 whileHover={{ scale: 1.1 }}

@@ -76,7 +76,7 @@ export const createOrUpdateEmergencyHelp = asyncHandler(async (req, res) => {
 
     // Validate phone numbers (optional, but if provided should be valid format)
     const phoneRegex = /^[\d\s\-\+\(\)]+$/;
-    
+
     if (medicalEmergency && !phoneRegex.test(medicalEmergency)) {
       return errorResponse(res, 400, 'Invalid medical emergency phone number format');
     }

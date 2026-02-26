@@ -162,8 +162,8 @@ export default function DiningCategory() {
   return (
     <AnimatedPage className="bg-background" style={{ minHeight: '100vh', paddingBottom: '80px', overflow: 'visible' }}>
       {/* Header with Back Button and Location */}
-      <div className="relative w-full bg-background border-b-2 border-border shadow-md z-30">
-        <nav className="relative z-20 w-full px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+      <div className="max-w-[1100px] mx-auto relative w-full bg-background border-b-2 border-border shadow-md z-30">
+        <nav className="relative z-20 w-full px-3 sm:px-0 py-3 sm:py-4">
           <div className="flex items-center justify-start gap-3 sm:gap-4">
             {/* Back Button */}
             <Button
@@ -193,8 +193,8 @@ export default function DiningCategory() {
       </div>
 
       {/* Content */}
-      <div className="px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
-        <div className="max-w-7xl mx-auto">
+      <div className="max-w-[1100px] mx-auto px-4 sm:px-0 pt-6 sm:pt-8">
+        <div>
           {/* Category Heading */}
           <div className="mb-2">
 

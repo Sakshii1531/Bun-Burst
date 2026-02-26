@@ -1,5 +1,5 @@
 // src/context/cart-context.jsx
-import { createContext, useContext, useEffect, useMemo, useState } from "react"
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
 
 // Default cart context value to prevent errors during initial render
 const defaultCartContext = {
@@ -32,6 +32,14 @@ const defaultCartContext = {
 
 const CartContext = createContext(defaultCartContext)
 
+const isUserAuthenticated = () => {
+  if (typeof window === "undefined") return false
+  const hasUserToken = !!localStorage.getItem("user_accessToken")
+  const hasUserAuthFlag = localStorage.getItem("user_authenticated") === "true"
+  const hasLegacyToken = !!localStorage.getItem("accessToken")
+  return hasUserToken || hasUserAuthFlag || hasLegacyToken
+}
+
 export function CartProvider({ children }) {
   // Safe init (works with SSR and bad JSON)
   const [cart, setCart] = useState(() => {
@@ -48,6 +56,7 @@ export function CartProvider({ children }) {
   const [lastAddEvent, setLastAddEvent] = useState(null)
   // Track last remove event for animation
   const [lastRemoveEvent, setLastRemoveEvent] = useState(null)
+  const wasAuthenticatedRef = useRef(isUserAuthenticated())
 
   // Persist to localStorage whenever cart changes
   useEffect(() => {
@@ -57,6 +66,33 @@ export function CartProvider({ children }) {
       // ignore storage errors (private mode, quota, etc.)
     }
   }, [cart])
+
+  // Clear cart on logout so next login always starts with an empty cart.
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const isAuthenticatedNow = isUserAuthenticated()
+      const wasAuthenticated = wasAuthenticatedRef.current
+      const hasStoredCart = !!localStorage.getItem("cart")
+
+      if (!isAuthenticatedNow && (wasAuthenticated || hasStoredCart)) {
+        setCart([])
+        try {
+          localStorage.removeItem("cart")
+        } catch {
+          // ignore storage errors
+        }
+      }
+
+      wasAuthenticatedRef.current = isAuthenticatedNow
+    }
+
+    window.addEventListener("userAuthChanged", handleAuthChange)
+    handleAuthChange()
+
+    return () => {
+      window.removeEventListener("userAuthChanged", handleAuthChange)
+    }
+  }, [])
 
   const addToCart = (item, sourcePosition = null) => {
     setCart((prev) => {

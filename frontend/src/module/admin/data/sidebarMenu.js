@@ -329,7 +329,7 @@ export const sidebarMenuData = [
       {
         type: "link",
         label: "ENV Setup",
-        path: "/admin/system-addons",
+        path: "/admin/env",
         icon: "Plus",
       },
     ],

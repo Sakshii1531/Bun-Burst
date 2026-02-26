@@ -165,8 +165,8 @@ export default function Coffee() {
                     {/* Rating Badge */}
                     <div className="mb-2">
                       <div className={`inline-flex items-center gap-1 px-2 py-1 rounded ${isHighRating
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-secondary text-secondary-foreground'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-secondary-foreground'
                         }`}>
                         <span className="text-sm font-semibold">{store.rating}</span>
                         <Star className={`h-3 w-3 ${isHighRating ? 'fill-primary-foreground text-primary-foreground' : 'fill-secondary-foreground text-secondary-foreground'}`} />
@@ -202,7 +202,7 @@ export default function Coffee() {
   return (
     <AnimatedPage className="bg-background" style={{ minHeight: '100vh', paddingBottom: '80px', overflow: 'visible' }}>
       {/* Banner Section with Back Button and Location */}
-      <div className="relative w-full overflow-hidden">
+      <div className="max-w-[1100px] mx-auto relative w-full overflow-hidden">
         {/* Background with coffee banner */}
         <div className="relative w-full z-0">
           <img
@@ -244,8 +244,8 @@ export default function Coffee() {
       </div>
 
       {/* Content */}
-      <div className="px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
-        <div className="max-w-4xl mx-auto">
+      <div className="max-w-[1100px] mx-auto px-4 sm:px-0 pt-6 sm:pt-8">
+        <div>
           {/* Header Section */}
           <div className="mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">

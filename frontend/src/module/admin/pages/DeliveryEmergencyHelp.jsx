@@ -199,8 +199,8 @@ export default function DeliveryEmergencyHelp() {
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
                     placeholder={field.placeholder}
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors[field.id]
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-slate-300"
+                      ? "border-red-300 focus:ring-red-500"
+                      : "border-slate-300"
                       }`}
                   />
                   {formErrors[field.id] && (

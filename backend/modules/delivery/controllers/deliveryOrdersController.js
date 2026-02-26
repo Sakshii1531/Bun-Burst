@@ -185,6 +185,7 @@ export const getOrderDetails = asyncHandler(async (req, res) => {
     const orderWithPayment = {
       ...order,
       paymentMethod,
+      customerPhone: order?.userId?.phone || '',
       ...(restaurantDoc ? { restaurant: restaurantDoc } : {}),
       ...(restaurantAddress ? { restaurantAddress } : {}),
     };
@@ -684,7 +685,11 @@ export const acceptOrder = asyncHandler(async (req, res) => {
         if (paymentRecord?.method === 'cash') paymentMethod = 'cash';
       } catch (e) { /* ignore */ }
     }
-    const orderWithPayment = { ...updatedOrder, paymentMethod };
+    const orderWithPayment = {
+      ...updatedOrder,
+      paymentMethod,
+      customerPhone: updatedOrder?.userId?.phone || ''
+    };
 
     return successResponse(res, 200, 'Order accepted successfully', {
       order: orderWithPayment,

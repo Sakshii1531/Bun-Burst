@@ -41,6 +41,8 @@ const countryCodes = [
   { code: "+46", country: "SE", flag: "🇸🇪" },
 ]
 
+const USER_SIGNIN_REMEMBER_KEY = "user_signin_remember_me"
+
 export default function SignIn() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -62,6 +64,28 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState("")
   const redirectHandledRef = useRef(false)
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(USER_SIGNIN_REMEMBER_KEY)
+      if (!saved) return
+
+      const parsed = JSON.parse(saved)
+      const savedAuthMethod = parsed?.authMethod === "email" ? "email" : "phone"
+
+      setAuthMethod(savedAuthMethod)
+      setFormData((prev) => ({
+        ...prev,
+        phone: typeof parsed?.phone === "string" ? parsed.phone : "",
+        countryCode: typeof parsed?.countryCode === "string" ? parsed.countryCode : "+91",
+        email: typeof parsed?.email === "string" ? parsed.email : "",
+        name: typeof parsed?.name === "string" ? parsed.name : "",
+        rememberMe: true,
+      }))
+    } catch (error) {
+      console.warn("Failed to restore remembered sign-in data:", error)
+    }
+  }, [])
 
   // Helper function to process signed-in user
   const processSignedInUser = async (user, source = "unknown") => {
@@ -536,6 +560,21 @@ export default function SignIn() {
       const fullPhone = authMethod === "phone" ? `${formData.countryCode} ${formData.phone}`.trim() : null
       const email = authMethod === "email" ? formData.email.trim() : null
 
+      if (formData.rememberMe) {
+        localStorage.setItem(
+          USER_SIGNIN_REMEMBER_KEY,
+          JSON.stringify({
+            authMethod,
+            phone: authMethod === "phone" ? formData.phone.trim() : "",
+            countryCode: formData.countryCode,
+            email: authMethod === "email" ? formData.email.trim() : "",
+            name: isSignUp ? formData.name.trim() : "",
+          })
+        )
+      } else {
+        localStorage.removeItem(USER_SIGNIN_REMEMBER_KEY)
+      }
+
       // Call backend to send OTP
       await authAPI.sendOTP(fullPhone, purpose, email)
 
@@ -799,9 +838,13 @@ export default function SignIn() {
               <Checkbox
                 id="rememberMe"
                 checked={formData.rememberMe}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, rememberMe: checked })
-                }
+                onCheckedChange={(checked) => {
+                  const isChecked = checked === true
+                  setFormData({ ...formData, rememberMe: isChecked })
+                  if (!isChecked) {
+                    localStorage.removeItem(USER_SIGNIN_REMEMBER_KEY)
+                  }
+                }}
                 className="w-4 h-4 border-2 border-gray-300 rounded data-[state=checked]:bg-[#E23744] data-[state=checked]:border-[#E23744] flex items-center justify-center"
               />
               <label
