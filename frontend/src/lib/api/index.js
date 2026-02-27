@@ -1390,6 +1390,11 @@ export const adminAPI = {
     return apiClient.get(API_ENDPOINTS.ADMIN.ORDERS, { params });
   },
 
+  // Get single order details
+  getOrderById: (id) => {
+    return apiClient.get(`/admin/orders/${encodeURIComponent(id)}`);
+  },
+
   // Get orders searching for deliveryman
   getSearchingDeliverymanOrders: (params = {}) => {
     return apiClient.get(API_ENDPOINTS.ADMIN.ORDERS_SEARCHING_DELIVERYMAN, {

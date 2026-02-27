@@ -18,6 +18,7 @@ import restaurantOrderRoutes from './routes/restaurantOrderRoutes.js';
 import outletTimingsRoutes from './routes/outletTimingsRoutes.js';
 import complaintRoutes from './routes/complaintRoutes.js';
 import { getOutletTimingsByRestaurantId } from './controllers/outletTimingsController.js';
+import { saveRestaurantFcmToken } from '../notification/controllers/notificationController.js';
 
 const router = express.Router();
 
@@ -116,6 +117,17 @@ router.post('/profile/menu-image', authenticate, uploadMiddleware.single('file')
 
 // Delivery status route (authenticated - for restaurant module)
 router.put('/delivery-status', authenticate, updateDeliveryStatus);
+
+// Push notification token routes (authenticated - restaurant module)
+router.post('/fcm-token', authenticate, saveRestaurantFcmToken);
+router.post('/fcm-token/web', authenticate, (req, res) => {
+  req.body = { ...(req.body || {}), platform: 'web' };
+  return saveRestaurantFcmToken(req, res);
+});
+router.post('/fcm-token/mobile', authenticate, (req, res) => {
+  req.body = { ...(req.body || {}), platform: 'mobile' };
+  return saveRestaurantFcmToken(req, res);
+});
 
 // Outlet Timings routes (authenticated - for restaurant module)
 // Must come after all /:id routes to avoid route conflicts

@@ -12,6 +12,7 @@ import AdminCommission from '../../admin/models/AdminCommission.js';
 import { calculateRoute } from '../../order/services/routeCalculationService.js';
 import mongoose from 'mongoose';
 import winston from 'winston';
+import { canDeliveryPartnerTakeCodOrder, resolveOrderPaymentMethod } from '../../../shared/utils/deliveryCashLimitGuard.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -233,6 +234,19 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     if (!order) {
       console.error(`❌ Order ${orderId} not found in database`);
       return errorResponse(res, 404, 'Order not found');
+    }
+
+    // COD guard: block COD acceptance when available cash limit is exhausted.
+    const paymentMethodForAcceptance = await resolveOrderPaymentMethod(order);
+    if (paymentMethodForAcceptance === 'cash') {
+      const codEligibility = await canDeliveryPartnerTakeCodOrder(delivery._id);
+      if (!codEligibility.allowed) {
+        return errorResponse(
+          res,
+          400,
+          `Cash limit reached. Settle with admin to accept COD orders. (cash in hand INR ${codEligibility.cashInHand.toFixed(2)} / limit INR ${codEligibility.totalCashLimit.toFixed(2)})`
+        );
+      }
     }
 
     // Check if order is assigned to this delivery partner

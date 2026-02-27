@@ -4,6 +4,7 @@ import AuthRedirect from "@/components/AuthRedirect"
 
 import { Suspense, lazy } from "react"
 import Loader from "@/components/Loader"
+import PushNotificationBootstrap from "@/components/PushNotificationBootstrap"
 
 // Lazy Loading Components
 const UserRouter = lazy(() => import("@/module/user/components/UserRouter"))
@@ -46,6 +47,7 @@ function UserPathRedirect() {
 export default function App() {
   return (
     <Suspense fallback={<Loader />}>
+      <PushNotificationBootstrap />
       <Routes>
         <Route path="/user" element={<Navigate to="/" replace />} />
         <Route path="/user/*" element={<UserPathRedirect />} />

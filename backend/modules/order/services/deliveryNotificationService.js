@@ -2,6 +2,7 @@ import Order from '../models/Order.js';
 import Delivery from '../../delivery/models/Delivery.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import mongoose from 'mongoose';
+import { canDeliveryPartnerTakeCodOrder, resolveOrderPaymentMethod } from '../../../shared/utils/deliveryCashLimitGuard.js';
 
 // Dynamic import to avoid circular dependency
 let getIO = null;
@@ -63,6 +64,22 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
     return { success: false, reason: 'Order is cancelled' };
   }
   try {
+    const paymentMethod = await resolveOrderPaymentMethod(order);
+    const isCashOrder = paymentMethod === 'cash';
+    if (isCashOrder) {
+      const codEligibility = await canDeliveryPartnerTakeCodOrder(deliveryPartnerId);
+      if (!codEligibility.allowed) {
+        console.log(
+          `🚫 Skipping COD notification for delivery partner ${deliveryPartnerId}. ` +
+          `availableCashLimit=₹${codEligibility.availableCashLimit.toFixed(2)}, cashInHand=₹${codEligibility.cashInHand.toFixed(2)}`
+        );
+        return {
+          success: false,
+          reason: 'Cash limit reached for COD orders'
+        };
+      }
+    }
+
     const io = await getIOInstance();
 
     if (!io) {
@@ -338,6 +355,32 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
       return { success: false, notified: 0 };
     }
 
+    const paymentMethod = await resolveOrderPaymentMethod(order);
+    const isCashOrder = paymentMethod === 'cash';
+    let targetDeliveryPartnerIds = [...deliveryPartnerIds];
+    if (isCashOrder) {
+      const eligibilityResults = await Promise.all(
+        targetDeliveryPartnerIds.map(async (partnerId) => {
+          const eligibility = await canDeliveryPartnerTakeCodOrder(partnerId);
+          return { partnerId, eligibility };
+        })
+      );
+
+      targetDeliveryPartnerIds = eligibilityResults
+        .filter(({ eligibility }) => eligibility.allowed)
+        .map(({ partnerId }) => partnerId);
+
+      const skippedCount = deliveryPartnerIds.length - targetDeliveryPartnerIds.length;
+      if (skippedCount > 0) {
+        console.log(`🚫 Skipped ${skippedCount} delivery partners for COD notification due to cash limit reached`);
+      }
+    }
+
+    if (!targetDeliveryPartnerIds.length) {
+      console.log(`ℹ️ No eligible delivery partners for ${isCashOrder ? 'COD' : 'online'} notification on order ${order.orderId}`);
+      return { success: true, notified: 0 };
+    }
+
     const deliveryNamespace = io.of('/delivery');
     let notifiedCount = 0;
 
@@ -474,7 +517,7 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
     });
 
     // Notify each delivery partner
-    for (const deliveryPartnerId of deliveryPartnerIds) {
+    for (const deliveryPartnerId of targetDeliveryPartnerIds) {
       try {
         const normalizedId = deliveryPartnerId?.toString() || deliveryPartnerId;
         const roomVariations = [

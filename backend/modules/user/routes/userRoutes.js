@@ -44,6 +44,14 @@ router.delete('/addresses/:id', deleteUserAddress);
 
 // Push notification token routes
 router.post('/fcm-token', saveUserFcmToken);
+router.post('/fcm-token/web', (req, res) => {
+  req.body = { ...(req.body || {}), platform: 'web' };
+  return saveUserFcmToken(req, res);
+});
+router.post('/fcm-token/mobile', (req, res) => {
+  req.body = { ...(req.body || {}), platform: 'mobile' };
+  return saveUserFcmToken(req, res);
+});
 
 // Wallet routes
 router.use('/wallet', userWalletRoutes);

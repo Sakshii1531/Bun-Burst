@@ -499,29 +499,33 @@ Order again from this restaurant in the ${companyName} app.`
   return (
     <div className="min-h-screen bg-gray-50 pb-10 font-sans">
       {/* Header */}
-      <div className="bg-white p-4 flex items-center shadow-sm sticky top-0 z-10">
-        <Link to="/user">
-          <ArrowLeft className="w-6 h-6 text-gray-700 cursor-pointer" />
-        </Link>
-        <h1 className="ml-4 text-xl font-semibold text-gray-800">Your Orders</h1>
+      <div className="bg-white p-4 shadow-sm sticky top-0 z-10">
+        <div className="w-full lg:max-w-[1100px] mx-auto flex items-center">
+          <Link to="/user">
+            <ArrowLeft className="w-6 h-6 text-gray-700 cursor-pointer" />
+          </Link>
+          <h1 className="ml-4 text-xl font-semibold text-gray-800">Your Orders</h1>
+        </div>
       </div>
 
       {/* Search Bar */}
       <div className="p-4 bg-white mt-1">
-        <div className="flex items-center bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm">
-          <Search className="w-5 h-5 text-red-500" />
-          <input 
-            type="text" 
-            placeholder="Search by restaurant or dish" 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 ml-3 outline-none text-gray-600 placeholder-gray-400"
-          />
+        <div className="w-full lg:max-w-[1100px] mx-auto">
+          <div className="flex items-center bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm">
+            <Search className="w-5 h-5 text-red-500" />
+            <input 
+              type="text" 
+              placeholder="Search by restaurant or dish" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 ml-3 outline-none text-gray-600 placeholder-gray-400"
+            />
+          </div>
         </div>
       </div>
 
       {/* Orders List */}
-      <div className="px-4 py-2 space-y-4">
+      <div className="w-full lg:max-w-[1100px] mx-auto px-4 py-2 space-y-4">
         {filteredOrders.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
             <p className="text-gray-600">No orders found matching your search</p>

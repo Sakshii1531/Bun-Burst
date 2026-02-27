@@ -17,6 +17,75 @@ function dedupeTokens(tokens = []) {
     .filter((token) => token && !seen.has(token) && seen.add(token));
 }
 
+function stringifyData(data = {}) {
+  return Object.fromEntries(
+    Object.entries(data || {}).map(([k, v]) => [String(k), String(v ?? '')])
+  );
+}
+
+function buildPushPayload({ title, body, data = {} }) {
+  const safeData = stringifyData(data);
+  const link = safeData.link || process.env.PUSH_DEFAULT_LINK || 'http://localhost:5173/';
+
+  return {
+    notification: { title, body },
+    data: safeData,
+    webpush: {
+      headers: {
+        Urgency: 'high'
+      },
+      notification: {
+        title,
+        body,
+        icon: '/bunburst-icon.png'
+      },
+      fcmOptions: {
+        link
+      }
+    }
+  };
+}
+
+function extractInvalidTokens(tokens = [], response) {
+  const invalidCodes = new Set([
+    'messaging/registration-token-not-registered',
+    'messaging/invalid-registration-token',
+    'messaging/invalid-argument'
+  ]);
+
+  const invalid = [];
+  response?.responses?.forEach((result, index) => {
+    const code = result?.error?.code;
+    if (result?.success === false && invalidCodes.has(code)) {
+      invalid.push(tokens[index]);
+    }
+  });
+  return dedupeTokens(invalid);
+}
+
+async function removeInvalidTokensFromDatabase(invalidTokens = []) {
+  if (!invalidTokens.length) return;
+
+  await Promise.all([
+    User.updateMany(
+      { fcmTokenWeb: { $in: invalidTokens } },
+      { $unset: { fcmTokenWeb: '' } }
+    ),
+    User.updateMany(
+      { fcmTokenMobile: { $in: invalidTokens } },
+      { $unset: { fcmTokenMobile: '' } }
+    ),
+    Delivery.updateMany(
+      { fcmTokenWeb: { $in: invalidTokens } },
+      { $unset: { fcmTokenWeb: '' } }
+    ),
+    Delivery.updateMany(
+      { fcmTokenMobile: { $in: invalidTokens } },
+      { $unset: { fcmTokenMobile: '' } }
+    )
+  ]);
+}
+
 async function tryInitializeFirebaseFromEnvOrFile() {
   if (admin.apps.length > 0) return true;
 
@@ -100,6 +169,8 @@ export async function sendPushNotificationToAudience({
     docs.flatMap((doc) => [doc.fcmTokenWeb, doc.fcmTokenMobile])
   );
 
+  console.log('[Push] Audience:', audience, 'Total docs:', docs.length, 'Unique tokens:', allTokens.length);
+
   if (allTokens.length === 0) {
     return {
       success: true,
@@ -112,23 +183,70 @@ export async function sendPushNotificationToAudience({
 
   const message = {
     tokens: allTokens,
-    notification: { title, body },
-    data: Object.fromEntries(
-      Object.entries(data).map(([k, v]) => [String(k), String(v ?? '')])
-    )
+    ...buildPushPayload({ title, body, data })
   };
 
   const response = await admin.messaging().sendEachForMulticast(message);
+  console.log('[Push] Multicast result:', {
+    successCount: response.successCount,
+    failureCount: response.failureCount
+  });
+
   const failedTokens = [];
   response.responses.forEach((r, i) => {
     if (!r.success) failedTokens.push(allTokens[i]);
   });
+
+  const invalidTokens = extractInvalidTokens(allTokens, response);
+  if (invalidTokens.length > 0) {
+    await removeInvalidTokensFromDatabase(invalidTokens);
+    console.log('[Push] Removed invalid tokens from DB:', invalidTokens.length);
+  }
 
   return {
     success: response.successCount > 0,
     sentCount: response.successCount,
     failedCount: response.failureCount,
     totalTokens: allTokens.length,
-    failedTokens
+    failedTokens,
+    invalidTokensRemoved: invalidTokens.length
+  };
+}
+
+export async function sendPushNotificationToSingleToken({
+  token,
+  title,
+  body,
+  data = {}
+}) {
+  const isReady = await ensureFirebaseMessagingReady();
+  if (!isReady) {
+    return {
+      success: false,
+      message: 'Firebase Admin is not configured for messaging.'
+    };
+  }
+
+  const cleanToken = typeof token === 'string' ? token.trim() : '';
+  if (!cleanToken) {
+    return {
+      success: false,
+      message: 'Valid token is required'
+    };
+  }
+
+  const response = await admin.messaging().send({
+    token: cleanToken,
+    ...buildPushPayload({ title, body, data })
+  });
+
+  console.log('[Push] Single token notification sent:', {
+    tokenPreview: `${cleanToken.slice(0, 12)}...`,
+    responseId: response
+  });
+
+  return {
+    success: true,
+    responseId: response
   };
 }

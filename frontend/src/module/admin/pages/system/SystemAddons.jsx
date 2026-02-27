@@ -28,6 +28,7 @@ export default function SystemAddons() {
     FIREBASE_PROJECT_ID: "",
     FIREBASE_CLIENT_EMAIL: "",
     FIREBASE_PRIVATE_KEY: "",
+    VITE_FIREBASE_VAPID_KEY: "",
     
     // SMTP
     SMTP_HOST: "",
@@ -217,6 +218,7 @@ export default function SystemAddons() {
               <InputField label="Measurement ID" fieldKey="MEASUREMENT_ID" />
               <InputField label="Firebase Project ID" fieldKey="FIREBASE_PROJECT_ID" />
               <InputField label="Firebase Client Email" fieldKey="FIREBASE_CLIENT_EMAIL" type="email" />
+              <InputField label="Firebase VAPID Key" fieldKey="VITE_FIREBASE_VAPID_KEY" />
               <div className="md:col-span-2">
                 <InputField 
                   label="Firebase Private Key" 

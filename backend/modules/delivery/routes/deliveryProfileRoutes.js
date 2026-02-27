@@ -80,6 +80,14 @@ router.get('/support-tickets/:id', getTicketById);
 
 // Push notification token route
 router.post('/fcm-token', saveDeliveryFcmToken);
+router.post('/fcm-token/web', (req, res) => {
+  req.body = { ...(req.body || {}), platform: 'web' };
+  return saveDeliveryFcmToken(req, res);
+});
+router.post('/fcm-token/mobile', (req, res) => {
+  req.body = { ...(req.body || {}), platform: 'mobile' };
+  return saveDeliveryFcmToken(req, res);
+});
 
 export default router;
 

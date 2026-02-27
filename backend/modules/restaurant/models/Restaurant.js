@@ -136,6 +136,14 @@ const restaurantSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    fcmTokenWeb: {
+      type: String,
+      trim: true,
+    },
+    fcmTokenMobile: {
+      type: String,
+      trim: true,
+    },
     isAcceptingOrders: {
       type: Boolean,
       default: true,

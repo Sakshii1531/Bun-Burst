@@ -3,9 +3,9 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import './index.css'
-import App from './App.jsx'
 import { getGoogleMapsApiKey } from './lib/utils/googleMapsApiKey.js'
 import { loadBusinessSettings } from './lib/utils/businessSettings.js'
+import { loadPublicEnvVariables } from './lib/utils/publicEnv.js'
 
 // Load business settings on app start (favicon, title)
 // Silently handle errors - this is not critical for app functionality
@@ -228,11 +228,20 @@ if (!rootElement) {
   throw new Error('Root element not found')
 }
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <BrowserRouter>
-      <App />
-      <Toaster position="top-center" richColors offset="80px" />
-    </BrowserRouter>
-  </StrictMode>,
-)
+;(async () => {
+  try {
+    await loadPublicEnvVariables()
+  } catch {
+    // continue app boot even if runtime env fetch fails
+  }
+  const { default: App } = await import('./App.jsx')
+
+  createRoot(rootElement).render(
+    <StrictMode>
+      <BrowserRouter>
+        <App />
+        <Toaster position="top-center" richColors offset="80px" />
+      </BrowserRouter>
+    </StrictMode>,
+  )
+})()

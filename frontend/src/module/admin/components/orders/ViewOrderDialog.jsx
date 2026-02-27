@@ -78,6 +78,7 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
   const [isAssigning, setIsAssigning] = useState(false)
   const [showDigitalBillPopup, setShowDigitalBillPopup] = useState(false)
   const [isLoadingBill, setIsLoadingBill] = useState(false)
+  const [fetchedRestaurantAddress, setFetchedRestaurantAddress] = useState("")
 
   const isPartnerOnline = (partner) => {
     if (typeof partner?.availability?.isOnline === "boolean") {
@@ -193,13 +194,17 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
   }
 
   const getRestaurantInvoiceAddress = (orderData) => {
-    const restaurant = orderData?.restaurantId || orderData?.restaurant || {}
+    const restaurant = (orderData?.restaurantId && typeof orderData.restaurantId === "object")
+      ? orderData.restaurantId
+      : (orderData?.restaurant && typeof orderData.restaurant === "object" ? orderData.restaurant : {})
 
     const candidates = [
       orderData?.restaurantAddress,
+      orderData?.restaurantIdAddress,
       orderData?.restaurantLocation?.formattedAddress,
       orderData?.restaurantLocation?.address,
       buildAddressFromLocation(orderData?.restaurantLocation),
+      orderData?.deliveryState?.restaurantAddress,
       restaurant?.address,
       restaurant?.location?.formattedAddress,
       restaurant?.location?.address,
@@ -210,8 +215,41 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
     ]
 
     const resolved = candidates.find(isValidDisplayAddress)
-    return resolved || "Address"
+    return resolved || "Address not available"
   }
+
+  useEffect(() => {
+    let isCancelled = false
+
+    const hydrateRestaurantAddress = async () => {
+      setFetchedRestaurantAddress("")
+      if (!isOpen || !order) return
+
+      const currentAddress = getRestaurantInvoiceAddress(order)
+      if (isValidDisplayAddress(currentAddress)) return
+
+      const orderIdentifier = order?.id || order?._id || order?.orderId
+      if (!orderIdentifier) return
+
+      try {
+        const response = await adminAPI.getOrderById(orderIdentifier)
+        const detailedOrder = response?.data?.data?.order
+        if (!detailedOrder || isCancelled) return
+
+        const resolvedAddress = getRestaurantInvoiceAddress(detailedOrder)
+        if (isValidDisplayAddress(resolvedAddress)) {
+          setFetchedRestaurantAddress(resolvedAddress)
+        }
+      } catch (error) {
+        console.error("Failed to hydrate restaurant address for invoice:", error)
+      }
+    }
+
+    hydrateRestaurantAddress()
+    return () => {
+      isCancelled = true
+    }
+  }, [isOpen, order?.id, order?._id, order?.orderId])
 
   return (
     <>
@@ -953,7 +991,7 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                   {order.restaurant || order.restaurantName || order.restaurantId?.name || 'Bun Burst Cafe'}
                 </h3>
                 <p className="text-sm text-[#1E1E1E] mt-1">
-                  {getRestaurantInvoiceAddress(order)}
+                  {fetchedRestaurantAddress || getRestaurantInvoiceAddress(order)}
                 </p>
               </div>
 

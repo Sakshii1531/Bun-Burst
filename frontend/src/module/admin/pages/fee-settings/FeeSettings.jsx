@@ -524,18 +524,7 @@ export default function FeeSettings() {
               <div className="h-px bg-[#F5F5F5]"></div>
 
               {/* 3. General Fees */}
-              <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-[#1E1E1E]/70">Default Delivery Fee (Rs)</label>
-                  <input
-                    type="number"
-                    value={feeSettings.deliveryFee}
-                    onChange={(e) => setFeeSettings({ ...feeSettings, deliveryFee: e.target.value })}
-                    min="0"
-                    className="w-full px-4 py-2 border border-[#F5F5F5] rounded-lg focus:ring-2 focus:ring-[#e53935]/25 outline-none"
-                  />
-                  <p className="text-xs text-[#1E1E1E]/60">Used as fallback if no slab/rule matches.</p>
-                </div>
+              <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-[#1E1E1E]/70">Platform Fee (Rs)</label>
                   <input

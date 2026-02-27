@@ -37,27 +37,42 @@ export const getEnvVariables = asyncHandler(async (req, res) => {
 /**
  * Get Public Environment Variables (for frontend use)
  * GET /api/env/public
- * Returns only non-sensitive public variables like Google Maps API key
+ * Returns public variables needed by frontend runtime config
  */
 export const getPublicEnvVariables = asyncHandler(async (req, res) => {
   try {
     const envVars = await EnvironmentVariable.getOrCreate();
 
-    // Get decrypted Google Maps API key (toEnvObject already decrypts)
+    // toEnvObject() already decrypts encrypted values
     const envData = envVars.toEnvObject();
 
-    // Return only public variables that frontend needs
-    // NO FALLBACK - Only use database value
+    // Return public frontend env variables from Admin System ENV.
     const publicEnvData = {
-      VITE_GOOGLE_MAPS_API_KEY: envData.VITE_GOOGLE_MAPS_API_KEY || ''
+      VITE_GOOGLE_MAPS_API_KEY: envData.VITE_GOOGLE_MAPS_API_KEY || '',
+      VITE_FIREBASE_API_KEY: envData.FIREBASE_API_KEY || '',
+      VITE_FIREBASE_AUTH_DOMAIN: envData.FIREBASE_AUTH_DOMAIN || '',
+      VITE_FIREBASE_PROJECT_ID: envData.FIREBASE_PROJECT_ID || '',
+      VITE_FIREBASE_APP_ID: envData.FIREBASE_APP_ID || '',
+      VITE_FIREBASE_MESSAGING_SENDER_ID: envData.FIREBASE_MESSAGING_SENDER_ID || '',
+      VITE_FIREBASE_STORAGE_BUCKET: envData.FIREBASE_STORAGE_BUCKET || '',
+      VITE_FIREBASE_MEASUREMENT_ID: envData.MEASUREMENT_ID || '',
+      VITE_FIREBASE_VAPID_KEY: envData.VITE_FIREBASE_VAPID_KEY || ''
     };
 
     return successResponse(res, 200, 'Public environment variables retrieved successfully', publicEnvData);
   } catch (error) {
     logger.error(`Error fetching public environment variables: ${error.message}`, { stack: error.stack });
-    // No fallback - return empty if database fails
+    // Return empty values if DB fetch fails.
     return successResponse(res, 200, 'Public environment variables retrieved successfully', {
-      VITE_GOOGLE_MAPS_API_KEY: ''
+      VITE_GOOGLE_MAPS_API_KEY: '',
+      VITE_FIREBASE_API_KEY: '',
+      VITE_FIREBASE_AUTH_DOMAIN: '',
+      VITE_FIREBASE_PROJECT_ID: '',
+      VITE_FIREBASE_APP_ID: '',
+      VITE_FIREBASE_MESSAGING_SENDER_ID: '',
+      VITE_FIREBASE_STORAGE_BUCKET: '',
+      VITE_FIREBASE_MEASUREMENT_ID: '',
+      VITE_FIREBASE_VAPID_KEY: ''
     });
   }
 });

@@ -868,7 +868,7 @@ export default function OrderTracking() {
       />
 
       {/* Scrollable Content */}
-      <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 pb-24 md:pb-32">
+      <div className="w-full lg:max-w-[1100px] mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 pb-24 md:pb-32">
         {/* Food Cooking Status - Show until delivery partner accepts pickup */}
         {(() => {
           // Check if delivery partner has accepted pickup

@@ -2,6 +2,7 @@ import Order from '../../order/models/Order.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 import mongoose from 'mongoose';
+import { canDeliveryPartnerTakeCodOrder, resolveOrderPaymentMethod } from '../../../shared/utils/deliveryCashLimitGuard.js';
 
 /**
  * Get all orders for admin
@@ -324,6 +325,17 @@ export const getOrders = asyncHandler(async (req, res) => {
         restaurantLocation?.zipCode || restaurantLocation?.pincode || restaurantLocation?.postalCode
       ].filter(Boolean);
 
+      const resolvedRestaurantAddress = composedRestaurantAddress.find((value) => {
+        if (typeof value !== 'string') return false;
+        const normalized = value.trim().toLowerCase();
+        return Boolean(
+          normalized &&
+          normalized !== 'address' &&
+          normalized !== 'n/a' &&
+          normalized !== 'na'
+        );
+      }) || '';
+
       return {
         sl: skip + index + 1,
         orderId: order.orderId,
@@ -335,9 +347,7 @@ export const getOrders = asyncHandler(async (req, res) => {
         customerEmail: order.userId?.email || '',
         restaurant: order.restaurantName || order.restaurantId?.name || 'Unknown Restaurant',
         restaurantId: order.restaurantId?.toString() || order.restaurantId || '',
-        restaurantAddress: composedRestaurantAddress.length > 0
-          ? composedRestaurantAddress[0] || composedRestaurantAddress.join(', ')
-          : '',
+        restaurantAddress: resolvedRestaurantAddress,
         restaurantLocation: restaurantLocation || null,
         // Report-specific fields
         totalItemAmount: totalItemAmount,
@@ -1881,6 +1891,20 @@ export const manualAssignOrder = asyncHandler(async (req, res) => {
 
     if (!deliveryBoy) {
       return errorResponse(res, 404, 'Delivery Partner not found');
+    }
+
+    // COD guard: if delivery partner reached cash limit, don't allow COD assignment
+    const paymentMethod = await resolveOrderPaymentMethod(order);
+    const isCashOrder = paymentMethod === 'cash';
+    if (isCashOrder) {
+      const codEligibility = await canDeliveryPartnerTakeCodOrder(deliveryBoy._id);
+      if (!codEligibility.allowed) {
+        return errorResponse(
+          res,
+          400,
+          `Delivery partner cash limit reached (cash in hand ₹${codEligibility.cashInHand.toFixed(2)} / limit ₹${codEligibility.totalCashLimit.toFixed(2)}). Please settle cash limit before assigning COD orders.`
+        );
+      }
     }
 
     // Check if order is already assigned

@@ -1441,7 +1441,7 @@ export default function Cart() {
     <div className="relative min-h-screen bg-background">
       {/* Header - Sticky at top */}
       <div className="bg-card border-b border-border sticky top-0 z-20 flex-shrink-0">
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full lg:max-w-[1100px] mx-auto">
           <div className="flex items-center justify-between px-3 md:px-6 py-2 md:py-3">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <Link onClick={() => navigate(-1)}>
@@ -1469,7 +1469,7 @@ export default function Cart() {
         {/* Savings Banner */}
         {savings > 0 && (
           <div className="bg-primary/10 px-4 md:px-6 py-2 md:py-3 flex-shrink-0">
-            <div className="max-w-7xl mx-auto">
+            <div className="w-full lg:max-w-[1100px] mx-auto">
               <p className="text-sm md:text-base font-medium text-primary">
                 🎉 You saved ₹{formatAmount(savings)} on this order
               </p>
@@ -1477,12 +1477,12 @@ export default function Cart() {
           </div>
         )}
 
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 px-4 md:px-6 py-4 md:py-6">
+        <div className="w-full lg:max-w-[1100px] mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 px-4 md:px-6 py-4 md:py-6">
             {/* Left Column - Cart Items and Details */}
-            <div className="lg:col-span-2 space-y-2 md:space-y-4">
+            <div className="lg:col-span-2 space-y-2 md:space-y-4 lg:space-y-5">
               {/* Cart Items */}
-              <div className="bg-card px-4 md:px-6 py-3 md:py-4 rounded-lg md:rounded-xl">
+              <div className="bg-card px-4 md:px-6 py-3 md:py-4 rounded-lg md:rounded-xl lg:border lg:border-border lg:shadow-sm">
                 <div className="space-y-3 md:space-y-4">
                   {cart.map((item) => {
                     const resolvedCategoryId = resolveCategoryIdForItem(item)
@@ -1879,7 +1879,7 @@ export default function Cart() {
             <div className="lg:col-span-1">
               <div className="lg:sticky lg:top-24 space-y-4 md:space-y-6">
                 {/* Bill Summary Card */}
-                <div className="bg-card px-4 md:px-6 py-4 md:py-5 rounded-lg md:rounded-xl border border-border">
+                <div className="bg-card px-4 md:px-6 py-4 md:py-5 rounded-lg md:rounded-xl border border-border lg:shadow-sm">
                   <h3 className="text-base md:text-lg font-semibold text-foreground mb-3 md:mb-4">Order Summary</h3>
                   <div className="space-y-2 md:space-y-3">
                     <div className="flex justify-between text-sm md:text-base">
@@ -1920,7 +1920,7 @@ export default function Cart() {
 
       {/* Bottom Sticky - Place Order */}
       <div className="bg-white dark:bg-[#1a1a1a] border-t dark:border-gray-800 shadow-lg z-30 flex-shrink-0 fixed bottom-0 left-0 right-0">
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full lg:max-w-[1100px] mx-auto">
           <div className="px-4 md:px-6 py-3 md:py-4">
             <div className="w-full max-w-md md:max-w-lg mx-auto">
               {/* Pay Using */}
