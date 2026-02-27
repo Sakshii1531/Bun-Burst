@@ -130,6 +130,39 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
     }
   }
 
+  useEffect(() => {
+    let isCancelled = false
+
+    const hydrateRestaurantAddress = async () => {
+      setFetchedRestaurantAddress("")
+      if (!isOpen || !order) return
+
+      const currentAddress = getRestaurantInvoiceAddress(order)
+      if (isValidDisplayAddress(currentAddress)) return
+
+      const orderIdentifier = order?.id || order?._id || order?.orderId
+      if (!orderIdentifier) return
+
+      try {
+        const response = await adminAPI.getOrderById(orderIdentifier)
+        const detailedOrder = response?.data?.data?.order
+        if (!detailedOrder || isCancelled) return
+
+        const resolvedAddress = getRestaurantInvoiceAddress(detailedOrder)
+        if (isValidDisplayAddress(resolvedAddress)) {
+          setFetchedRestaurantAddress(resolvedAddress)
+        }
+      } catch (error) {
+        console.error("Failed to hydrate restaurant address for invoice:", error)
+      }
+    }
+
+    hydrateRestaurantAddress()
+    return () => {
+      isCancelled = true
+    }
+  }, [isOpen, order?.id, order?._id, order?.orderId])
+
   if (!order) return null
 
   // Debug: Log order data to check billImageUrl
@@ -217,39 +250,6 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
     const resolved = candidates.find(isValidDisplayAddress)
     return resolved || "Address not available"
   }
-
-  useEffect(() => {
-    let isCancelled = false
-
-    const hydrateRestaurantAddress = async () => {
-      setFetchedRestaurantAddress("")
-      if (!isOpen || !order) return
-
-      const currentAddress = getRestaurantInvoiceAddress(order)
-      if (isValidDisplayAddress(currentAddress)) return
-
-      const orderIdentifier = order?.id || order?._id || order?.orderId
-      if (!orderIdentifier) return
-
-      try {
-        const response = await adminAPI.getOrderById(orderIdentifier)
-        const detailedOrder = response?.data?.data?.order
-        if (!detailedOrder || isCancelled) return
-
-        const resolvedAddress = getRestaurantInvoiceAddress(detailedOrder)
-        if (isValidDisplayAddress(resolvedAddress)) {
-          setFetchedRestaurantAddress(resolvedAddress)
-        }
-      } catch (error) {
-        console.error("Failed to hydrate restaurant address for invoice:", error)
-      }
-    }
-
-    hydrateRestaurantAddress()
-    return () => {
-      isCancelled = true
-    }
-  }, [isOpen, order?.id, order?._id, order?.orderId])
 
   return (
     <>
