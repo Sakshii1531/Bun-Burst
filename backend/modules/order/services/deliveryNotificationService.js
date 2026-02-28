@@ -209,14 +209,14 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
       note: order.note || '',
       pickupDistance: pickupDistance ? `${pickupDistance.toFixed(2)} km` : 'Distance not available',
       deliveryDistance: deliveryDistance ? `${deliveryDistance.toFixed(2)} km` : 'Calculating...',
-      deliveryDistanceRaw: deliveryDistance || 0, // Raw distance number for calculations
-      estimatedEarnings
+      deliveryDistanceRaw: deliveryDistance || 0,
+      estimatedEarnings,
+      paymentMethod: order.payment?.method || 'cash'
     };
 
     // Get delivery namespace
     const deliveryNamespace = io.of('/delivery');
 
-    // Normalize deliveryPartnerId to string
     const normalizedDeliveryPartnerId = deliveryPartnerId?.toString() || deliveryPartnerId;
 
     // Try multiple room formats to ensure we find the delivery partner

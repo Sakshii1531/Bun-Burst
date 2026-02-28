@@ -1,58 +1,5 @@
 import React from 'react';
-import { GoogleMap, LoadScript, Marker, Polyline } from '@react-google-maps/api';
 import { ArrowLeft, Share2, RefreshCcw, Home, UtensilsCrossed, ChevronRight, Shield, Phone } from 'lucide-react';
-
-// --- 1. Google Map Styles (Light Theme - as shown in image) ---
-const lightMapStyle = [
-  { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#333333" }] },
-  {
-    featureType: "administrative.locality",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#666666" }],
-  },
-  {
-    featureType: "poi",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#666666" }],
-  },
-  {
-    featureType: "poi.park",
-    elementType: "geometry",
-    stylers: [{ color: "#e5e5e5" }],
-  },
-  {
-    featureType: "road",
-    elementType: "geometry",
-    stylers: [{ color: "#ffffff" }],
-  },
-  {
-    featureType: "road",
-    elementType: "geometry.stroke",
-    stylers: [{ color: "#e0e0e0" }],
-  },
-  {
-    featureType: "road.highway",
-    elementType: "geometry",
-    stylers: [{ color: "#f0f0f0" }],
-  },
-  {
-    featureType: "water",
-    elementType: "geometry",
-    stylers: [{ color: "#e3f2fd" }],
-  },
-];
-
-const containerStyle = {
-  width: '100%',
-  height: '100vh',
-};
-
-// Coordinates (Example: Indore locations)
-const restaurantPos = { lat: 22.7196, lng: 75.8577 };
-const userPos = { lat: 22.75, lng: 75.89 };
-const center = { lat: 22.735, lng: 75.875 };
 
 const TrackingPage = () => {
 
@@ -78,50 +25,14 @@ const TrackingPage = () => {
         </div>
       </div>
 
-      {/* --- 3. Google Map Background --- */}
+      {/* --- 3. Map Background (disabled) --- */}
       <div className="absolute top-0 left-0 w-full h-full z-0">
-        <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "YOUR_GOOGLE_MAPS_API_KEY"}> 
-          <GoogleMap
-            mapContainerStyle={containerStyle}
-            center={center}
-            zoom={13}
-            options={{
-              styles: lightMapStyle,
-              disableDefaultUI: true,
-              zoomControl: false,
-            }}
-          >
-            {/* Markers */}
-            <Marker 
-              position={restaurantPos} 
-              icon={{
-                url: "http://maps.google.com/mapfiles/ms/icons/restaurant.png",
-                scaledSize: new window.google.maps.Size(40, 40)
-              }}
-            />
-            <Marker 
-              position={userPos} 
-              icon={{
-                url: "http://maps.google.com/mapfiles/ms/icons/homegardenbusiness.png",
-                scaledSize: new window.google.maps.Size(40, 40)
-              }}
-            />
-            {/* Dotted Polyline */}
-            <Polyline
-              path={[restaurantPos, userPos]}
-              options={{
-                strokeColor: "#23633F",
-                strokeOpacity: 0.8,
-                strokeWeight: 3,
-                icons: [{
-                  icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 4 },
-                  offset: "0",
-                  repeat: "20px",
-                }],
-              }}
-            />
-          </GoogleMap>
-        </LoadScript>
+        <div className="w-full h-full bg-gray-800" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="bg-yellow-900/40 border border-yellow-700 text-yellow-200 text-sm px-4 py-2 rounded-lg">
+            Map is temporarily disabled
+          </div>
+        </div>
 
         {/* Map Overlay - Arrival Time Card */}
         <div className="absolute bottom-[50vh] left-4 right-4 z-10 bg-white rounded-xl p-4 shadow-lg border border-gray-200">

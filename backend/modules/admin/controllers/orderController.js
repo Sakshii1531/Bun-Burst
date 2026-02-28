@@ -172,7 +172,7 @@ export const getOrders = asyncHandler(async (req, res) => {
     // Fetch orders with population
     const orders = await Order.find(query)
       .populate('userId', 'name email phone')
-      .populate('restaurantId', 'name slug address location')
+      .populate('restaurantId', 'name slug address location onboarding')
       .populate('deliveryPartnerId', 'name phone')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
@@ -311,7 +311,33 @@ export const getOrders = asyncHandler(async (req, res) => {
           ? order.restaurantId
           : null;
 
-      const restaurantLocation = restaurantEntity?.location || {};
+      // Pick the best location source: main location → onboarding.step1.location → null
+      const restaurantLocation = (() => {
+        const loc = restaurantEntity?.location
+        const onboardingLoc = restaurantEntity?.onboarding?.step1?.location
+        // Prefer whichever source has coordinates; fallback to the other
+        const hasCoords = (l) => l && (l.latitude || l.longitude || (Array.isArray(l.coordinates) && l.coordinates.length === 2))
+        const chosen = hasCoords(loc) ? loc : hasCoords(onboardingLoc) ? onboardingLoc : (loc || onboardingLoc || null)
+        if (!chosen) return null
+        return {
+          formattedAddress: chosen.formattedAddress || null,
+          address: chosen.address || null,
+          addressLine1: chosen.addressLine1 || null,
+          addressLine2: chosen.addressLine2 || null,
+          area: chosen.area || null,
+          city: chosen.city || null,
+          state: chosen.state || null,
+          zipCode: chosen.zipCode || chosen.pincode || chosen.postalCode || null,
+          street: chosen.street || null,
+          landmark: chosen.landmark || null,
+          // Always expose lat/lng explicitly for frontend geocoding
+          latitude: chosen.latitude ?? null,
+          longitude: chosen.longitude ?? null,
+          coordinates: chosen.coordinates ?? null,
+        }
+      })();
+
+
       const composedRestaurantAddress = [
         restaurantLocation?.formattedAddress,
         restaurantLocation?.address,
@@ -428,7 +454,7 @@ export const getOrderById = asyncHandler(async (req, res) => {
     if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
       order = await Order.findById(id)
         .populate('userId', 'name email phone')
-        .populate('restaurantId', 'name slug location address phone')
+        .populate('restaurantId', 'name slug location address phone onboarding')
         .populate('deliveryPartnerId', 'name phone availability')
         .lean();
     }
@@ -437,7 +463,7 @@ export const getOrderById = asyncHandler(async (req, res) => {
     if (!order) {
       order = await Order.findOne({ orderId: id })
         .populate('userId', 'name email phone')
-        .populate('restaurantId', 'name slug location address phone')
+        .populate('restaurantId', 'name slug location address phone onboarding')
         .populate('deliveryPartnerId', 'name phone availability')
         .lean();
     }

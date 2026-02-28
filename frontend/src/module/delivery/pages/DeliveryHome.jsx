@@ -41,7 +41,8 @@ import { useProgressStore } from "../store/progressStore"
 import { formatTimeDisplay, calculateTotalHours } from "../utils/gigUtils"
 import {
   fetchDeliveryWallet,
-  calculatePeriodEarnings
+  calculatePeriodEarnings,
+  calculateDeliveryBalances
 } from "../utils/deliveryWalletState"
 import { formatCurrency } from "../../restaurant/utils/currency"
 import { getAllDeliveryOrders } from "../utils/deliveryOrderStatus"
@@ -1100,6 +1101,16 @@ export default function DeliveryHome() {
     const m = Math.floor((hours - h) * 60)
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
   }
+  // Calculate available cash limit
+  const walletBalances = calculateDeliveryBalances(walletState)
+  const totalCashLimit = Number.isFinite(Number(walletState?.totalCashLimit))
+    ? Number(walletState.totalCashLimit)
+    : 0
+  const availableCashLimit =
+    Number.isFinite(Number(walletState?.availableCashLimit)) &&
+      Number(walletState?.availableCashLimit) >= 0
+      ? Number(walletState.availableCashLimit)
+      : Math.max(0, totalCashLimit - (Number(walletBalances.cashInHand) || 0))
 
 
   // Listen for progress data updates
@@ -4188,6 +4199,17 @@ export default function DeliveryHome() {
         }
       } catch (e) {
         // Ignore localStorage errors
+      }
+
+      // Check if cash limit reached for COD orders
+      const orderPaymentMethod = newOrder.paymentMethod || newOrder.payment?.method || 'cash'
+      const isCodOrder = orderPaymentMethod === 'cash'
+
+      if (isCodOrder && availableCashLimit <= 0) {
+        console.log('🚫 Cash limit reached, blocking COD order notification:', orderId)
+        toast.error('Cash limit reached. You cannot receive COD orders.')
+        clearNewOrder()
+        return
       }
 
       console.log('📦 New order received from Socket.IO:', newOrder)
@@ -7892,17 +7914,170 @@ export default function DeliveryHome() {
     return getRestaurantDisplayAddress(newOrder)
   }, [selectedRestaurant, newOrder])
 
-  // Carousel slides data - filter based on bank details status
-  const carouselSlides = useMemo(() => [
-    ...(bankDetailsFilled ? [] : [{
-      id: 2,
-      title: "Submit bank details",
-      subtitle: "PAN & bank details required for payouts",
-      icon: "bank",
-      buttonText: "Submit",
-      bgColor: "bg-[#FFC400]"
-    }])
-  ], [bankDetailsFilled])
+  // Carousel slides data - fully dynamic, built from real-time state
+  const carouselSlides = useMemo(() => {
+    const slides = []
+
+    // Slide 1: Bank details not filled → always show as priority
+    if (!bankDetailsFilled) {
+      slides.push({
+        id: 'bank-details',
+        title: 'Submit bank details',
+        subtitle: 'PAN & bank details required for payouts',
+        icon: 'bank',
+        buttonText: 'Submit',
+        bgColor: 'bg-[#FFC400]',
+        action: 'navigate',
+        path: '/delivery/profile/details'
+      })
+    }
+
+    // Slide 2: Cash limit reached → COD orders paused
+    if (availableCashLimit <= 0 && walletState?.totalCashLimit > 0) {
+      slides.push({
+        id: 'cash-limit',
+        title: 'Cash limit reached!',
+        subtitle: `Deposit ₹${Math.round(walletState?.cashInHand || 0)} to continue receiving COD orders`,
+        icon: 'bag',
+        buttonText: 'Deposit',
+        bgColor: 'bg-[#e53935]',
+        titleColor: 'text-white',
+        subtitleColor: 'text-white/90',
+        buttonBgColor: 'bg-white text-[#e53935]',
+        action: 'navigate',
+        path: '/delivery/requests'
+      })
+    }
+
+    // Slide 3: Active earning addon / earnings guarantee offer
+    if (activeEarningAddon && (activeEarningAddon.isValid || activeEarningAddon.isUpcoming)) {
+      const target = activeEarningAddon.earningAmount || 0
+      const orders = activeEarningAddon.requiredOrders || 0
+      const current = earningsGuaranteeCurrentEarnings || 0
+      const remaining = Math.max(0, target - current)
+      slides.push({
+        id: 'earning-offer',
+        title: `Earn ₹${target} guarantee!`,
+        subtitle: orders > 0
+          ? `Complete ${orders} orders to earn ₹${target}. ₹${remaining.toFixed(0)} remaining.`
+          : `Active earning bonus offer — valid till ${weekEndDate}`,
+        icon: 'bag',
+        buttonText: 'View',
+        bgColor: 'bg-gray-700',
+        titleColor: 'text-white',
+        subtitleColor: 'text-white/90',
+        buttonBgColor: 'bg-gray-600 text-white',
+        action: 'none'
+      })
+    }
+
+    // Slide 4: Today's earnings summary (always shown if > 0 or at least delivery is approved)
+    if (deliveryStatus === 'approved' || deliveryStatus === 'active') {
+      if (todayEarnings > 0 || todayTrips > 0) {
+        slides.push({
+          id: 'today-summary',
+          title: `Today: ₹${todayEarnings.toFixed(0)} earned`,
+          subtitle: `${todayTrips} ${todayTrips === 1 ? 'trip' : 'trips'} completed${todayHoursWorked > 0 ? ` · ${formatHours(todayHoursWorked)} hrs worked` : ''}`,
+          icon: 'bank',
+          buttonText: 'Details',
+          bgColor: 'bg-gray-700',
+          titleColor: 'text-white',
+          subtitleColor: 'text-white/90',
+          buttonBgColor: 'bg-gray-600 text-white',
+          action: 'navigate',
+          path: '/delivery/my-orders'
+        })
+      }
+    }
+
+    // Slide 5: Pocket balance info
+    if (deliveryStatus === 'approved' || deliveryStatus === 'active') {
+      const pocketBal = walletState?.pocketBalance ?? walletState?.totalBalance ?? 0
+      if (pocketBal > 0) {
+        slides.push({
+          id: 'pocket-balance',
+          title: `Pocket balance: ₹${pocketBal.toFixed(0)}`,
+          subtitle: 'Withdraw to your bank account anytime',
+          icon: 'bank',
+          buttonText: 'Withdraw',
+          bgColor: 'bg-[#FFC400]',
+          action: 'navigate',
+          path: '/delivery/requests'
+        })
+      }
+    }
+
+    // Slide 3.5: Active order / en-route restaurant info
+    const activeRestaurantName =
+      selectedRestaurant?.name ||
+      selectedRestaurant?.restaurantName ||
+      newOrder?.restaurantName ||
+      null
+
+    const activeRestaurantAddress = sliderRestaurantAddress
+
+    if (activeRestaurantName && activeRestaurantAddress) {
+      const orderStatus =
+        selectedRestaurant?.orderStatus ||
+        selectedRestaurant?.status ||
+        newOrder?.status ||
+        ''
+
+      const deliveryPhase =
+        selectedRestaurant?.deliveryPhase ||
+        selectedRestaurant?.deliveryState?.currentPhase ||
+        ''
+
+      // Only show while order is active (not delivered/completed)
+      const isDelivered =
+        orderStatus === 'delivered' ||
+        orderStatus === 'completed' ||
+        deliveryPhase === 'completed' ||
+        deliveryPhase === 'delivered'
+
+      if (!isDelivered) {
+        const phaseLabel =
+          deliveryPhase === 'en_route_to_pickup' ? 'Heading to pickup' :
+            deliveryPhase === 'at_pickup' ? 'At pickup point' :
+              deliveryPhase === 'en_route_to_delivery' || deliveryPhase === 'picked_up' ? 'Out for delivery' :
+                orderStatus === 'out_for_delivery' ? 'Out for delivery' :
+                  orderStatus === 'ready' ? 'Order ready — pick up now' :
+                    orderStatus === 'preparing' ? 'Order is being prepared' :
+                      'Active order'
+
+        slides.push({
+          id: 'active-order',
+          title: `${phaseLabel} · ${activeRestaurantName}`,
+          subtitle: activeRestaurantAddress,
+          icon: 'bag',
+          buttonText: 'Navigate',
+          bgColor: 'bg-gray-700',
+          titleColor: 'text-white',
+          subtitleColor: 'text-white/80',
+          buttonBgColor: 'bg-gray-600 text-white hover:bg-gray-500',
+          action: 'navigate',
+          path: '/delivery'
+        })
+      }
+    }
+
+    return slides
+  }, [
+    bankDetailsFilled,
+    availableCashLimit,
+    walletState,
+    activeEarningAddon,
+    earningsGuaranteeCurrentEarnings,
+    weekEndDate,
+    deliveryStatus,
+    todayEarnings,
+    todayTrips,
+    todayHoursWorked,
+    formatHours,
+    sliderRestaurantAddress,
+    selectedRestaurant,
+    newOrder
+  ])
 
   // Auto-rotate carousel
   useEffect(() => {
@@ -8399,9 +8574,11 @@ export default function DeliveryHome() {
     }
   }, [mapLoading, riderLocation])
 
+  const desktopBottomPopupPanelClass = "lg:left-1/2 lg:right-auto lg:-translate-x-1/2 lg:w-[min(920px,calc(100%-2.5rem))] lg:bottom-4 lg:rounded-3xl lg:border lg:border-[#f0e4da] lg:shadow-[0_30px_80px_rgba(30,30,30,0.20)]"
+
   // Render normal feed view when offline or no gig booked
   return (
-    <div className="min-h-screen bg-[#f6e9dc] overflow-x-hidden flex flex-col" style={{ height: '100vh' }}>
+    <div className="w-full min-h-screen bg-[#f6e9dc] overflow-x-hidden flex flex-col lg:max-w-[1100px] lg:mx-auto" style={{ height: '100vh' }}>
       {/* Top Navigation Bar */}
       <FeedNavbar
         isOnline={isOnline}
@@ -8409,6 +8586,7 @@ export default function DeliveryHome() {
         onEmergencyClick={() => setShowEmergencyPopup(true)}
         onHelpClick={() => setShowHelpPopup(true)}
       />
+
 
       {/* Carousel - Only show if there are slides */}
       {carouselSlides.length > 0 && (
@@ -8418,82 +8596,85 @@ export default function DeliveryHome() {
           onMouseDown={handleCarouselMouseDown}
         >
           <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${currentCarouselSlide * 100}%)` }}>
-            {carouselSlides.map((slide) => (
-              <div key={slide.id} className="min-w-full">
-                <div className={`${slide.bgColor} px-4 py-3 flex items-center gap-3 min-h-[80px]`}>
-                  {/* Icon */}
-                  <div className="flex-shrink-0">
-                    {slide.icon === "bag" ? (
-                      <div className="relative">
-                        {/* Delivery Bag Icon - Reduced size */}
-                        <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center shadow-lg relative">
-                          {/* Bag shape */}
-                          <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                            <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                          </svg>
-                        </div>
-                        {/* Shadow */}
-                        <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-10 h-1.5 bg-black/30 rounded-full blur-sm"></div>
-                      </div>
-                    ) : (
-                      <div className="relative w-10 h-10">
-                        {/* Bank/Rupee Icon - Reduced size */}
-                        <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center relative">
-                          {/* Rupee symbol */}
-                          <svg className="w-12 h-12 text-white absolute" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" />
-                          </svg>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+            {carouselSlides.map((slide) => {
+              // Resolve text colors: use explicit slide colors, or infer from bgColor
+              const isDark = slide.bgColor === 'bg-gray-700' || slide.bgColor === 'bg-[#e53935]'
+              const titleCls = slide.titleColor ?? (isDark ? 'text-white' : 'text-black')
+              const subtitleCls = slide.subtitleColor ?? (isDark ? 'text-white/90' : 'text-black/80')
+              const addressCls = isDark ? 'text-white/80' : 'text-black/70'
+              const btnCls = slide.buttonBgColor ?? (isDark ? 'bg-gray-600 text-white hover:bg-gray-500' : 'bg-[#e53935] text-white hover:bg-[#c62828]')
 
-                  {/* Text Content */}
-                  <div className="flex-1">
-                    <h3 className={`${slide.bgColor === "bg-gray-700" ? "text-white" : "text-black"} text-sm font-semibold mb-0.5`}>
-                      {slide.title}
-                    </h3>
-                    <p className={`${slide.bgColor === "bg-gray-700" ? "text-white/90" : "text-black/80"} text-xs`}>
-                      {slide.subtitle}
-                    </p>
-                    {sliderRestaurantAddress && (
-                      <p className={`${slide.bgColor === "bg-gray-700" ? "text-white/80" : "text-black/70"} text-[11px] mt-0.5 truncate`}>
-                        {sliderRestaurantAddress}
+              return (
+                <div key={slide.id} className="min-w-full">
+                  <div className={`${slide.bgColor} px-4 py-3 flex items-center gap-3 min-h-[80px]`}>
+                    {/* Icon */}
+                    <div className="flex-shrink-0">
+                      {slide.icon === 'bag' ? (
+                        <div className="relative">
+                          <div className="w-12 h-12 bg-black/30 rounded-lg flex items-center justify-center shadow-lg relative">
+                            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                              <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                            </svg>
+                          </div>
+                          <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-10 h-1.5 bg-black/20 rounded-full blur-sm" />
+                        </div>
+                      ) : (
+                        <div className="relative w-10 h-10">
+                          <div className="w-10 h-10 bg-black/20 rounded-lg flex items-center justify-center relative">
+                            <svg className="w-12 h-12 text-white absolute" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" />
+                            </svg>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Text Content */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`${titleCls} text-sm font-semibold mb-0.5 truncate`}>
+                        {slide.title}
+                      </h3>
+                      <p className={`${subtitleCls} text-xs truncate`}>
+                        {slide.subtitle}
                       </p>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Button */}
-                  <button
-                    onClick={() => {
-                      if (slide.id === 2) {
-                        navigate("/delivery/profile/details")
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-colors ${slide.bgColor === "bg-gray-700"
-                      ? "bg-gray-600 text-white hover:bg-gray-500"
-                      : "bg-[#FFC400] text-black hover:bg-[#FFE082]"
-                      }`}>
-                    {slide.buttonText}
-                  </button>
+                    {/* Button */}
+                    <button
+                      onClick={() => {
+                        if (slide.action === 'navigate' && slide.path) {
+                          navigate(slide.path)
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-colors whitespace-nowrap ${btnCls}`}
+                    >
+                      {slide.buttonText}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Carousel Indicators */}
-          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-            {carouselSlides.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentCarouselSlide(index)}
-                className={`h-1.5 rounded-full transition-all duration-300 ${index === currentCarouselSlide
-                  ? (currentCarouselSlide === 0 ? "w-6 bg-white" : "w-6 bg-black")
-                  : (index === 0 ? "w-1.5 bg-white/50" : "w-1.5 bg-black/30")
-                  }`}
-              />
-            ))}
-          </div>
+          {carouselSlides.length > 1 && (
+            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+              {carouselSlides.map((slide, index) => {
+                const currentSlide = carouselSlides[currentCarouselSlide]
+                const isDarkSlide = currentSlide?.bgColor === 'bg-gray-700' || currentSlide?.bgColor === 'bg-[#e53935]'
+                return (
+                  <button
+                    key={slide.id}
+                    onClick={() => setCurrentCarouselSlide(index)}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${index === currentCarouselSlide
+                      ? (isDarkSlide ? 'w-6 bg-white' : 'w-6 bg-black')
+                      : (isDarkSlide ? 'w-1.5 bg-white/50' : 'w-1.5 bg-black/30')
+                      }`}
+                  />
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -8989,6 +9170,7 @@ export default function DeliveryHome() {
         showCloseButton={true}
         closeOnBackdropClick={true}
         maxHeight="70vh"
+        panelClassName={desktopBottomPopupPanelClass}
       >
         <div className="py-2">
           {helpOptions.map((option) => (
@@ -9040,6 +9222,7 @@ export default function DeliveryHome() {
         showCloseButton={true}
         closeOnBackdropClick={true}
         maxHeight="70vh"
+        panelClassName={desktopBottomPopupPanelClass}
       >
         <div className="py-2">
           {emergencyOptions.map((option, index) => (
@@ -9133,6 +9316,7 @@ export default function DeliveryHome() {
         showCloseButton={true}
         closeOnBackdropClick={true}
         maxHeight="auto"
+        panelClassName={desktopBottomPopupPanelClass}
       >
         <div className="py-4">
           {/* Gig Details Card */}
@@ -9191,7 +9375,7 @@ export default function DeliveryHome() {
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 100, opacity: 0 }}
                 transition={{ duration: 0.3 }}
-                className="fixed bottom-0 left-0 right-0 z-[115] flex justify-center pb-2"
+                className="fixed bottom-0 left-0 right-0 z-[115] flex justify-center pb-2 lg:left-1/2 lg:right-auto lg:-translate-x-1/2 lg:w-[min(920px,calc(100%-2.5rem))] lg:pb-4"
                 onTouchStart={handleNewOrderPopupTouchStart}
                 onTouchMove={handleNewOrderPopupTouchMove}
                 onTouchEnd={handleNewOrderPopupTouchEnd}
@@ -9232,7 +9416,7 @@ export default function DeliveryHome() {
               onTouchStart={handleNewOrderPopupTouchStart}
               onTouchMove={handleNewOrderPopupTouchMove}
               onTouchEnd={handleNewOrderPopupTouchEnd}
-              className="fixed bottom-0 left-0 right-0 bg-transparent rounded-t-3xl z-[110] overflow-visible"
+              className="fixed bottom-0 left-0 right-0 bg-transparent rounded-t-3xl z-[110] overflow-visible lg:left-1/2 lg:right-auto lg:-translate-x-1/2 lg:w-[min(920px,calc(100%-2.5rem))] lg:bottom-4"
               style={{ touchAction: 'none' }}
             >
               {/* Swipe Handle */}
@@ -9241,7 +9425,7 @@ export default function DeliveryHome() {
               </div>
 
               {/* Green Countdown Header */}
-              <div className="relative scale-110 mb-0 bg-[#e53935] rounded-t-3xl overflow-visible">
+              <div className="relative scale-110 mb-0 bg-[#e53935] rounded-t-3xl overflow-visible lg:scale-100">
                 {/* Small countdown badge - positioned at center edge, half above popup */}
                 <div className="absolute left-1/2 -translate-x-1/2 -top-5 z-20">
                   <div className="relative inline-flex items-center justify-center">
@@ -9338,27 +9522,33 @@ export default function DeliveryHome() {
                       {sliderRestaurantAddress || 'Address'}
                     </p>
 
-                    <div className="flex items-center gap-1.5 text-gray-500 text-sm mb-2">
-                      <Clock className="w-4 h-4" />
-                      <span>
-                        {selectedRestaurant?.timeAway && selectedRestaurant.timeAway !== 'Calculating...'
-                          ? `${selectedRestaurant.timeAway} away`
-                          : (newOrder?.pickupDistance && newOrder.pickupDistance !== '0 km' && newOrder.pickupDistance !== 'Calculating...'
-                            ? `${calculateTimeAway(newOrder.pickupDistance)} away`
-                            : 'Calculating...')}
-                      </span>
-                    </div>
+                    {(() => {
+                      const timeVal = selectedRestaurant?.timeAway && selectedRestaurant.timeAway !== 'Calculating...'
+                        ? `${selectedRestaurant.timeAway} away`
+                        : (newOrder?.pickupDistance && newOrder.pickupDistance !== '0 km' && newOrder.pickupDistance !== 'Calculating...'
+                          ? `${calculateTimeAway(newOrder.pickupDistance)} away`
+                          : null)
+                      return timeVal ? (
+                        <div className="flex items-center gap-1.5 text-gray-500 text-sm mb-2">
+                          <Clock className="w-4 h-4" />
+                          <span>{timeVal}</span>
+                        </div>
+                      ) : null
+                    })()}
 
-                    <div className="flex items-center gap-1.5 text-gray-500 text-sm">
-                      <MapPin className="w-4 h-4" />
-                      <span>
-                        {selectedRestaurant?.distance && selectedRestaurant.distance !== '0 km' && selectedRestaurant.distance !== 'Calculating...'
-                          ? `${selectedRestaurant.distance} away`
-                          : (newOrder?.pickupDistance && newOrder.pickupDistance !== '0 km' && newOrder.pickupDistance !== 'Calculating...'
-                            ? `${newOrder.pickupDistance} away`
-                            : 'Calculating...')}
-                      </span>
-                    </div>
+                    {(() => {
+                      const distVal = selectedRestaurant?.distance && selectedRestaurant.distance !== '0 km' && selectedRestaurant.distance !== 'Calculating...'
+                        ? `${selectedRestaurant.distance} away`
+                        : (newOrder?.pickupDistance && newOrder.pickupDistance !== '0 km' && newOrder.pickupDistance !== 'Calculating...'
+                          ? `${newOrder.pickupDistance} away`
+                          : null)
+                      return distVal ? (
+                        <div className="flex items-center gap-1.5 text-gray-500 text-sm">
+                          <MapPin className="w-4 h-4" />
+                          <span>{distVal}</span>
+                        </div>
+                      ) : null
+                    })()}
                   </div>
 
                   {/* Accept Order Button with Swipe */}
@@ -9432,7 +9622,7 @@ export default function DeliveryHome() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.3, delay: 0.1 }}
-              className="fixed top-4 right-4 z-[115]"
+              className="fixed top-4 right-4 z-[115] lg:top-6 lg:right-6"
             >
               <button
                 onClick={handleRejectConfirm}
@@ -9563,6 +9753,7 @@ export default function DeliveryHome() {
         showHandle={true}
         showBackdrop={false}
         backdropBlocksInteraction={false}
+        panelClassName={desktopBottomPopupPanelClass}
       >
         <div className="">
           {/* Pickup Label */}
@@ -9932,6 +10123,7 @@ export default function DeliveryHome() {
         showHandle={false}
         showBackdrop={false}
         backdropBlocksInteraction={false}
+        panelClassName={desktopBottomPopupPanelClass}
       >
         <div className="">
           <div className="text-center mb-6">
@@ -10386,6 +10578,7 @@ export default function DeliveryHome() {
         showHandle={true}
         showBackdrop={false}
         backdropBlocksInteraction={false}
+        panelClassName={desktopBottomPopupPanelClass}
       >
         <div className="">
           {/* Drop Label */}
@@ -10509,6 +10702,7 @@ export default function DeliveryHome() {
         showHandle={true}
         showBackdrop={false}
         backdropBlocksInteraction={false}
+        panelClassName={desktopBottomPopupPanelClass}
       >
         <div className="">
           {/* Success Icon and Title */}
@@ -10536,7 +10730,7 @@ export default function DeliveryHome() {
                     ? (tripDistance >= 1000
                       ? `${(tripDistance / 1000).toFixed(1)} kms`
                       : `${tripDistance.toFixed(0)} m`)
-                    : (selectedRestaurant?.tripDistance || 'Calculating...')}
+                    : (selectedRestaurant?.tripDistance || '—')}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -10549,7 +10743,7 @@ export default function DeliveryHome() {
                     ? (tripTime >= 60
                       ? `${Math.round(tripTime / 60)} mins`
                       : `${tripTime} secs`)
-                    : (selectedRestaurant?.tripTime || 'Calculating...')}
+                    : (selectedRestaurant?.tripTime || '—')}
                 </span>
               </div>
             </div>
@@ -10649,6 +10843,7 @@ export default function DeliveryHome() {
         closeOnBackdropClick={false}
         maxHeight="80vh"
         showHandle={true}
+        panelClassName={desktopBottomPopupPanelClass}
       >
         <div className="">
           <div className="text-center mb-6">

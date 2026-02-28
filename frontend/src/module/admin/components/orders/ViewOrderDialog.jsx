@@ -131,50 +131,132 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
   }
 
   useEffect(() => {
+    if (!isOpen || !order) return
     let isCancelled = false
 
-    const hydrateRestaurantAddress = async () => {
-      setFetchedRestaurantAddress("")
-      if (!isOpen || !order) return
+    // Self-contained: check if a string is a real usable address
+    const isValidText = (v) => {
+      if (typeof v !== 'string') return false
+      const n = v.trim().toLowerCase()
+      return Boolean(n && n !== 'address' && n !== 'n/a' && n !== 'address not available' && n !== 'not available')
+    }
 
-      const currentAddress = getRestaurantInvoiceAddress(order)
-      if (isValidDisplayAddress(currentAddress)) return
-
-      const orderIdentifier = order?.id || order?._id || order?.orderId
-      if (!orderIdentifier) return
-
-      try {
-        const response = await adminAPI.getOrderById(orderIdentifier)
-        const detailedOrder = response?.data?.data?.order
-        if (!detailedOrder || isCancelled) return
-
-        const resolvedAddress = getRestaurantInvoiceAddress(detailedOrder)
-        if (isValidDisplayAddress(resolvedAddress)) {
-          setFetchedRestaurantAddress(resolvedAddress)
+    // Self-contained: extract {lat, lng} from any location object
+    const extractCoords = (loc) => {
+      if (!loc || typeof loc !== 'object') return null
+      // GeoJSON Point: { coordinates: [longitude, latitude] }
+      if (Array.isArray(loc.coordinates) && loc.coordinates.length === 2) {
+        const [a, b] = loc.coordinates
+        if (typeof a === 'number' && typeof b === 'number' && !isNaN(a) && !isNaN(b)) {
+          return { lat: b, lng: a } // GeoJSON is [lng, lat]
         }
-      } catch (error) {
-        console.error("Failed to hydrate restaurant address for invoice:", error)
+      }
+      if (typeof loc.lat === 'number' && typeof loc.lng === 'number') return { lat: loc.lat, lng: loc.lng }
+      if (typeof loc.latitude === 'number' && typeof loc.longitude === 'number') return { lat: loc.latitude, lng: loc.longitude }
+      return null
+    }
+
+    // Self-contained: reverse geocode via Google Maps REST API
+    const reverseGeocode = async (lat, lng) => {
+      try {
+        const { getGoogleMapsApiKey } = await import('@/lib/utils/googleMapsApiKey.js')
+        const apiKey = await getGoogleMapsApiKey()
+        if (!apiKey) {
+          console.warn('⚠️ Invoice: No Google Maps API key — cannot reverse geocode restaurant location')
+          return null
+        }
+        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`)
+        if (!res.ok) return null
+        const data = await res.json()
+        console.log('🗺️ Invoice geocode status:', data.status, '| results:', data.results?.length ?? 0)
+        if (data.status === 'OK' && data.results?.length > 0) {
+          return data.results[0].formatted_address || null
+        }
+        return null
+      } catch (e) {
+        console.warn('Invoice reverse geocode error:', e.message)
+        return null
       }
     }
 
-    hydrateRestaurantAddress()
-    return () => {
-      isCancelled = true
+    const run = async () => {
+      setFetchedRestaurantAddress('')
+
+      // Step 1 — try text address fields directly from the order prop
+      const directText = [
+        order?.restaurantAddress,
+        order?.restaurantLocation?.formattedAddress,
+        order?.restaurantLocation?.address,
+        order?.deliveryState?.restaurantAddress,
+      ].find(isValidText)
+
+      if (directText) {
+        if (!isCancelled) setFetchedRestaurantAddress(directText)
+        return
+      }
+
+      // Step 2 — extract coordinates from restaurantLocation and reverse geocode
+      const coords = extractCoords(order?.restaurantLocation)
+      console.log('📍 Invoice: restaurantLocation raw =', order?.restaurantLocation, '| extracted =', coords)
+
+      if (coords) {
+        const geocoded = await reverseGeocode(coords.lat, coords.lng)
+        if (!isCancelled && geocoded) {
+          setFetchedRestaurantAddress(geocoded)
+          return
+        }
+      }
+
+      // Step 3 — fetch detailed order from backend for enriched data
+      const orderId = order?.id || order?._id || order?.orderId
+      if (!orderId) return
+
+      try {
+        const resp = await adminAPI.getOrderById(orderId)
+        if (isCancelled) return
+        const detailed = resp?.data?.data?.order || resp?.data?.order
+        console.log('📦 Invoice: detailed order restaurantLocation =', detailed?.restaurantLocation)
+
+        if (detailed) {
+          // Try text fields from detailed order
+          const rest = (detailed.restaurantId && typeof detailed.restaurantId === 'object') ? detailed.restaurantId
+            : (detailed.restaurant && typeof detailed.restaurant === 'object') ? detailed.restaurant : {}
+
+          const detailText = [
+            detailed?.restaurantAddress,
+            rest?.address,
+            rest?.location?.formattedAddress,
+            rest?.location?.address,
+          ].find(isValidText)
+
+          if (detailText) {
+            if (!isCancelled) setFetchedRestaurantAddress(detailText)
+            return
+          }
+
+          // Try coordinates from the detailed order
+          const detailCoords = extractCoords(detailed?.restaurantLocation) || extractCoords(rest?.location)
+          console.log('📍 Invoice: detailed order coords =', detailCoords)
+
+          if (detailCoords) {
+            const geocoded = await reverseGeocode(detailCoords.lat, detailCoords.lng)
+            if (!isCancelled && geocoded) {
+              setFetchedRestaurantAddress(geocoded)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Invoice: failed to fetch detailed order for address:', err)
+      }
     }
-  }, [isOpen, order?.id, order?._id, order?.orderId])
+
+    run()
+    return () => { isCancelled = true }
+  }, [isOpen, order?.orderId, order?.id, order?._id])
+
+
 
   if (!order) return null
-
-  // Debug: Log order data to check billImageUrl
-  if (order.billImageUrl) {
-    console.log('📸 Bill Image URL found:', order.billImageUrl)
-  } else {
-    console.log('⚠️ Bill Image URL not found in order:', {
-      orderId: order.orderId,
-      hasBillImageUrl: !!order.billImageUrl,
-      orderKeys: Object.keys(order)
-    })
-  }
 
   // Format address for display
   const formatAddress = (address) => {
@@ -207,7 +289,13 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
   const isValidDisplayAddress = (value) => {
     if (typeof value !== "string") return false
     const normalized = value.trim().toLowerCase()
-    return Boolean(normalized && normalized !== "address" && normalized !== "n/a")
+    return Boolean(
+      normalized &&
+      normalized !== "address" &&
+      normalized !== "n/a" &&
+      normalized !== "address not available" &&
+      normalized !== "not available"
+    )
   }
 
   const buildAddressFromLocation = (location) => {
@@ -237,18 +325,26 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
       orderData?.restaurantLocation?.formattedAddress,
       orderData?.restaurantLocation?.address,
       buildAddressFromLocation(orderData?.restaurantLocation),
+      // Check for explicit lat/lng fields if text isn't available
+      (orderData?.restaurantLocation?.latitude && orderData?.restaurantLocation?.longitude)
+        ? `${orderData.restaurantLocation.latitude}, ${orderData.restaurantLocation.longitude}`
+        : null,
       orderData?.deliveryState?.restaurantAddress,
       restaurant?.address,
       restaurant?.location?.formattedAddress,
       restaurant?.location?.address,
       buildAddressFromLocation(restaurant?.location),
+      // Additional paths for populated restaurant objects
+      restaurant?.addressLine1 ? [restaurant.addressLine1, restaurant.addressLine2, restaurant.city, restaurant.state, restaurant.pincode].filter(Boolean).join(', ') : null,
+      restaurant?.street ? [restaurant.street, restaurant.area, restaurant.city, restaurant.state].filter(Boolean).join(', ') : null,
       orderData?.pickupAddress?.formattedAddress,
       orderData?.pickupAddress?.address,
       buildAddressFromLocation(orderData?.pickupAddress),
     ]
 
     const resolved = candidates.find(isValidDisplayAddress)
-    return resolved || "Address not available"
+    // Return null if no valid address found, so parents can handle the fallback logic
+    return resolved || null
   }
 
   return (
@@ -988,11 +1084,13 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
               <div className="border-b border-[#F5F5F5] pb-4">
                 <p className="text-xs text-[#1E1E1E] uppercase tracking-wide mb-2">From</p>
                 <h3 className="text-lg font-bold text-[#1E1E1E]">
-                  {order.restaurant || order.restaurantName || order.restaurantId?.name || 'Bun Burst Cafe'}
+                  {order.restaurant || order.restaurantName || order.restaurantId?.name || 'Restaurant'}
                 </h3>
-                <p className="text-sm text-[#1E1E1E] mt-1">
-                  {fetchedRestaurantAddress || getRestaurantInvoiceAddress(order)}
-                </p>
+                <div className="text-sm text-[#1E1E1E] mt-1">
+                  {fetchedRestaurantAddress && isValidDisplayAddress(fetchedRestaurantAddress)
+                    ? fetchedRestaurantAddress
+                    : (getRestaurantInvoiceAddress(order) || "Address not available")}
+                </div>
               </div>
 
               {/* Customer Info */}

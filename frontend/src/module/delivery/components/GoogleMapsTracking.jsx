@@ -1,6 +1,7 @@
 import { useCallback, useRef, useEffect, useState } from 'react'
-import { GoogleMap, useJsApiLoader, Marker, Polyline } from '@react-google-maps/api'
+import { GoogleMap, Marker } from '@react-google-maps/api'
 import { motion } from 'framer-motion'
+import { MAP_APIS_ENABLED } from '@/lib/utils/googleMapsApiKey'
 
 /**
  * GoogleMapsTracking Component
@@ -61,7 +62,6 @@ export default function GoogleMapsTracking({
   onRouteInfoUpdate,
   lastUpdate
 }) {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   const mapRef = useRef(null)
   const directionsServiceRef = useRef(null)
   const directionsRendererRef = useRef(null)
@@ -93,10 +93,8 @@ export default function GoogleMapsTracking({
     }
   }, [routeInfo, onRouteInfoUpdate]);
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: apiKey || ''
-  })
+  const isLoaded = MAP_APIS_ENABLED
+  const loadError = MAP_APIS_ENABLED ? null : new Error('Map APIs are disabled')
 
   // Combine storeLocation with sellerLocations
   const allSellers = storeLocation ? [storeLocation, ...sellerLocations] : sellerLocations;
@@ -494,14 +492,6 @@ export default function GoogleMapsTracking({
     )
   }
 
-  if (!apiKey) {
-    return (
-      <div className={containerClasses + " bg-yellow-50 border border-yellow-200 p-4 text-center"}>
-        <p className="text-yellow-800 text-sm">⚠️ Google Maps API key not configured</p>
-      </div>
-    )
-  }
-
   return (
     <div className={containerClasses}>
       {/* Map UI Overlays */}
@@ -657,4 +647,5 @@ export default function GoogleMapsTracking({
     </div>
   )
 }
+
 

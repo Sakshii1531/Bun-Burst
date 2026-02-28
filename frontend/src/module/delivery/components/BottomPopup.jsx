@@ -30,7 +30,8 @@ export default function BottomPopup({
   disableSwipeToClose = false,
   collapsedContent = null, // Content to show when collapsed (e.g., Reached pickup button)
   showBackdrop = true, // Show backdrop overlay
-  backdropBlocksInteraction = true // Whether backdrop blocks pointer events
+  backdropBlocksInteraction = true, // Whether backdrop blocks pointer events
+  panelClassName = ""
 }) {
   const popupRef = useRef(null)
   const handleRef = useRef(null)
@@ -282,7 +283,7 @@ export default function BottomPopup({
               }
               handlePopupClick(e)
             }}
-            className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-[110] overflow-hidden flex flex-col"
+            className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-[110] overflow-hidden flex flex-col ${panelClassName}`}
             style={{ 
               maxHeight: isCollapsed ? "120px" : maxHeight,
               touchAction: 'none'

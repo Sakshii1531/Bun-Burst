@@ -30,6 +30,17 @@ export default function AvailableCashLimit({ onClose, walletData = {} }) {
           <div className="text-sm font-medium">Available cash limit</div>
           <div className="text-sm font-semibold">{formatCurrency(availableCashLimit)}</div>
         </div>
+
+        {availableCashLimit <= 0 && (
+          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-3">
+            <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shrink-0 mt-0.5">
+              <span className="text-white text-xs font-bold leading-none">!</span>
+            </div>
+            <p className="text-red-700 text-xs font-medium flex-1">
+              Your cash limit has been exhausted. You will not receive any Cash on Delivery (COD) orders until you deposit the cash in hand.
+            </p>
+          </div>
+        )}
       </div>
 
       <div onClick={onClose} className="mt-6">

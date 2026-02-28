@@ -838,14 +838,22 @@ export default function PocketPage() {
               </div>
 
               {/* Warning Message */}
-              {/* <div className="bg-yellow-500 rounded-lg p-3 flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-black flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-yellow-500 text-xs font-bold leading-none">!</span>
+              {availableCashLimit <= 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="text-white text-xs font-bold leading-none">!</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-red-700 text-sm font-bold">
+                      Cash Limit Reached!
+                    </p>
+                    <p className="text-red-600 text-xs mt-0.5">
+                      You won't receive any COD orders until you deposit the cash in hand.
+                    </p>
+                  </div>
                 </div>
-                <p className="text-black text-sm font-medium flex-1">
-                  Deposit ₹{depositAmount.toFixed(2)} to avoid getting blocked
-                </p>
-              </div> */}
+              )}
+
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-2">
