@@ -67,16 +67,13 @@ export const releaseEscrow = async (orderId) => {
     settlement.escrowReleasedAt = new Date();
     await settlement.save();
 
-    // Credit restaurant wallet with net earning (food price - commission)
-    // Example: ₹200 order, 15% commission = ₹30, restaurant gets ₹170
+    // Credit restaurant wallet with full food price earning (no commission deducted)
     if (settlement.restaurantEarning.netEarning > 0) {
       await creditRestaurantWallet(
         settlement.restaurantId,
         settlement.orderId,
-        settlement.restaurantEarning.netEarning, // ₹170 (₹200 - ₹30)
-        settlement.orderNumber,
-        settlement.restaurantEarning.foodPrice, // Full order value for reference
-        settlement.restaurantEarning.commission // Commission deducted
+        settlement.restaurantEarning.netEarning,
+        settlement.orderNumber
       );
       settlement.restaurantEarning.status = 'credited';
       settlement.restaurantEarning.creditedAt = new Date();
@@ -142,22 +139,16 @@ export const releaseEscrow = async (orderId) => {
  * Credit restaurant wallet
  * @param {ObjectId} restaurantId - Restaurant ID
  * @param {ObjectId} orderId - Order ID
- * @param {Number} netAmount - Net amount to credit (food price - commission)
+ * @param {Number} netAmount - Amount to credit (full food price)
  * @param {String} orderNumber - Order number
- * @param {Number} foodPrice - Full food price (for reference)
- * @param {Number} commission - Commission deducted (for reference)
  */
-const creditRestaurantWallet = async (restaurantId, orderId, netAmount, orderNumber, foodPrice = null, commission = null) => {
+const creditRestaurantWallet = async (restaurantId, orderId, netAmount, orderNumber) => {
   try {
     const RestaurantWallet = (await import('../../restaurant/models/RestaurantWallet.js')).default;
     const wallet = await RestaurantWallet.findOrCreateByRestaurantId(restaurantId);
-    
-    // Create description with breakdown
-    let description = `Payment for order ${orderNumber}`;
-    if (foodPrice && commission) {
-      description = `Payment for order ${orderNumber} (Order: ₹${foodPrice}, Commission: ₹${commission}, Net: ₹${netAmount})`;
-    }
-    
+
+    const description = `Payment for order ${orderNumber}`;
+
     wallet.addTransaction({
       amount: netAmount, // Credit net amount (₹170)
       type: 'payment',
@@ -165,7 +156,7 @@ const creditRestaurantWallet = async (restaurantId, orderId, netAmount, orderNum
       description: description,
       orderId: orderId
     });
-    
+
     await wallet.save();
 
     // Create audit log
@@ -200,7 +191,7 @@ const creditDeliveryWallet = async (deliveryId, orderId, amount, orderNumber) =>
   try {
     const DeliveryWallet = (await import('../../delivery/models/DeliveryWallet.js')).default;
     const wallet = await DeliveryWallet.findOrCreateByDeliveryId(deliveryId);
-    
+
     wallet.addTransaction({
       amount: amount,
       type: 'payment',
@@ -209,7 +200,7 @@ const creditDeliveryWallet = async (deliveryId, orderId, amount, orderNumber) =>
       orderId: orderId,
       paymentCollected: false // Will be updated when COD is collected
     });
-    
+
     await wallet.save();
 
     // Create audit log
@@ -248,21 +239,6 @@ const creditDeliveryWallet = async (deliveryId, orderId, amount, orderNumber) =>
 const creditAdminWallet = async (orderId, adminEarning, orderNumber, restaurantId, settlement = null) => {
   try {
     const wallet = await AdminWallet.findOrCreate();
-
-    // Credit commission (from restaurant)
-    // This is the commission deducted from restaurant's food price
-    if (adminEarning.commission > 0) {
-      const foodPrice = settlement?.restaurantEarning?.foodPrice || 0;
-      const commissionPercent = foodPrice > 0 ? ((adminEarning.commission / foodPrice) * 100).toFixed(1) : '0';
-      wallet.addTransaction({
-        amount: adminEarning.commission,
-        type: 'commission',
-        status: 'Completed',
-        description: `Restaurant commission from order ${orderNumber} (${commissionPercent}% of ₹${foodPrice})`,
-        orderId: orderId,
-        restaurantId: restaurantId
-      });
-    }
 
     // Credit platform fee
     if (adminEarning.platformFee > 0) {
