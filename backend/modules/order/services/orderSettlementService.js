@@ -1,12 +1,8 @@
 import Order from '../models/Order.js';
 import OrderSettlement from '../models/OrderSettlement.js';
-import RestaurantCommission from '../../admin/models/RestaurantCommission.js';
-import DeliveryBoyCommission from '../../admin/models/DeliveryBoyCommission.js';
 import FeeSettings from '../../admin/models/FeeSettings.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
-import Delivery from '../../delivery/models/Delivery.js';
 import mongoose from 'mongoose';
-import { calculateDistance } from './orderCalculationService.js';
 
 /**
  * Calculate comprehensive order settlement breakdown
@@ -56,28 +52,18 @@ export const calculateOrderSettlement = async (orderId) => {
       total: order.pricing.total || 0
     };
 
-    // Calculate restaurant commission and earnings
-    // Commission is calculated on food price (subtotal - discount)
+    // Restaurant receives the full food price — no commission deducted
     const foodPrice = userPayment.subtotal - userPayment.discount;
-    const restaurantCommissionData = await RestaurantCommission.calculateCommissionForOrder(
-      restaurant._id,
-      foodPrice
-    );
-
-    const commissionAmount = Math.round(restaurantCommissionData.commission * 100) / 100;
-    const restaurantNetEarning = Math.round((foodPrice - commissionAmount) * 100) / 100;
 
     const restaurantEarning = {
-      foodPrice: foodPrice, // Full order value (₹200)
-      commission: commissionAmount, // Commission deducted (₹30 for 15%)
-      commissionPercentage: restaurantCommissionData.type === 'percentage'
-        ? restaurantCommissionData.value
-        : (commissionAmount / foodPrice) * 100,
-      netEarning: restaurantNetEarning, // Amount restaurant receives (₹170)
+      foodPrice: foodPrice,
+      commission: 0,
+      commissionPercentage: 0,
+      netEarning: Math.round(foodPrice * 100) / 100,
       status: 'pending'
     };
 
-    // Calculate delivery partner earnings
+    // Delivery partner earnings (salaried model — no per-order commission)
     let deliveryPartnerEarning = {
       basePayout: 0,
       distance: 0,
@@ -90,42 +76,22 @@ export const calculateOrderSettlement = async (orderId) => {
     };
 
     if (order.deliveryPartnerId && order.assignmentInfo?.distance) {
-      const distance = order.assignmentInfo.distance;
-      const surgeMultiplier = order.assignmentInfo?.surgeMultiplier || 1;
-
-      // For salaried employees, NO per-order commission is given
-      console.log(`Order ${order.orderId}: Delivery partner ${order.deliveryPartnerId} is salaried. No commission calculated.`);
-
-      deliveryPartnerEarning = {
-        basePayout: 0,
-        distance: distance, // Still track distance for records
-        commissionPerKm: 0,
-        distanceCommission: 0,
-        surgeMultiplier: surgeMultiplier,
-        surgeAmount: 0,
-        totalEarning: 0,
-        status: 'pending'
-      };
+      deliveryPartnerEarning.distance = order.assignmentInfo.distance;
+      deliveryPartnerEarning.surgeMultiplier = order.assignmentInfo?.surgeMultiplier || 1;
     }
 
-    // Calculate admin/platform earnings
-    // Admin gets: Restaurant commission + Platform fee + Delivery fee + GST
-    // Note: Even if delivery is free for user, delivery fee amount still goes to admin
-    const deliveryMargin = userPayment.deliveryFee - deliveryPartnerEarning.totalEarning;
-
-    const adminCommission = Math.round(restaurantEarning.commission * 100) / 100;
+    // Admin/platform earnings: Platform fee + Delivery fee + GST (no commission)
     const adminPlatformFee = Math.round(userPayment.platformFee * 100) / 100;
     const adminDeliveryFee = Math.round(userPayment.deliveryFee * 100) / 100;
     const adminGST = Math.round(userPayment.gst * 100) / 100;
-    const adminTotal = Math.round((adminCommission + adminPlatformFee + adminDeliveryFee + adminGST) * 100) / 100;
 
     const adminEarning = {
-      commission: adminCommission, // Restaurant commission (₹30)
-      platformFee: adminPlatformFee, // Platform fee (₹6)
-      deliveryFee: adminDeliveryFee, // Delivery fee (₹0 if free, but still tracked)
-      gst: adminGST, // GST (₹10)
-      deliveryMargin: Math.max(0, Math.round(deliveryMargin * 100) / 100), // Delivery fee - delivery partner earning
-      totalEarning: adminTotal, // Total admin earnings
+      commission: 0,
+      platformFee: adminPlatformFee,
+      deliveryFee: adminDeliveryFee,
+      gst: adminGST,
+      deliveryMargin: adminDeliveryFee,
+      totalEarning: Math.round((adminPlatformFee + adminDeliveryFee + adminGST) * 100) / 100,
       status: 'pending'
     };
 
@@ -151,16 +117,6 @@ export const calculateOrderSettlement = async (orderId) => {
           gstRate: feeSettings?.gstRate,
           deliveryFee: feeSettings?.deliveryFee
         },
-        restaurantCommission: {
-          type: restaurantCommissionData.type,
-          value: restaurantCommissionData.value,
-          rule: restaurantCommissionData.rule
-        },
-        deliveryCommission: deliveryPartnerEarning.distance > 0 ? {
-          distance: deliveryPartnerEarning.distance,
-          basePayout: deliveryPartnerEarning.basePayout,
-          commissionPerKm: deliveryPartnerEarning.commissionPerKm
-        } : null,
         calculatedAt: new Date()
       }
     };
@@ -178,7 +134,7 @@ export const calculateOrderSettlement = async (orderId) => {
     return settlement;
   } catch (error) {
     console.error('Error calculating order settlement:', error);
-    throw new Error(`Failed to calculate order settlement: ${error.message}`);
+    throw new Error(`Failed to calculate order settlement: ${error.message} `);
   }
 };
 

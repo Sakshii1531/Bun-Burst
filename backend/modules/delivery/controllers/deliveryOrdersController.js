@@ -5,10 +5,7 @@ import Order from '../../order/models/Order.js';
 import Payment from '../../payment/models/Payment.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import DeliveryWallet from '../models/DeliveryWallet.js';
-import DeliveryBoyCommission from '../../admin/models/DeliveryBoyCommission.js';
 import RestaurantWallet from '../../restaurant/models/RestaurantWallet.js';
-import RestaurantCommission from '../../admin/models/RestaurantCommission.js';
-import AdminCommission from '../../admin/models/AdminCommission.js';
 import { calculateRoute } from '../../order/services/routeCalculationService.js';
 import mongoose from 'mongoose';
 import winston from 'winston';
@@ -1468,11 +1465,8 @@ export const completeDelivery = asyncHandler(async (req, res) => {
           }
 
           if (deliveryDistance > 0) {
-            const commissionResult = await DeliveryBoyCommission.calculateCommission(deliveryDistance);
-            earnings = {
-              amount: commissionResult.commission,
-              breakdown: commissionResult.breakdown
-            };
+            // Salaried delivery partner — no per-order commission
+            earnings = { amount: 0, breakdown: null };
           }
         }
       } catch (earningsError) {
@@ -1603,33 +1597,10 @@ export const completeDelivery = asyncHandler(async (req, res) => {
       deliveryDistance = R * c;
     }
 
-    console.log(`📏 Delivery distance: ${deliveryDistance.toFixed(2)} km for order ${orderIdForLog}`);
-
-    // Calculate earnings using admin's commission rules
+    // Salaried delivery partner — no per-order commission calculated
     let totalEarning = 0;
     let commissionBreakdown = null;
-
-    try {
-      // Use DeliveryBoyCommission model to calculate commission based on distance
-      const commissionResult = await DeliveryBoyCommission.calculateCommission(deliveryDistance);
-      totalEarning = commissionResult.commission;
-      commissionBreakdown = commissionResult.breakdown;
-
-      console.log(`💰 Delivery earnings calculated using commission rules: ₹${totalEarning.toFixed(2)} for order ${orderIdForLog}`);
-      console.log(`📊 Commission breakdown:`, {
-        rule: commissionResult.rule.name,
-        basePayout: commissionResult.breakdown.basePayout,
-        distance: commissionResult.breakdown.distance,
-        commissionPerKm: commissionResult.breakdown.commissionPerKm,
-        distanceCommission: commissionResult.breakdown.distanceCommission,
-        total: totalEarning
-      });
-    } catch (commissionError) {
-      console.error('⚠️ Error calculating commission using rules:', commissionError.message);
-      // Fallback: Use delivery fee as earnings if commission calculation fails
-      totalEarning = order.pricing?.deliveryFee || 0;
-      console.warn(`⚠️ Using fallback earnings (delivery fee): ₹${totalEarning.toFixed(2)}`);
-    }
+    console.log(`📏 Delivery distance: ${deliveryDistance.toFixed(2)} km for order ${orderIdForLog} (salaried partner, no commission)`);
 
     // Add earning to delivery boy's wallet
     let walletTransaction = null;
@@ -1725,14 +1696,11 @@ export const completeDelivery = asyncHandler(async (req, res) => {
       // Don't fail the delivery completion if bonus check fails
     }
 
-    // Calculate restaurant commission and update restaurant wallet
+    // Credit restaurant wallet with full order amount (no commission deducted)
     let restaurantWalletTransaction = null;
-    let adminCommissionRecord = null;
     try {
-      // Get order total amount (subtotal, excluding delivery fee and tax for commission calculation)
       const orderTotal = order.pricing?.subtotal || order.pricing?.total || 0;
 
-      // Find restaurant by restaurantId (can be string or ObjectId)
       let restaurant = null;
       if (mongoose.Types.ObjectId.isValid(order.restaurantId)) {
         restaurant = await Restaurant.findById(order.restaurantId);
@@ -1741,100 +1709,40 @@ export const completeDelivery = asyncHandler(async (req, res) => {
       }
 
       if (!restaurant) {
-        console.warn(`⚠️ Restaurant not found for order ${orderIdForLog}, skipping commission calculation`);
-      } else {
-        // Calculate restaurant commission
-        const commissionResult = await RestaurantCommission.calculateCommissionForOrder(
-          restaurant._id,
-          orderTotal
+        console.warn(`⚠️ Restaurant not found for order ${orderIdForLog}, skipping wallet update`);
+      } else if (restaurant._id) {
+        const restaurantWallet = await RestaurantWallet.findOrCreateByRestaurantId(restaurant._id);
+
+        const existingRestaurantTransaction = restaurantWallet.transactions?.find(
+          t => t.orderId && t.orderId.toString() === orderIdForTransaction && t.type === 'payment'
         );
 
-        const commissionAmount = commissionResult.commission || 0;
-        const restaurantEarning = orderTotal - commissionAmount;
+        if (existingRestaurantTransaction) {
+          console.warn(`⚠️ Restaurant earning already added for order ${orderIdForLog}, skipping wallet update`);
+        } else {
+          restaurantWalletTransaction = restaurantWallet.addTransaction({
+            amount: orderTotal,
+            type: 'payment',
+            status: 'Completed',
+            description: `Order #${orderIdForLog} - Amount: ₹${orderTotal.toFixed(2)}`,
+            orderId: orderMongoId || order._id
+          });
 
-        console.log(`💰 Restaurant commission calculation for order ${orderIdForLog}:`, {
-          orderTotal: orderTotal,
-          commissionPercentage: commissionResult.value,
-          commissionAmount: commissionAmount,
-          restaurantEarning: restaurantEarning
-        });
+          await restaurantWallet.save();
 
-        // Update restaurant wallet
-        if (restaurant._id) {
-          const restaurantWallet = await RestaurantWallet.findOrCreateByRestaurantId(restaurant._id);
+          logger.info(`💰 Earning added to restaurant wallet: ${restaurant._id}`, {
+            restaurantId: restaurant.restaurantId || restaurant._id.toString(),
+            orderId: orderIdForLog,
+            orderTotal: orderTotal,
+            walletBalance: restaurantWallet.totalBalance
+          });
 
-          // Check if transaction already exists for this order
-          const existingRestaurantTransaction = restaurantWallet.transactions?.find(
-            t => t.orderId && t.orderId.toString() === orderIdForTransaction && t.type === 'payment'
-          );
-
-          if (existingRestaurantTransaction) {
-            console.warn(`⚠️ Restaurant earning already added for order ${orderIdForLog}, skipping wallet update`);
-          } else {
-            // Add payment transaction to restaurant wallet
-            restaurantWalletTransaction = restaurantWallet.addTransaction({
-              amount: restaurantEarning,
-              type: 'payment',
-              status: 'Completed',
-              description: `Order #${orderIdForLog} - Amount: ₹${orderTotal.toFixed(2)}, Commission: ₹${commissionAmount.toFixed(2)}`,
-              orderId: orderMongoId || order._id
-            });
-
-            await restaurantWallet.save();
-
-            logger.info(`💰 Earning added to restaurant wallet: ${restaurant._id}`, {
-              restaurantId: restaurant.restaurantId || restaurant._id.toString(),
-              orderId: orderIdForLog,
-              orderTotal: orderTotal,
-              commissionAmount: commissionAmount,
-              restaurantEarning: restaurantEarning,
-              walletBalance: restaurantWallet.totalBalance
-            });
-
-            console.log(`✅ Restaurant earning ₹${restaurantEarning.toFixed(2)} added to wallet`);
-            console.log(`💰 New restaurant wallet balance: ₹${restaurantWallet.totalBalance.toFixed(2)}`);
-          }
-        }
-
-        // Track admin commission earned
-        try {
-          // Check if commission record already exists
-          const existingCommission = await AdminCommission.findOne({ orderId: orderMongoId || order._id });
-
-          if (!existingCommission) {
-            adminCommissionRecord = await AdminCommission.create({
-              orderId: orderMongoId || order._id,
-              orderAmount: orderTotal,
-              commissionAmount: commissionAmount,
-              commissionPercentage: commissionResult.value,
-              restaurantId: restaurant._id,
-              restaurantName: restaurant.name || order.restaurantName,
-              restaurantEarning: restaurantEarning,
-              status: 'completed',
-              orderDate: order.createdAt || new Date()
-            });
-
-            logger.info(`💰 Admin commission recorded: ${commissionAmount}`, {
-              orderId: orderIdForLog,
-              commissionAmount: commissionAmount,
-              orderTotal: orderTotal
-            });
-
-            console.log(`✅ Admin commission ₹${commissionAmount.toFixed(2)} recorded`);
-          } else {
-            console.warn(`⚠️ Admin commission already recorded for order ${orderIdForLog}`);
-          }
-        } catch (adminCommissionError) {
-          logger.error('❌ Error recording admin commission:', adminCommissionError);
-          console.error('❌ Error recording admin commission:', adminCommissionError);
-          // Don't fail the delivery completion if commission tracking fails
+          console.log(`✅ Restaurant earning ₹${orderTotal.toFixed(2)} added to wallet`);
         }
       }
     } catch (restaurantWalletError) {
       logger.error('❌ Error processing restaurant wallet:', restaurantWalletError);
       console.error('❌ Error processing restaurant wallet:', restaurantWalletError);
-      // Don't fail the delivery completion if restaurant wallet update fails
-      // But log it for investigation
     }
 
     // Send response first, then handle notifications asynchronously
