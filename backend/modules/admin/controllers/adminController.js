@@ -2,7 +2,6 @@ import Admin from "../models/Admin.js";
 import Order from "../../order/models/Order.js";
 import Restaurant from "../../restaurant/models/Restaurant.js";
 import Offer from "../../restaurant/models/Offer.js";
-import AdminCommission from "../models/AdminCommission.js";
 import OrderSettlement from "../../order/models/OrderSettlement.js";
 import AdminWallet from "../models/AdminWallet.js";
 import {
@@ -85,8 +84,8 @@ const normalizeRestaurantLocation = (incomingLocation = {}, existingLocation = {
     trimText(normalizedLocation.state),
     trimText(
       normalizedLocation.pincode ||
-        normalizedLocation.zipCode ||
-        normalizedLocation.postalCode,
+      normalizedLocation.zipCode ||
+      normalizedLocation.postalCode,
     ),
   ].filter(Boolean);
 

@@ -87,15 +87,7 @@ import {
   getEnvVariables,
   saveEnvVariables,
 } from "../controllers/envVariablesController.js";
-import {
-  getCommissionRules,
-  getCommissionRuleById,
-  createCommissionRule,
-  updateCommissionRule,
-  deleteCommissionRule,
-  toggleCommissionRuleStatus,
-  calculateCommission,
-} from "../controllers/deliveryBoyCommissionController.js";
+
 import {
   getDeliveryCashLimit,
   updateDeliveryCashLimit,
@@ -122,17 +114,7 @@ import {
   updateTicket,
   getTicketStats,
 } from "../controllers/deliverySupportTicketController.js";
-import {
-  getRestaurantCommissions,
-  getApprovedRestaurants,
-  getRestaurantCommissionById,
-  getCommissionByRestaurantId,
-  createRestaurantCommission,
-  updateRestaurantCommission,
-  deleteRestaurantCommission,
-  toggleRestaurantCommissionStatus,
-  calculateCommission as calculateRestaurantCommission,
-} from "../controllers/restaurantCommissionController.js";
+
 import {
   getPendingFoodApprovals,
   approveFoodItem,
@@ -166,7 +148,6 @@ import {
   getAuditLogs,
   getAuditLogById,
   getEntityAuditLogs,
-  getCommissionChangeLogs,
 } from "../controllers/auditLogController.js";
 import { getAbout, updateAbout } from "../controllers/aboutController.js";
 import {
@@ -376,14 +357,6 @@ router.patch("/earning-addon-history/:id/cancel", cancelEarningAddonHistory);
 router.get("/env-variables", getEnvVariables);
 router.post("/env-variables", saveEnvVariables);
 
-// Delivery Boy Commission Management
-router.get("/delivery-boy-commission", getCommissionRules);
-router.post("/delivery-boy-commission", createCommissionRule);
-router.post("/delivery-boy-commission/calculate", calculateCommission);
-router.get("/delivery-boy-commission/:id", getCommissionRuleById);
-router.put("/delivery-boy-commission/:id", updateCommissionRule);
-router.delete("/delivery-boy-commission/:id", deleteCommissionRule);
-router.patch("/delivery-boy-commission/:id/status", toggleCommissionRuleStatus);
 
 // Delivery Emergency Help Management
 router.get("/delivery-emergency-help", getEmergencyHelp);
@@ -396,25 +369,7 @@ router.get("/delivery-support-tickets/stats", getTicketStats);
 router.get("/delivery-support-tickets/:id", getTicketByIdAdmin);
 router.put("/delivery-support-tickets/:id", updateTicket);
 
-// Restaurant Commission Management
-// router.get("/restaurant-commission", getRestaurantCommissions);
-// router.get(
-//   "/restaurant-commission/approved-restaurants",
-//   getApprovedRestaurants,
-// );
-// router.get(
-//   "/restaurant-commission/restaurant/:restaurantId",
-//   getCommissionByRestaurantId,
-// );
-// router.post("/restaurant-commission", createRestaurantCommission);
-// router.post("/restaurant-commission/calculate", calculateRestaurantCommission);
-// router.get("/restaurant-commission/:id", getRestaurantCommissionById);
-// router.put("/restaurant-commission/:id", updateRestaurantCommission);
-// router.delete("/restaurant-commission/:id", deleteRestaurantCommission);
-// router.patch(
-//   "/restaurant-commission/:id/status",
-//   toggleRestaurantCommissionStatus,
-// );
+
 
 // Restaurant Complaint Management
 router.get("/restaurant-complaints", getAllComplaints);
@@ -605,7 +560,6 @@ router.get("/settlements/statistics", getSettlementStatistics);
 router.get("/audit-logs", getAuditLogs);
 router.get("/audit-logs/:id", getAuditLogById);
 router.get("/audit-logs/entity/:entityType/:entityId", getEntityAuditLogs);
-router.get("/audit-logs/commission-changes", getCommissionChangeLogs);
 
 // Withdrawal Request Routes (Admin)
 router.get("/withdrawal/requests", getAllWithdrawalRequests);
