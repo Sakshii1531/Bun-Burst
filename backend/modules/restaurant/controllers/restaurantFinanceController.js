@@ -1,5 +1,4 @@
 import Order from '../../order/models/Order.js';
-import RestaurantCommission from '../../admin/models/RestaurantCommission.js';
 import WithdrawalRequest from '../models/WithdrawalRequest.js';
 import RestaurantWallet from '../models/RestaurantWallet.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
@@ -27,12 +26,12 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
     const now = new Date();
     const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
     const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1; // Convert Sunday (0) to 6
-    
+
     // Start of current cycle (Monday)
     const currentCycleStart = new Date(now);
     currentCycleStart.setDate(now.getDate() - daysFromMonday);
     currentCycleStart.setHours(0, 0, 0, 0);
-    
+
     // End of current cycle (Sunday)
     const currentCycleEnd = new Date(currentCycleStart);
     currentCycleEnd.setDate(currentCycleStart.getDate() + 6);
@@ -54,81 +53,7 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
       ]
     };
 
-    // Get commission setup for restaurant
-    let restaurantCommission = null;
-    try {
-      restaurantCommission = await RestaurantCommission.findOne({
-        restaurant: restaurantId,
-        status: true
-      }).lean();
-    } catch (commissionError) {
-      console.warn('⚠️ Could not fetch commission setup:', commissionError.message);
-    }
 
-    // Helper function to calculate commission for an order
-    const calculateCommissionForOrder = (orderAmount) => {
-      if (!restaurantCommission || !restaurantCommission.status) {
-        // Default 10% if no commission setup
-        return {
-          commission: (orderAmount * 10) / 100,
-          type: 'percentage',
-          value: 10
-        };
-      }
-
-      // Find matching commission rule
-      const sortedRules = [...(restaurantCommission.commissionRules || [])]
-        .filter(rule => rule.isActive)
-        .sort((a, b) => {
-          if (b.priority !== a.priority) {
-            return b.priority - a.priority;
-          }
-          return a.minOrderAmount - b.minOrderAmount;
-        });
-
-      let matchingRule = null;
-      for (const rule of sortedRules) {
-        if (orderAmount >= rule.minOrderAmount) {
-          if (rule.maxOrderAmount === null || orderAmount <= rule.maxOrderAmount) {
-            matchingRule = rule;
-            break;
-          }
-        }
-      }
-
-      let commission = 0;
-      let commissionType = 'percentage';
-      let commissionValue = 10;
-
-      if (matchingRule) {
-        commissionType = matchingRule.type;
-        commissionValue = matchingRule.value;
-        if (matchingRule.type === 'percentage') {
-          commission = (orderAmount * matchingRule.value) / 100;
-        } else {
-          commission = matchingRule.value;
-        }
-      } else if (restaurantCommission.defaultCommission) {
-        commissionType = restaurantCommission.defaultCommission.type || 'percentage';
-        commissionValue = restaurantCommission.defaultCommission.value || 10;
-        if (commissionType === 'percentage') {
-          commission = (orderAmount * commissionValue) / 100;
-        } else {
-          commission = commissionValue;
-        }
-      } else {
-        // Default 10%
-        commission = (orderAmount * 10) / 100;
-      }
-
-      return {
-        commission: Math.round(commission * 100) / 100,
-        type: commissionType,
-        value: commissionValue
-      };
-    };
-
-    // Get current cycle orders (delivered orders in current week)
     // Query orders that were delivered in the current cycle
     // First try with deliveredAt, if not found, use tracking.delivered.timestamp as fallback
     let currentCycleOrders = await Order.find({
@@ -139,9 +64,9 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
         { 'tracking.delivered.timestamp': { $gte: currentCycleStart, $lte: currentCycleEnd } }
       ]
     })
-    .populate('userId', 'name phone email')
-    .select('orderId userId items pricing payment status address createdAt deliveredAt tracking')
-    .lean();
+      .populate('userId', 'name phone email')
+      .select('orderId userId items pricing payment status address createdAt deliveredAt tracking')
+      .lean();
 
     // If no orders found with deliveredAt/tracking, check by createdAt as last resort
     if (currentCycleOrders.length === 0) {
@@ -150,9 +75,9 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
         status: 'delivered',
         createdAt: { $gte: currentCycleStart, $lte: currentCycleEnd }
       })
-      .populate('userId', 'name phone email')
-      .select('orderId userId items pricing payment status address createdAt deliveredAt tracking')
-      .lean();
+        .populate('userId', 'name phone email')
+        .select('orderId userId items pricing payment status address createdAt deliveredAt tracking')
+        .lean();
     }
 
     console.log(`📊 Finance API - Current cycle orders found: ${currentCycleOrders.length} for restaurant ${restaurantId}`);
@@ -170,9 +95,9 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
         return order.userId.toString();
       }
     }).filter(Boolean))];
-    
+
     console.log(`📋 Found ${userIds.length} unique user IDs:`, userIds);
-    
+
     // Fetch user data in bulk
     let usersMap = {};
     if (userIds.length > 0) {
@@ -200,29 +125,25 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
     }
 
     // Calculate current cycle payout
-    // IMPORTANT: Commission is calculated on FOOD PRICE (subtotal - discount), NOT on total (which includes platform fee, GST, delivery fee)
+    // Payout = full food price (subtotal - discount), no commission deducted
     let currentCycleTotal = 0;
-    let currentCycleCommission = 0;
     const currentCycleOrdersData = await Promise.all(currentCycleOrders.map(async (order) => {
-      // Food price = subtotal - discount (this is what commission is calculated on)
       const foodPrice = (order.pricing?.subtotal || 0) - (order.pricing?.discount || 0);
-      const commissionData = calculateCommissionForOrder(foodPrice);
-      const payout = foodPrice - commissionData.commission;
-      
-      currentCycleTotal += foodPrice; // Use food price, not total
-      currentCycleCommission += commissionData.commission;
+      const payout = foodPrice;
+
+      currentCycleTotal += foodPrice;
 
       // Get food names from order items
       const foodNames = (order.items || []).map(item => item.name).join(', ') || 'N/A';
-      
+
       // Handle userId - can be ObjectId or populated object
       let customerName = 'N/A';
       let customerPhone = 'N/A';
       let customerEmail = 'N/A';
-      
+
       if (order.userId) {
         let userIdStr = null;
-        
+
         // Check if populated (has _id property or name property)
         if (typeof order.userId === 'object' && (order.userId.name || order.userId._id)) {
           // Populated user object
@@ -246,7 +167,7 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
       } else {
         console.log(`⚠️ No userId found for order: ${order.orderId}`);
       }
-      
+
       // Format payment method - fetch full order if payment not available
       let paymentMethod = 'N/A';
       if (order.payment && order.payment.method) {
@@ -266,7 +187,7 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
           console.log(`⚠️ Could not fetch payment for order ${order.orderId}:`, err.message);
         }
       }
-      
+
       // Format order status - use from order or fetch if missing
       let orderStatus = 'N/A';
       if (order.status) {
@@ -286,12 +207,12 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
           console.log(`⚠️ Could not fetch status for order ${order.orderId}:`, err.message);
         }
       }
-      
+
       return {
         orderId: order.orderId || order._id?.toString() || 'N/A',
         orderTotal: foodPrice, // Food price (subtotal - discount) for display
         totalAmount: order.pricing?.total || 0, // Total order amount paid by customer
-        commission: commissionData.commission,
+        commission: 0,
         payout,
         deliveredAt: order.deliveredAt || order.createdAt,
         createdAt: order.createdAt,
@@ -335,8 +256,8 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
           { 'tracking.delivered.timestamp': { $gte: start, $lte: end } }
         ]
       })
-      .populate('userId', 'name phone email')
-      .lean();
+        .populate('userId', 'name phone email')
+        .lean();
 
       // If no orders found with deliveredAt/tracking, check by createdAt as last resort
       if (pastCycleOrders.length === 0) {
@@ -345,9 +266,9 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
           status: 'delivered',
           createdAt: { $gte: start, $lte: end }
         })
-        .populate('userId', 'name phone email')
-        .select('orderId userId items pricing payment status address createdAt deliveredAt tracking')
-        .lean();
+          .populate('userId', 'name phone email')
+          .select('orderId userId items pricing payment status address createdAt deliveredAt tracking')
+          .lean();
       }
 
       console.log(`📊 Finance API - Past cycle orders found: ${pastCycleOrders.length} for date range ${startDate} to ${endDate}`);
@@ -364,9 +285,9 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
           return order.userId.toString();
         }
       }).filter(Boolean))];
-      
+
       console.log(`📋 Found ${pastUserIds.length} unique user IDs for past cycle:`, pastUserIds);
-      
+
       // Fetch user data in bulk for past cycle
       let pastUsersMap = {};
       if (pastUserIds.length > 0) {
@@ -386,27 +307,23 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
       }
 
       let pastCycleTotal = 0;
-      let pastCycleCommission = 0;
       const pastCycleOrdersData = await Promise.all(pastCycleOrders.map(async (order) => {
-        // Food price = subtotal - discount (this is what commission is calculated on)
         const foodPrice = (order.pricing?.subtotal || 0) - (order.pricing?.discount || 0);
-        const commissionData = calculateCommissionForOrder(foodPrice);
-        const payout = foodPrice - commissionData.commission;
-        
-        pastCycleTotal += foodPrice; // Use food price, not total
-        pastCycleCommission += commissionData.commission;
+        const payout = foodPrice;
+
+        pastCycleTotal += foodPrice;
 
         // Get food names from order items
         const foodNames = (order.items || []).map(item => item.name).join(', ') || 'N/A';
-        
+
         // Handle userId - can be ObjectId or populated object
         let customerName = 'N/A';
         let customerPhone = 'N/A';
         let customerEmail = 'N/A';
-        
+
         if (order.userId) {
           let userIdStr = null;
-          
+
           // Check if populated (has _id property or name property)
           if (typeof order.userId === 'object' && (order.userId.name || order.userId._id)) {
             // Populated user object
@@ -430,7 +347,7 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
         } else {
           console.log(`⚠️ No userId found for order: ${order.orderId}`);
         }
-        
+
         // Format payment method
         let paymentMethod = 'N/A';
         if (order.payment && order.payment.method) {
@@ -439,7 +356,7 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
         } else {
           console.log(`⚠️ No payment method found for past order: ${order.orderId}, payment object:`, order.payment);
         }
-        
+
         // Format order status
         let orderStatus = 'N/A';
         if (order.status) {
@@ -448,12 +365,12 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
         } else {
           console.log(`⚠️ No status found for past order: ${order.orderId}`);
         }
-        
+
         return {
           orderId: order.orderId || order._id?.toString() || 'N/A',
           orderTotal: foodPrice, // Food price (subtotal - discount) for display
           totalAmount: order.pricing?.total || 0, // Total order amount paid by customer
-          commission: commissionData.commission,
+          commission: 0,
           payout,
           deliveredAt: order.deliveredAt || order.createdAt,
           createdAt: order.createdAt,
@@ -464,9 +381,9 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
           customerEmail: customerEmail,
           paymentMethod: paymentMethod,
           orderStatus: orderStatus,
-        address: order.address || {}
-      };
-    }));
+          address: order.address || {}
+        };
+      }));
 
       pastCyclesData = {
         dateRange: {
@@ -475,14 +392,14 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
         },
         totalOrders: pastCycleOrders.length,
         totalOrderValue: Math.round(pastCycleTotal * 100) / 100,
-        totalCommission: Math.round(pastCycleCommission * 100) / 100,
-        estimatedPayout: Math.round((pastCycleTotal - pastCycleCommission) * 100) / 100,
+        totalCommission: 0,
+        estimatedPayout: Math.round(pastCycleTotal * 100) / 100,
         orders: pastCycleOrdersData
       };
     }
 
-    // Calculate current cycle payout (total - commission)
-    const currentCyclePayout = Math.round((currentCycleTotal - currentCycleCommission) * 100) / 100;
+    // Calculate current cycle payout (full food price, no commission deduction)
+    const currentCyclePayout = Math.round(currentCycleTotal * 100) / 100;
 
     // Get all withdrawal requests (pending + approved) to subtract from estimatedPayout
     // This ensures that once a withdrawal is made, it's immediately reflected in the available balance
@@ -492,11 +409,11 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
     }).lean();
 
     const totalWithdrawals = allWithdrawals.reduce((sum, req) => sum + (req.amount || 0), 0);
-    
+
     // Subtract all withdrawals (pending + approved) from estimatedPayout to show available balance
     // This ensures end-to-end withdrawal calculation works correctly
     const availablePayout = Math.max(0, Math.round((currentCyclePayout - totalWithdrawals) * 100) / 100);
-    
+
     console.log('💰 Finance Calculation:', {
       currentCyclePayout,
       totalWithdrawals,
@@ -511,7 +428,7 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
         end: currentCycleEndFormatted,
         totalOrders: currentCycleOrders.length,
         totalOrderValue: Math.round(currentCycleTotal * 100) / 100,
-        totalCommission: Math.round(currentCycleCommission * 100) / 100,
+        totalCommission: 0,
         estimatedPayout: availablePayout, // Show available balance after pending withdrawals
         payoutDate: null, // Will be set when payout is processed
         orders: currentCycleOrdersData // Include orders array in response

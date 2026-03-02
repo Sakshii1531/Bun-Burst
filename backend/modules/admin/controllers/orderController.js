@@ -947,45 +947,27 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
     // Get total count
     const total = await Order.countDocuments(query);
 
-    // Calculate summary statistics
-    const AdminCommission = (await import('../models/AdminCommission.js')).default;
+    // Calculate summary statistics from OrderSettlement documents
+    const OrderSettlementModel = (await import('../../order/models/OrderSettlement.js')).default;
 
     // Build date query for summary stats
     const summaryDateQuery = {};
     if (fromDate || toDate) {
-      summaryDateQuery.orderDate = {};
+      summaryDateQuery.createdAt = {};
       if (fromDate) {
         const startDate = new Date(fromDate);
         startDate.setHours(0, 0, 0, 0);
-        summaryDateQuery.orderDate.$gte = startDate;
+        summaryDateQuery.createdAt.$gte = startDate;
       }
       if (toDate) {
         const endDate = new Date(toDate);
         endDate.setHours(23, 59, 59, 999);
-        summaryDateQuery.orderDate.$lte = endDate;
-      }
-    }
-
-    // Build restaurant filter for summary
-    let summaryRestaurantQuery = {};
-    if (restaurant && restaurant !== 'All restaurants') {
-      const Restaurant = (await import('../../restaurant/models/Restaurant.js')).default;
-      const restaurantDoc = await Restaurant.findOne({
-        $or: [
-          { name: { $regex: restaurant, $options: 'i' } },
-          { _id: mongoose.Types.ObjectId.isValid(restaurant) ? restaurant : null },
-          { restaurantId: restaurant }
-        ]
-      }).select('_id restaurantId').lean();
-
-      if (restaurantDoc) {
-        summaryRestaurantQuery.restaurantId = restaurantDoc._id || restaurantDoc.restaurantId;
+        summaryDateQuery.createdAt.$lte = endDate;
       }
     }
 
     // Get all orders for summary calculation (without pagination)
-    const summaryQuery = { ...query };
-    const allOrdersForSummary = await Order.find(summaryQuery)
+    const allOrdersForSummary = await Order.find(query)
       .populate('userId', 'name')
       .populate('restaurantId', 'name')
       .lean();
@@ -1006,26 +988,21 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
       sum + (order.pricing?.total || 0), 0
     );
 
-    // Get admin earning from AdminCommission
-    const adminCommissionQuery = {
-      status: 'completed',
-      ...summaryDateQuery,
-      ...summaryRestaurantQuery
-    };
-    const adminCommissions = await AdminCommission.find(adminCommissionQuery).lean();
-    const adminEarning = adminCommissions.reduce((sum, comm) => sum + (comm.commissionAmount || 0), 0);
+    // Get admin earning from OrderSettlement (platform fee + delivery fee + GST)
+    const settlementDocs = await OrderSettlementModel.find({
+      settlementStatus: { $in: ['completed', 'pending'] },
+      ...summaryDateQuery
+    }).lean();
+    const adminEarning = settlementDocs.reduce((sum, s) =>
+      sum + (s.adminEarning?.totalEarning || 0), 0
+    );
+    const restaurantEarning = settlementDocs.reduce((sum, s) =>
+      sum + (s.restaurantEarning?.netEarning || 0), 0
+    );
 
-    // Calculate restaurant earning (order total - admin commission - delivery commission)
-    // For simplicity, we'll use restaurantEarning from AdminCommission if available
-    const restaurantEarning = adminCommissions.reduce((sum, comm) => sum + (comm.restaurantEarning || 0), 0);
-
-    // Calculate deliveryman earning (from delivery commissions)
-    // This would need to be calculated from delivery wallet transactions or order assignment info
-    // For now, we'll estimate based on delivery fee or use a placeholder
+    // Deliveryman earning
     const deliverymanEarning = completedOrders.reduce((sum, order) => {
-      // Delivery commission is typically calculated from distance
-      // For now, we'll use a simple estimate or fetch from delivery wallet
-      return sum + (order.pricing?.deliveryFee || 0) * 0.8; // Estimate 80% of delivery fee goes to deliveryman
+      return sum + (order.pricing?.deliveryFee || 0) * 0.8;
     }, 0);
 
     // Transform orders to match frontend format
@@ -1111,7 +1088,6 @@ export const getRestaurantReport = asyncHandler(async (req, res) => {
     console.log('📋 Query params:', { zone, all, type, time, search });
 
     const Restaurant = (await import('../../restaurant/models/Restaurant.js')).default;
-    const AdminCommission = (await import('../models/AdminCommission.js')).default;
     const FeedbackExperience = (await import('../models/FeedbackExperience.js')).default;
 
     // Build restaurant query
@@ -1125,7 +1101,6 @@ export const getRestaurantReport = asyncHandler(async (req, res) => {
       }).select('_id name').lean();
 
       if (zoneDoc) {
-        // Find restaurants in this zone by checking orders with this zoneId
         const ordersInZone = await Order.find({
           'assignmentInfo.zoneId': zoneDoc._id?.toString()
         }).distinct('restaurantId').lean();
@@ -1136,15 +1111,9 @@ export const getRestaurantReport = asyncHandler(async (req, res) => {
             { restaurantId: { $in: ordersInZone } }
           ];
         } else {
-          // No restaurants found in this zone
           return successResponse(res, 200, 'Restaurant report retrieved successfully', {
             restaurants: [],
-            pagination: {
-              page: 1,
-              limit: 1000,
-              total: 0,
-              pages: 0
-            }
+            pagination: { page: 1, limit: 1000, total: 0, pages: 0 }
           });
         }
       }
@@ -1163,7 +1132,6 @@ export const getRestaurantReport = asyncHandler(async (req, res) => {
       ];
     }
 
-    // Get all restaurants matching the query
     const restaurants = await Restaurant.find(restaurantQuery)
       .select('_id restaurantId name profileImage rating totalRatings isActive')
       .lean();
@@ -1201,13 +1169,11 @@ export const getRestaurantReport = asyncHandler(async (req, res) => {
       }
     }
 
-    // Process each restaurant
     const restaurantReports = await Promise.all(
       restaurants.map(async (restaurant) => {
         const restaurantId = restaurant._id?.toString();
         const restaurantIdField = restaurant.restaurantId;
 
-        // Build order query for this restaurant
         const orderQuery = {
           ...dateQuery,
           $or: [
@@ -1216,60 +1182,30 @@ export const getRestaurantReport = asyncHandler(async (req, res) => {
           ]
         };
 
-        // Get orders for this restaurant
         const orders = await Order.find(orderQuery).lean();
 
-        // Calculate statistics
         const totalOrder = orders.length;
+        const totalOrderAmount = orders.reduce((sum, order) => sum + (order.pricing?.total || 0), 0);
+        const totalDiscountGiven = orders.reduce((sum, order) => sum + (order.pricing?.discount || 0), 0);
+        const totalVATTAX = orders.reduce((sum, order) => sum + (order.pricing?.tax || 0), 0);
 
-        // Total order amount
-        const totalOrderAmount = orders.reduce((sum, order) =>
-          sum + (order.pricing?.total || 0), 0
-        );
-
-        // Total discount given
-        const totalDiscountGiven = orders.reduce((sum, order) =>
-          sum + (order.pricing?.discount || 0), 0
-        );
-
-        // Total VAT/TAX
-        const totalVATTAX = orders.reduce((sum, order) =>
-          sum + (order.pricing?.tax || 0), 0
-        );
-
-        // Get unique food items (count distinct itemIds from all orders)
         const uniqueItemIds = new Set();
         orders.forEach(order => {
           if (order.items && Array.isArray(order.items)) {
             order.items.forEach(item => {
-              if (item.itemId) {
-                uniqueItemIds.add(item.itemId);
-              }
+              if (item.itemId) uniqueItemIds.add(item.itemId);
             });
           }
         });
         const totalFood = uniqueItemIds.size;
 
-        // Get admin commission for this restaurant
+        // No commission system — admin commission is 0
+        const totalAdminCommission = 0;
+
         const restaurantObjectId = restaurant._id instanceof mongoose.Types.ObjectId
           ? restaurant._id
           : new mongoose.Types.ObjectId(restaurant._id);
 
-        const commissionQuery = {
-          restaurantId: restaurantObjectId,
-          status: 'completed'
-        };
-
-        if (dateQuery.createdAt) {
-          commissionQuery.orderDate = dateQuery.createdAt;
-        }
-
-        const commissions = await AdminCommission.find(commissionQuery).lean();
-        const totalAdminCommission = commissions.reduce((sum, comm) =>
-          sum + (comm.commissionAmount || 0), 0
-        );
-
-        // Get ratings from FeedbackExperience
         const ratingStats = await FeedbackExperience.aggregate([
           {
             $match: {
@@ -1289,13 +1225,12 @@ export const getRestaurantReport = asyncHandler(async (req, res) => {
         const averageRatings = ratingStats[0]?.averageRating || restaurant.rating || 0;
         const reviews = ratingStats[0]?.totalRatings || restaurant.totalRatings || 0;
 
-        // Format currency values
         const formatCurrency = (amount) => {
           return `₹${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         };
 
         return {
-          sl: 0, // Will be set in frontend
+          sl: 0,
           id: restaurantId,
           restaurantName: restaurant.name,
           icon: restaurant.profileImage?.url || restaurant.profileImage || null,
@@ -1311,22 +1246,13 @@ export const getRestaurantReport = asyncHandler(async (req, res) => {
       })
     );
 
-    // Filter by type (Commission/Subscription) if needed
     let filteredReports = restaurantReports;
     if (type && type !== 'All types') {
-      // This would require checking restaurant subscription status
-      // For now, we'll return all restaurants
-      // You can add subscription filtering logic here if needed
+      // Subscription filtering can be added here if needed
     }
 
-    // Sort by restaurant name
     filteredReports.sort((a, b) => a.restaurantName.localeCompare(b.restaurantName));
-
-    // Add serial numbers
-    filteredReports = filteredReports.map((report, index) => ({
-      ...report,
-      sl: index + 1
-    }));
+    filteredReports = filteredReports.map((report, index) => ({ ...report, sl: index + 1 }));
 
     return successResponse(res, 200, 'Restaurant report retrieved successfully', {
       restaurants: filteredReports,
