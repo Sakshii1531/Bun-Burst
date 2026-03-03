@@ -23,17 +23,11 @@ const transactionSchema = new mongoose.Schema({
   },
   orderId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Order',
-    sparse: true
+    ref: 'Order'
   },
   restaurantId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Restaurant',
-    sparse: true
-  },
-  metadata: {
-    type: Map,
-    of: mongoose.Schema.Types.Mixed
+    ref: 'Restaurant'
   },
   processedAt: {
     type: Date,

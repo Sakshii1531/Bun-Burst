@@ -77,11 +77,10 @@ const deliverySupportTicketSchema = new mongoose.Schema(
 );
 
 // Indexes
-deliverySupportTicketSchema.index({ deliveryId: 1 });
 deliverySupportTicketSchema.index({ status: 1 });
 deliverySupportTicketSchema.index({ priority: 1 });
 deliverySupportTicketSchema.index({ createdAt: -1 });
-deliverySupportTicketSchema.index({ ticketId: 1 });
+
 
 // Generate unique ticket ID before saving
 deliverySupportTicketSchema.pre('save', async function(next) {
