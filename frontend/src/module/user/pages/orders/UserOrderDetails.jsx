@@ -657,16 +657,3 @@ export default function UserOrderDetails() {
                 ? orderMongoId.toString()
                 : String(orderMongoId)
 
-              console.log("Navigating to complaint page with orderId:", orderIdString)
-              navigate(`/user/complaints/submit/${encodeURIComponent(orderIdString)}`)
-            }}
-            className="w-full bg-orange-50 border border-orange-200 text-orange-700 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-orange-100 transition-colors"
-          >
-            <FileText className="w-4 h-4" />
-            Restaurant Complaint
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}

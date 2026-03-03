@@ -91,7 +91,6 @@ export function initializeFirebaseRealtime() {
     }
 
     realtimeDb = getDatabase(admin.app());
-    console.log('✅ Firebase Realtime Database initialized');
     return realtimeDb;
   } catch (error) {
     console.error(`❌ Firebase Realtime Database initialization failed: ${error.message}`);

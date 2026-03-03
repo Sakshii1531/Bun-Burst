@@ -258,14 +258,3 @@ export default function RatingsReviews() {
           <button
             onClick={() => {
               setShowNotHelpfulPopup(false)
-              console.log("Contact support")
-            }}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
-            Contact Support
-          </button>
-        </div>
-      </BottomPopup>
-    </div>
-  )
-}

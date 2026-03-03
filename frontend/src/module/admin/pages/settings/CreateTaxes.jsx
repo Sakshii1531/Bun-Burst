@@ -32,7 +32,6 @@ export default function CreateTaxes() {
       alert("No data to export");
       return;
     }
-    console.log(`Exporting as ${format}`, filtered);
   };
 
   const toggleColumn = (columnKey) => {

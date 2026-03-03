@@ -155,21 +155,3 @@ export default function UpdateReplyPage() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4 z-50 md:relative md:border-t-0 md:px-4 md:py-4 md:mt-6">
         <Button
           onClick={() => {
-            console.log("Update reply:", { reviewId: id, reply: replyText })
-            // Navigate back to reviews list after update
-            navigate("/restaurant/reviews")
-          }}
-          className="w-full bg-[#ff8100] hover:bg-[#e67300] text-white font-semibold py-3 rounded-lg"
-        >
-          Update Review
-        </Button>
-      </div>
-
-      {/* Bottom Navigation Bar - Hidden on this page to avoid overlap */}
-      <div className="hidden md:block">
-        <BottomNavbar />
-      </div>
-    </div>
-  )
-}
-

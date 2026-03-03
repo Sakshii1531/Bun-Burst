@@ -137,7 +137,6 @@ export default function LandingPageSettings({ type = "admin" }) {
 
   const handleSave = () => {
     // Handle save logic here
-    console.log("Saving...");
   };
 
   if (isAdmin) {

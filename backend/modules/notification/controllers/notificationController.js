@@ -28,12 +28,6 @@ export const saveUserFcmToken = async (req, res) => {
       { new: true, projection: { fcmTokenWeb: 1, fcmTokenMobile: 1 } }
     ).lean();
 
-    console.log('[Push] Saved user token', {
-      userId: req.user?._id?.toString(),
-      platform,
-      field,
-      tokenPreview: `${token.trim().slice(0, 12)}...`
-    });
 
     return successResponse(res, 200, 'User FCM token saved successfully', {
       platform,
@@ -62,12 +56,6 @@ export const saveDeliveryFcmToken = async (req, res) => {
       { new: true, projection: { fcmTokenWeb: 1, fcmTokenMobile: 1 } }
     ).lean();
 
-    console.log('[Push] Saved delivery token', {
-      deliveryId: req.delivery?._id?.toString(),
-      platform,
-      field,
-      tokenPreview: `${token.trim().slice(0, 12)}...`
-    });
 
     return successResponse(res, 200, 'Delivery FCM token saved successfully', {
       platform,
@@ -96,12 +84,6 @@ export const saveRestaurantFcmToken = async (req, res) => {
       { new: true, projection: { fcmTokenWeb: 1, fcmTokenMobile: 1 } }
     ).lean();
 
-    console.log('[Push] Saved restaurant token', {
-      restaurantId: req.restaurant?._id?.toString(),
-      platform,
-      field,
-      tokenPreview: `${token.trim().slice(0, 12)}...`
-    });
 
     return successResponse(res, 200, 'Restaurant FCM token saved successfully', {
       platform,

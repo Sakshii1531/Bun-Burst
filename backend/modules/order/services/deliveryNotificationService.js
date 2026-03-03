@@ -60,7 +60,6 @@ async function checkDeliveryPartnerConnection(deliveryPartnerId) {
 export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
   // CRITICAL: Don't notify if order is cancelled
   if (order.status === 'cancelled') {
-    console.log(`⚠️ Order ${order.orderId} is cancelled. Cannot notify delivery partner.`);
     return { success: false, reason: 'Order is cancelled' };
   }
   try {
@@ -69,10 +68,6 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
     if (isCashOrder) {
       const codEligibility = await canDeliveryPartnerTakeCodOrder(deliveryPartnerId);
       if (!codEligibility.allowed) {
-        console.log(
-          `🚫 Skipping COD notification for delivery partner ${deliveryPartnerId}. ` +
-          `availableCashLimit=₹${codEligibility.availableCashLimit.toFixed(2)}, cashInHand=₹${codEligibility.cashInHand.toFixed(2)}`
-        );
         return {
           success: false,
           reason: 'Cash limit reached for COD orders'
@@ -125,24 +120,14 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
       console.warn(`⚠️ Delivery partner ${deliveryPartnerId} (${deliveryPartner.name}) has no valid location.`);
     }
 
-    console.log(`📋 Delivery partner details:`, {
-      id: deliveryPartnerId,
-      name: deliveryPartner.name,
-      isOnline: deliveryPartner.availability?.isOnline,
-      isActive: deliveryPartner.isActive,
-      status: deliveryPartner.status,
-      hasLocation: !!deliveryPartner.availability?.currentLocation?.coordinates
-    });
 
     // Check if delivery partner is connected to socket BEFORE trying to notify
     const connectionStatus = await checkDeliveryPartnerConnection(deliveryPartnerId);
-    console.log(`🔌 Delivery partner socket connection status:`, connectionStatus);
 
     if (!connectionStatus.connected) {
       console.warn(`⚠️ Delivery partner ${deliveryPartnerId} (${deliveryPartner.name}) is NOT connected to socket!`);
       console.warn(`⚠️ Notification will be sent but may not be received until they reconnect.`);
     } else {
-      console.log(`✅ Delivery partner ${deliveryPartnerId} is connected via socket in room: ${connectionStatus.room}`);
     }
 
     // Get restaurant details for pickup location
@@ -234,7 +219,6 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
 
     // First, get all connected sockets in delivery namespace for debugging
     const allSockets = await deliveryNamespace.fetchSockets();
-    console.log(`📊 Total connected delivery sockets: ${allSockets.length}`);
 
     // Check each room variation
     for (const room of roomVariations) {
@@ -242,25 +226,17 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
       if (sockets.length > 0) {
         socketsInRoom = sockets;
         foundRoom = room;
-        console.log(`📢 Found ${sockets.length} socket(s) in room: ${room}`);
-        console.log(`📢 Socket IDs in room:`, sockets.map(s => s.id));
         break;
       } else {
         // Check room size using adapter (alternative method)
         const roomSize = deliveryNamespace.adapter.rooms.get(room)?.size || 0;
         if (roomSize > 0) {
-          console.log(`📢 Room ${room} has ${roomSize} socket(s) (checked via adapter)`);
         }
       }
     }
 
     const primaryRoom = roomVariations[0];
 
-    console.log(`📢 Attempting to notify delivery partner ${normalizedDeliveryPartnerId} about order ${order.orderId}`);
-    console.log(`📢 Delivery partner name: ${deliveryPartner.name}`);
-    console.log(`📢 Room variations to try:`, roomVariations);
-    console.log(`📢 Connected sockets in primary room ${primaryRoom}:`, socketsInRoom.length);
-    console.log(`📢 Found room:`, foundRoom || 'none');
 
     // Emit new order notification to all room variations (even if no sockets found, in case they connect)
     let notificationSent = false;
@@ -272,7 +248,6 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
         message: `New order assigned: ${order.orderId}`
       });
       notificationSent = true;
-      console.log(`📤 Emitted notification to room: ${room}`);
     });
 
     // Also emit to all sockets in the delivery namespace (fallback if no specific room found)
@@ -294,12 +269,9 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
       console.warn(`  5. Delivery partner ID mismatch (check if ID used to join room matches ${normalizedDeliveryPartnerId})`);
 
       if (allSockets.length > 0) {
-        console.log(`📊 Connected delivery socket IDs:`, allSockets.map(s => s.id));
-        console.log(`📊 Checking all delivery rooms to see which partners are connected...`);
 
         // List all rooms in delivery namespace
         const allRooms = deliveryNamespace.adapter.rooms;
-        console.log(`📊 All delivery rooms:`, Array.from(allRooms.keys()).filter(room => room.startsWith('delivery:')));
       } else {
         console.warn(`⚠️ No delivery partners are currently connected to the app!`);
       }
@@ -314,12 +286,9 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
       });
       notificationSent = true;
     } else {
-      console.log(`✅ Successfully found ${socketsInRoom.length} connected socket(s) for delivery partner ${normalizedDeliveryPartnerId}`);
-      console.log(`✅ Notification sent to room: ${foundRoom}`);
     }
 
     if (notificationSent) {
-      console.log(`✅ Notification emitted for order ${order.orderId} to delivery partner ${normalizedDeliveryPartnerId}`);
     } else {
       console.error(`❌ Failed to send notification - no sockets found and broadcast failed`);
     }
@@ -372,12 +341,10 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
 
       const skippedCount = deliveryPartnerIds.length - targetDeliveryPartnerIds.length;
       if (skippedCount > 0) {
-        console.log(`🚫 Skipped ${skippedCount} delivery partners for COD notification due to cash limit reached`);
       }
     }
 
     if (!targetDeliveryPartnerIds.length) {
-      console.log(`ℹ️ No eligible delivery partners for ${isCashOrder ? 'COD' : 'online'} notification on order ${order.orderId}`);
       return { success: true, notified: 0 };
     }
 
@@ -430,12 +397,6 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
     // Calculate delivery distance (restaurant to customer) for earnings calculation
     let deliveryDistance = 0;
 
-    console.log(`🔍 Calculating earnings for order ${orderWithUser.orderId}:`, {
-      hasRestaurantLocation: !!restaurantLocation,
-      restaurantCoords: restaurantLocation?.coordinates,
-      hasAddressLocation: !!orderWithUser.address?.location,
-      addressCoords: orderWithUser.address?.location?.coordinates
-    });
 
     if (restaurantLocation?.coordinates && orderWithUser.address?.location?.coordinates) {
       const [restaurantLng, restaurantLat] = restaurantLocation.coordinates;
@@ -454,7 +415,6 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
           Math.sin(dLng / 2) * Math.sin(dLng / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         deliveryDistance = R * c;
-        console.log(`✅ Calculated delivery distance: ${deliveryDistance.toFixed(2)} km`);
       } else {
         console.warn('⚠️ Invalid coordinates for distance calculation');
       }
@@ -505,16 +465,6 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
       fullOrder: orderWithUser
     };
 
-    console.log(`📤 Notification payload for order ${orderWithUser.orderId}:`, {
-      orderId: orderNotification.orderId,
-      estimatedEarnings: orderNotification.estimatedEarnings,
-      estimatedEarningsType: typeof orderNotification.estimatedEarnings,
-      estimatedEarningsValue: typeof orderNotification.estimatedEarnings === 'object' ? orderNotification.estimatedEarnings.totalEarning : orderNotification.estimatedEarnings,
-      deliveryDistance: orderNotification.deliveryDistance,
-      deliveryFee: orderNotification.deliveryFee,
-      hasRestaurantLocation: !!orderNotification.restaurantLocation,
-      hasCustomerLocation: !!orderNotification.customerLocation
-    });
 
     // Notify each delivery partner
     for (const deliveryPartnerId of targetDeliveryPartnerIds) {
@@ -541,7 +491,6 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
             });
             notificationSent = true;
             notifiedCount++;
-            console.log(`📤 Notified delivery partner ${normalizedId} in room: ${room} (phase: ${phase})`);
             break;
           }
         }
@@ -559,7 +508,6 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
       }
     }
 
-    console.log(`✅ Notified ${notifiedCount} delivery partners (phase: ${phase}) for order ${order.orderId}`);
     return { success: true, notified: notifiedCount };
   } catch (error) {
     console.error('❌ Error notifying multiple delivery boys:', error);
@@ -625,7 +573,6 @@ export async function notifyDeliveryBoyOrderReady(order, deliveryPartnerId) {
       // Send to specific delivery partner room
       deliveryNamespace.to(foundRoom).emit('order_ready', orderReadyNotification);
       notificationSent = true;
-      console.log(`✅ Order ready notification sent to delivery partner ${normalizedDeliveryPartnerId} in room ${foundRoom}`);
     } else {
       // Fallback: broadcast to all delivery sockets
       console.warn(`⚠️ Delivery partner ${normalizedDeliveryPartnerId} not found in any room, broadcasting to all`);
@@ -674,7 +621,6 @@ async function calculateEstimatedEarnings(deliveryDistance) {
 
     // If distance is 0 or not provided, still return base payout
     if (!deliveryDistance || deliveryDistance <= 0) {
-      console.log(`💰 Distance is 0 or missing, returning base payout only: ₹${commissionResult.breakdown.basePayout}`);
       return {
         basePayout: commissionResult.breakdown.basePayout,
         distance: 0,

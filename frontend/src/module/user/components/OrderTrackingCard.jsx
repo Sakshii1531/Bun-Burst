@@ -143,10 +143,6 @@ export default function OrderTrackingCard() {
   // Debug: Log when component renders
   useEffect(() => {
     if (activeOrder) {
-      console.log('🎯 OrderTrackingCard active:', {
-        restaurant: activeOrder.restaurant || activeOrder.restaurantName,
-        timeRemaining
-      });
     }
   }, [activeOrder, timeRemaining]);
 

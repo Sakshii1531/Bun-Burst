@@ -23,22 +23,7 @@ export default function TaxReport() {
 
   const handleSubmit = () => {
     // Handle form submission
-    console.log("Submitting tax report filters:", filters)
-  }
-
-  const handleExport = (format) => {
-    if (taxReportDummy.length === 0) {
-      alert("No data to export")
-      return
-    }
-    const headers = [
-      { key: "sl", label: "SI" },
-      { key: "incomeSource", label: "Income Source" },
-      { key: "totalIncome", label: "Total Income" },
-      { key: "totalTax", label: "Total Tax" },
-    ]
-    switch (format) {
-      case "csv": exportReportsToCSV(taxReportDummy, headers, "tax_report"); break
+ break
       case "excel": exportReportsToExcel(taxReportDummy, headers, "tax_report"); break
       case "pdf": exportReportsToPDF(taxReportDummy, headers, "tax_report", "Tax Report"); break
       case "json": exportReportsToJSON(taxReportDummy, "tax_report"); break

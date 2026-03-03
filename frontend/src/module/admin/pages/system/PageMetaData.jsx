@@ -79,29 +79,7 @@ export default function PageMetaDataPageMetaData() {
     if (!editingPage) return
     
     // In real app, this would save to API
-    console.log("Saving SEO data for:", editingPage.name, seoData)
-    alert(`SEO data saved successfully for ${editingPage.name}!`)
-    setIsEditDialogOpen(false)
-    setEditingPage(null)
-    setSeoData({
-      title: "",
-      description: "",
-      keywords: "",
-      metaTitle: "",
-      metaDescription: "",
-      ogTitle: "",
-      ogDescription: "",
-      ogImage: ""
-    })
-  }
-
-  const handleExport = (format) => {
-    if (filteredPages.length === 0) {
-      alert("No data to export")
-      return
-    }
-    switch (format) {
-      case "csv": exportSEOPagesToCSV(filteredPages); break
+ break
       case "excel": exportSEOPagesToExcel(filteredPages); break
       case "pdf": exportSEOPagesToPDF(filteredPages); break
       case "json": exportSEOPagesToJSON(filteredPages); break

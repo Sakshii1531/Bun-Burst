@@ -44,8 +44,6 @@ async function seed() {
   }
 
   await db.ref('/').update(updatePayload);
-  console.log(`Seed complete from ${inputPath}`);
-  console.log(`Updated keys: ${Object.keys(updatePayload).join(', ')}`);
   process.exit(0);
 }
 

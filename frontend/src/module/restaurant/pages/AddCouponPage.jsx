@@ -478,22 +478,3 @@ export default function AddCouponPage(props) {
         <Button
           onClick={() => {
             if (isEditMode) {
-              console.log("Update coupon:", { id: couponId, ...formData })
-            } else {
-              console.log("Add coupon:", formData)
-            }
-            // Navigate to coupon list after save
-            navigate("/restaurant/coupon")
-          }}
-          className="w-full bg-[#ff8100] hover:bg-[#e67300] text-white font-semibold py-3 rounded-lg"
-        >
-          {isEditMode ? "Update" : "Add"}
-        </Button>
-      </div>
-
-      {/* Bottom Navigation Bar */}
-      <BottomNavbar />
-    </div>
-  )
-}
-

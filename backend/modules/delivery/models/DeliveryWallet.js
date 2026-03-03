@@ -193,12 +193,6 @@ deliveryWalletSchema.methods.addTransaction = function(transactionData) {
       
       // Log bonus/earning_addon transaction for debugging
       if (transaction.type === 'bonus' || transaction.type === 'earning_addon') {
-        console.log(`💰 ${transaction.type.toUpperCase()} TRANSACTION ADDED:`, {
-          amount: transaction.amount,
-          oldBalance: oldBalance,
-          newBalance: this.totalBalance,
-          walletId: this._id
-        });
       }
       
       // If payment is collected (COD), add to cash in hand

@@ -18,33 +18,25 @@ if (!MONGODB_URI) {
 
 const checkZones = async () => {
     try {
-        console.log('🔌 Connecting to MongoDB...');
         await mongoose.connect(MONGODB_URI);
-        console.log('✅ Connected to MongoDB');
 
         const activeZones = await Zone.find({ isActive: true }).lean();
-        console.log(`Found ${activeZones.length} active zones.`);
 
         // Test Point for "Soham" restaurant (Indore)
         const testLat = 22.719568;
         const testLng = 75.857727;
 
-        console.log(`Testing point: Lat ${testLat}, Lng ${testLng}`);
 
         let restaurantInZone = false;
         let matchedZone = null;
 
         for (const zone of activeZones) {
-            console.log(`Checking Zone: ${zone.name} (${zone._id})`);
 
             if (!zone.coordinates || zone.coordinates.length < 3) {
-                console.log(`  Skipping zone ${zone.name}: Invalid coordinates`);
                 continue;
             }
 
-            console.log(`  Zone has ${zone.coordinates.length} coordinates.`);
             // Log all coordinates to verify format
-            console.log(`  All coordinates: ${JSON.stringify(zone.coordinates)}`);
 
             // Ray casting algorithm from orderController.js
             let inside = false;
@@ -59,7 +51,6 @@ const checkZones = async () => {
                 const yj = typeof coordJ === 'object' ? (coordJ.longitude ?? coordJ.lng) : null;
 
                 if (xi === null || yi === null || xj === null || yj === null) {
-                    console.log('  Invalid coordinate format found:', coordI);
                     continue;
                 }
 
@@ -68,7 +59,6 @@ const checkZones = async () => {
                 if (intersect) inside = !inside;
             }
 
-            console.log(`  Is inside: ${inside}`);
 
             if (inside) {
                 restaurantInZone = true;
@@ -78,16 +68,13 @@ const checkZones = async () => {
         }
 
         if (restaurantInZone) {
-            console.log(`✅ Success! Restaurant is in zone: ${matchedZone.name}`);
         } else {
-            console.log('❌ Failure! Restaurant is NOT in any active zone.');
         }
 
     } catch (error) {
         console.error('❌ Error checking zones:', error);
     } finally {
         await mongoose.disconnect();
-        console.log('🔌 Disconnected from MongoDB');
         process.exit(0);
     }
 };

@@ -184,168 +184,6 @@ function shouldAcceptLocation(position, lastValidLocation, lastLocationTime) {
   if (isFirstLocation) {
     // For first location, accept if accuracy < 1000m (very lenient)
     if (accuracy > 1000) {
-      console.log('🚫 First location rejected: accuracy extremely poor', { accuracy: accuracy.toFixed(2) + 'm' })
-      return false
-    }
-    console.log('✅ Accepting first location (will be used for admin map):', {
-      accuracy: accuracy.toFixed(2) + 'm',
-      lat: latitude,
-      lng: longitude
-    })
-    return true
-  }
-
-  // Filter 1: For subsequent locations, use relaxed accuracy threshold (200m instead of 30m)
-  // This allows GPS to work even in areas with poor signal
-  if (accuracy > 200) {
-    console.log('🚫 Location rejected: accuracy too poor', { accuracy: accuracy.toFixed(2) + 'm' })
-    return false
-  }
-
-  // Filter 2: Check distance jump and speed if we have previous location
-  if (lastValidLocation && lastLocationTime) {
-    const [prevLat, prevLng] = lastValidLocation
-    const distance = haversineDistance(prevLat, prevLng, latitude, longitude)
-    const timeDiff = (Date.now() - lastLocationTime) / 1000 // seconds
-
-    // Filter 2a: Ignore if distance jump > 50 meters within 2 seconds
-    if (distance > 50 && timeDiff < 2) {
-      console.log('🚫 Location rejected: distance jump too large', {
-        distance: distance.toFixed(2) + 'm',
-        timeDiff: timeDiff.toFixed(2) + 's'
-      })
-      return false
-    }
-
-    // Filter 2b: Ignore if calculated speed > 60 km/h (bike speed limit)
-    if (timeDiff > 0) {
-      const speedKmh = (distance / timeDiff) * 3.6 // Convert m/s to km/h
-      if (speedKmh > 60) {
-        console.log('🚫 Location rejected: speed too high', {
-          speed: speedKmh.toFixed(2) + ' km/h'
-        })
-        return false
-      }
-    }
-  }
-
-  return true
-}
-
-/**
- * Apply moving average smoothing on location history
- * @param {Array} locationHistory - Array of [lat, lng] coordinates
- * @returns {Array|null} Smoothed [lat, lng] or null if not enough points
- */
-function smoothLocation(locationHistory) {
-  if (locationHistory.length < 2) {
-    return locationHistory.length === 1 ? locationHistory[0] : null
-  }
-
-  // Use last 5 points for moving average
-  const pointsToUse = locationHistory.slice(-5)
-
-  // Calculate average latitude and longitude
-  const avgLat = pointsToUse.reduce((sum, point) => sum + point[0], 0) / pointsToUse.length
-  const avgLng = pointsToUse.reduce((sum, point) => sum + point[1], 0) / pointsToUse.length
-
-  return [avgLat, avgLng]
-}
-
-/**
- * Animate marker smoothly from current position to new position
- * @param {Object} marker - Google Maps Marker instance
- * @param {Object} newPosition - {lat, lng} new position
- * @param {number} duration - Animation duration in milliseconds (default 1500ms)
- * @param {React.RefObject} animationRef - Ref to store animation frame ID (from component)
- */
-function animateMarkerSmoothly(marker, newPosition, duration = 1500, animationRef) {
-  if (!marker || !newPosition) return
-
-  const currentPosition = marker.getPosition()
-  if (!currentPosition) {
-    // If no current position, set directly
-    marker.setPosition(newPosition)
-    return
-  }
-
-  const startLat = currentPosition.lat()
-  const startLng = currentPosition.lng()
-  const endLat = newPosition.lat
-  const endLng = newPosition.lng
-
-  // Cancel any ongoing animation (use ref if passed)
-  if (animationRef?.current) {
-    cancelAnimationFrame(animationRef.current)
-  }
-
-  const startTime = Date.now()
-  const startPos = { lat: startLat, lng: startLng }
-  const endPos = { lat: endLat, lng: endLng }
-
-  function animate() {
-    const elapsed = Date.now() - startTime
-    const progress = Math.min(elapsed / duration, 1)
-
-    // Linear easing
-    const currentLat = startPos.lat + (endPos.lat - startPos.lat) * progress
-    const currentLng = startPos.lng + (endPos.lng - startPos.lng) * progress
-
-    marker.setPosition({ lat: currentLat, lng: currentLng })
-
-    if (progress < 1) {
-      if (animationRef) animationRef.current = requestAnimationFrame(animate)
-    } else {
-      if (animationRef) animationRef.current = null
-    }
-  }
-
-  if (animationRef) animationRef.current = requestAnimationFrame(animate)
-}
-
-function toFiniteCoordinate(value) {
-  if (value === null || value === undefined || value === '') return null
-  const numericValue = typeof value === 'string' ? Number(value.trim()) : Number(value)
-  return Number.isFinite(numericValue) ? numericValue : null
-}
-
-function extractLatLng(location) {
-  if (!location || typeof location !== 'object') {
-    return { lat: null, lng: null }
-  }
-
-  if (Array.isArray(location.coordinates) && location.coordinates.length >= 2) {
-    const lngFromCoords = toFiniteCoordinate(location.coordinates[0])
-    const latFromCoords = toFiniteCoordinate(location.coordinates[1])
-    if (latFromCoords !== null && lngFromCoords !== null) {
-      return { lat: latFromCoords, lng: lngFromCoords }
-    }
-  }
-
-  const lat = toFiniteCoordinate(location.latitude ?? location.lat)
-  const lng = toFiniteCoordinate(location.longitude ?? location.lng)
-
-  if (lat !== null && lng !== null) {
-    return { lat, lng }
-  }
-
-  return { lat: null, lng: null }
-}
-
-function hasValidCoordinates(lat, lng) {
-  return toFiniteCoordinate(lat) !== null && toFiniteCoordinate(lng) !== null
-}
-
-export default function DeliveryHome() {
-  const companyName = useCompanyName()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [animationKey, setAnimationKey] = useState(0)
-
-  // Helper function to safely call preventDefault (handles passive event listeners)
-  // React's synthetic touch events are passive by default, so we check cancelable first
-  const safePreventDefault = (e) => {
-    if (!e) return;
 
     // Early return if event is not cancelable (passive listener)
     // This prevents the browser warning about calling preventDefault on passive listeners
@@ -736,110 +574,7 @@ export default function DeliveryHome() {
     const handleStorageChange = (e) => {
       if (e.key === LS_KEY && e.newValue != null) {
         const next = JSON.parse(e.newValue) === true
-        console.log('[DeliveryHome] Storage event - online status changed:', next)
-        setIsOnline(prev => {
-          // Only update if different to avoid unnecessary re-renders
-          if (prev !== next) {
-            console.log('[DeliveryHome] Updating isOnline state:', prev, '->', next)
-            return next
-          }
-          return prev
-        })
-      }
-    }
-
-    // Listen for storage events (cross-tab sync)
-    window.addEventListener('storage', handleStorageChange)
-
-    // Also listen for custom events (same-tab sync from FeedNavbar)
-    const handleCustomStorageChange = () => {
-      try {
-        const raw = localStorage.getItem(LS_KEY)
-        const next = raw ? JSON.parse(raw) === true : false
-        console.log('[DeliveryHome] Custom event - online status changed:', next)
-        setIsOnline(prev => {
-          if (prev !== next) {
-            console.log('[DeliveryHome] Updating isOnline state from custom event:', prev, '->', next)
-            return next
-          }
-          return prev
-        })
-      } catch (error) {
-        console.error('[DeliveryHome] Error reading online status:', error)
-      }
-    }
-
-    window.addEventListener('onlineStatusChanged', handleCustomStorageChange)
-
-    // Also poll localStorage periodically to catch any missed updates (fallback)
-    const pollInterval = setInterval(() => {
-      try {
-        const raw = localStorage.getItem(LS_KEY)
-        const next = raw ? JSON.parse(raw) === true : false
-        setIsOnline(prev => {
-          if (prev !== next) {
-            console.log('[DeliveryHome] Polling detected change:', prev, '->', next)
-            return next
-          }
-          return prev
-        })
-      } catch { }
-    }, 1000) // Check every second
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('onlineStatusChanged', handleCustomStorageChange)
-      clearInterval(pollInterval)
-    }
-  }, [])
-
-  // Calculate today's stats
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const todayDateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-
-  // Get today's gig (prioritize active, then booked)
-  const todayGig = bookedGigs.find(gig => gig.date === todayDateKey && gig.status === 'active') ||
-    bookedGigs.find(gig => gig.date === todayDateKey && gig.status === 'booked')
-
-  // Calculate login hours based on when gig started
-  const calculateLoginHours = () => {
-    if (!todayGig || todayGig.status !== 'active') return 0
-
-    const now = new Date()
-    let startTime = now
-
-    // Use startedAt if available, otherwise use gig start time
-    if (todayGig.startedAt) {
-      startTime = new Date(todayGig.startedAt)
-    } else if (todayGig.startTime) {
-      const [hours, minutes] = todayGig.startTime.split(':').map(Number)
-      startTime = new Date()
-      startTime.setHours(hours, minutes, 0, 0)
-      // If start time is in the future, use current time
-      if (startTime > now) {
-        startTime = now
-      }
-    }
-
-    const diffMs = now - startTime
-    const diffHours = diffMs / (1000 * 60 * 60)
-    return Math.max(0, diffHours)
-  }
-
-  const loginHours = calculateLoginHours()
-  const minimumHours = 2.67 // 2 hrs 40 mins = 2.67 hours
-  const progressPercentage = Math.min((loginHours / minimumHours) * 100, 100)
-
-  // Get today's progress from store
-  const { getTodayProgress, getDateData, hasDateData, updateTodayProgress } = useProgressStore()
-  const todayProgress = getTodayProgress()
-
-  // Check if store has data for today
-  const hasStoreDataForToday = hasDateData(today)
-  const todayData = hasStoreDataForToday ? getDateData(today) : null
-
-  // Calculate today's earnings (prefer store, then calculated; default to 0 so UI is not empty)
+ default to 0 so UI is not empty)
   const calculatedEarnings = calculatePeriodEarnings(walletState, 'today') || 0
   const todayEarnings = hasStoreDataForToday && todayData
     ? (todayData.earnings ?? calculatedEarnings)
@@ -909,143 +644,7 @@ export default function DeliveryHome() {
     const fetchActiveEarningAddons = async () => {
       try {
         const response = await deliveryAPI.getActiveEarningAddons()
-        console.log('Active earning addons response:', response?.data)
-
-        if (response?.data?.success && response?.data?.data?.activeOffers) {
-          const offers = response.data.data.activeOffers
-          console.log('Active offers found:', offers)
-
-          // Get the first valid active offer (prioritize isValid, then isUpcoming, then any active status)
-          const activeOffer = offers.find(offer => offer.isValid) ||
-            offers.find(offer => offer.isUpcoming) ||
-            offers.find(offer => offer.status === 'active') ||
-            offers[0] ||
-            null
-
-          console.log('Selected active offer:', activeOffer)
-          setActiveEarningAddon(activeOffer)
-        } else {
-          console.log('No active offers found in response')
-          setActiveEarningAddon(null)
-        }
-      } catch (error) {
-        // Suppress network errors - backend might be down or endpoint not available
-        if (error.code === 'ERR_NETWORK') {
-          // Silently handle network errors - backend might not be running
-          setActiveEarningAddon(null)
-          return
-        }
-
-        // Skip logging timeout errors (handled by axios interceptor)
-        if (error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-          // Only log non-network errors
-          if (error.response) {
-            console.error('Error fetching active earning addons:', error.response?.data || error.message)
-          }
-        }
-        setActiveEarningAddon(null)
-      }
-    }
-
-    // Fetch immediately on mount
-    fetchActiveEarningAddons()
-
-    // Refresh every 5 seconds to get latest offers
-    const refreshInterval = setInterval(() => {
-      fetchActiveEarningAddons()
-    }, 5000)
-
-    // Refresh when page becomes visible
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        fetchActiveEarningAddons()
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    // Also listen for focus events for instant refresh
-    const handleFocus = () => {
-      fetchActiveEarningAddons()
-    }
-    window.addEventListener('focus', handleFocus)
-
-    return () => {
-      clearInterval(refreshInterval)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('focus', handleFocus)
-    }
-  }, [])
-
-  // Calculate bonus earnings from earning_addon transactions (only for active offer)
-  const calculateBonusEarnings = () => {
-    if (!activeEarningAddon || !walletState?.transactions) return 0
-
-    const now = new Date()
-    const startDate = activeEarningAddon.startDate ? new Date(activeEarningAddon.startDate) : null
-    const endDate = activeEarningAddon.endDate ? new Date(activeEarningAddon.endDate) : null
-
-    return walletState.transactions
-      .filter(t => {
-        // Only count earning_addon type transactions
-        if (t.type !== 'earning_addon' || t.status !== 'Completed') return false
-
-        // Filter by date range if offer has dates
-        if (startDate || endDate) {
-          const transactionDate = t.date ? new Date(t.date) : (t.createdAt ? new Date(t.createdAt) : null)
-          if (!transactionDate) return false
-
-          if (startDate && transactionDate < startDate) return false
-          if (endDate && transactionDate > endDate) return false
-        }
-
-        // Check if transaction is related to current offer
-        if (t.metadata?.earningAddonId) {
-          return t.metadata.earningAddonId === activeEarningAddon._id?.toString() ||
-            t.metadata.earningAddonId === activeEarningAddon.id?.toString()
-        }
-
-        // If no metadata, include all earning_addon transactions in date range
-        return true
-      })
-      .reduce((sum, t) => sum + (t.amount || 0), 0)
-  }
-
-  // Earnings Guarantee - Use active earning addon if available, otherwise show 0
-  // When no offer is active, show 0 of 0 and ₹0
-  const earningsGuaranteeTarget = activeEarningAddon?.earningAmount || 0
-  const earningsGuaranteeOrdersTarget = activeEarningAddon?.requiredOrders || 0
-  // Only show current orders/earnings if there's an active offer
-  const earningsGuaranteeCurrentOrders = activeEarningAddon ? (activeEarningAddon.currentOrders ?? weeklyOrders) : 0
-  // Show only bonus earnings from the offer, not total weekly earnings
-  const earningsGuaranteeCurrentEarnings = activeEarningAddon ? calculateBonusEarnings() : 0
-  const ordersProgress = earningsGuaranteeOrdersTarget > 0
-    ? Math.min(earningsGuaranteeCurrentOrders / earningsGuaranteeOrdersTarget, 1)
-    : 0
-  const earningsProgress = earningsGuaranteeTarget > 0
-    ? Math.min(earningsGuaranteeCurrentEarnings / earningsGuaranteeTarget, 1)
-    : 0
-
-  // Get week end date for valid till - use offer end date if available
-  const getWeekEndDate = () => {
-    if (activeEarningAddon?.endDate) {
-      const endDate = new Date(activeEarningAddon.endDate)
-      const day = endDate.getDate()
-      const month = endDate.toLocaleString('en-US', { month: 'short' })
-      return `${day} ${month}`
-    }
-    const now = new Date()
-    const endOfWeek = new Date(now)
-    endOfWeek.setDate(now.getDate() - now.getDay() + 6) // End of week (Saturday)
-    const day = endOfWeek.getDate()
-    const month = endOfWeek.toLocaleString('en-US', { month: 'short' })
-    return `${day} ${month}`
-  }
-
-  const weekEndDate = getWeekEndDate()
-  // Offer is live if it's valid (started) or upcoming (not started yet but active)
-  const isOfferLive = activeEarningAddon?.isValid || activeEarningAddon?.isUpcoming || false
-
-  // Calculate total hours worked today (prefer store, then calculated; default to 0)
+ default to 0)
   const calculatedHours = bookedGigs
     .filter(gig => gig.date === todayDateKey)
     .reduce((total, gig) => total + (gig.totalHours || 0), 0)
@@ -1175,641 +774,6 @@ export default function DeliveryHome() {
   const playAlertSound = async () => {
     // Only play if user has interacted with the page (browser autoplay policy)
     if (!userInteractedRef.current) {
-      console.log('🔇 Audio playback skipped - user has not interacted with page yet')
-      return null
-    }
-
-    try {
-      // Get selected alert sound preference from localStorage
-      const selectedSound = localStorage.getItem('delivery_alert_sound') || 'zomato_tone'
-      const soundFile = selectedSound === 'original' ? originalSound : alertSound
-
-      console.log('🔊 Playing alert sound:', {
-        selectedSound,
-        soundType: selectedSound === 'original' ? 'Original' : 'Zomato Tone',
-        soundFile,
-        originalSoundPath: originalSound,
-        alertSoundPath: alertSound
-      })
-
-      // Verify sound file exists
-      if (!soundFile) {
-        console.error('❌ Sound file is undefined!', { selectedSound, soundFile })
-        return null
-      }
-
-      // Use selected sound file from assets
-      const audio = new Audio(soundFile)
-
-      // Add load event listener to verify file loads
-      audio.addEventListener('loadeddata', () => {
-        console.log('✅ Audio file loaded successfully:', soundFile)
-      })
-
-      audio.addEventListener('canplay', () => {
-        console.log('✅ Audio can play:', soundFile)
-      })
-
-      audio.volume = 1
-      audio.loop = true // Loop the sound
-
-      // Set up error handler
-      audio.addEventListener('error', (e) => {
-        console.error('Audio error:', e)
-        console.error('Audio error details:', {
-          code: audio.error?.code,
-          message: audio.error?.message
-        })
-      })
-
-      // Preload audio before playing
-      audio.preload = 'auto'
-
-      // Play the sound and wait for it to start
-      try {
-        // Wait for audio to be ready
-        await new Promise((resolve, reject) => {
-          audio.addEventListener('canplaythrough', resolve, { once: true })
-          audio.addEventListener('error', reject, { once: true })
-          audio.load()
-          // Timeout after 3 seconds
-          setTimeout(() => reject(new Error('Audio load timeout')), 3000)
-        })
-
-        const playPromise = audio.play()
-        if (playPromise !== undefined) {
-          await playPromise
-        }
-        console.log('✅ Alert sound started playing successfully', {
-          src: audio.src,
-          volume: audio.volume,
-          loop: audio.loop,
-          readyState: audio.readyState
-        })
-        return audio
-      } catch (playError) {
-        console.error('❌ Audio play error:', {
-          error: playError,
-          message: playError.message,
-          name: playError.name,
-          soundFile,
-          selectedSound,
-          audioReadyState: audio.readyState,
-          audioSrc: audio.src
-        })
-
-        // Don't log autoplay policy errors as they're expected before user interaction
-        if (!playError.message?.includes('user didn\'t interact') &&
-          !playError.name?.includes('NotAllowedError') &&
-          !playError.message?.includes('timeout')) {
-          console.error('❌ Could not play alert sound:', playError)
-        }
-
-        // Try to load and play again
-        try {
-          audio.load()
-          await new Promise((resolve) => setTimeout(resolve, 100)) // Small delay
-          const playPromise = audio.play()
-          if (playPromise !== undefined) {
-            await playPromise
-          }
-          console.log('✅ Alert sound started playing after retry')
-          return audio
-        } catch (retryError) {
-          // Don't log autoplay policy errors
-          if (!retryError.message?.includes('user didn\'t interact') &&
-            !retryError.name?.includes('NotAllowedError')) {
-            console.error('❌ Could not play alert sound after retry:', retryError)
-          }
-          return null
-        }
-      }
-    } catch (error) {
-      console.error('❌ Could not create audio:', error)
-      return null
-    }
-  }
-
-  // Auto-show disabled - Only real orders from Socket.IO will show
-  // Removed mock restaurant auto-show logic
-
-  // Countdown timer for new order popup
-  useEffect(() => {
-    if (showNewOrderPopup && countdownSeconds > 0) {
-      countdownTimerRef.current = setInterval(() => {
-        setCountdownSeconds((prev) => {
-          if (prev <= 1) {
-            // Stop audio when countdown reaches 0
-            if (alertAudioRef.current) {
-              alertAudioRef.current.pause()
-              alertAudioRef.current.currentTime = 0
-              alertAudioRef.current = null
-              console.log('[NewOrder] 🔇 Audio stopped (countdown ended)')
-            }
-            // Auto-close when countdown reaches 0
-            setShowNewOrderPopup(false)
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    } else {
-      if (countdownTimerRef.current) {
-        clearInterval(countdownTimerRef.current)
-        countdownTimerRef.current = null
-      }
-    }
-
-    return () => {
-      // Only clear the timer, don't stop audio here
-      // Audio will be stopped by the popup close useEffect
-      if (countdownTimerRef.current) {
-        clearInterval(countdownTimerRef.current)
-        countdownTimerRef.current = null
-      }
-    }
-  }, [showNewOrderPopup, countdownSeconds])
-
-  // Play audio when New Order popup appears (only for real orders from Socket.IO)
-  useEffect(() => {
-    if (showNewOrderPopup && (newOrder || selectedRestaurant)) {
-      // Stop any existing audio first
-      if (alertAudioRef.current) {
-        alertAudioRef.current.pause()
-        alertAudioRef.current.currentTime = 0
-        alertAudioRef.current = null
-      }
-
-      // Play alert sound when popup appears
-      const playAudio = async () => {
-        try {
-          // Check localStorage preference
-          const currentPreference = localStorage.getItem('delivery_alert_sound') || 'zomato_tone'
-          console.log('[NewOrder] 🎵 Attempting to play audio...', {
-            preference: currentPreference,
-            willUse: currentPreference === 'original' ? 'original.mp3' : 'alert.mp3'
-          })
-          const audio = await playAlertSound()
-          if (audio) {
-            alertAudioRef.current = audio
-            console.log('[NewOrder] 🔊 Audio started playing, looping:', audio.loop)
-
-            // Verify audio is actually playing and ensure it loops
-            audio.addEventListener('playing', () => {
-              console.log('[NewOrder] ✅ Audio is now playing')
-            })
-
-            // Manually restart if loop doesn't work
-            audio.addEventListener('ended', () => {
-              console.log('[NewOrder] 🔄 Audio ended, restarting...')
-              if (showNewOrderPopup && alertAudioRef.current === audio) {
-                audio.currentTime = 0
-                audio.play().catch(err => {
-                  console.error('[NewOrder] ❌ Failed to restart audio:', err)
-                })
-              }
-            })
-
-            audio.addEventListener('error', (e) => {
-              console.error('[NewOrder] ❌ Audio error:', e)
-            })
-
-            // Double-check loop is enabled
-            if (!audio.loop) {
-              audio.loop = true
-              console.log('[NewOrder] 🔧 Loop was false, enabled it')
-            }
-          } else {
-            console.log('[NewOrder] ⚠️ playAlertSound returned null')
-          }
-        } catch (error) {
-          console.error('[NewOrder] ⚠️ Audio failed to play:', error)
-        }
-      }
-
-      // Small delay to ensure popup is fully rendered
-      const timeoutId = setTimeout(() => {
-        playAudio()
-      }, 100)
-
-      return () => {
-        clearTimeout(timeoutId)
-      }
-    } else {
-      // Stop audio when popup closes
-      if (alertAudioRef.current) {
-        console.log('[NewOrder] 🔇 Stopping audio (popup closed)')
-        alertAudioRef.current.pause()
-        alertAudioRef.current.currentTime = 0
-        alertAudioRef.current = null
-      }
-    }
-  }, [showNewOrderPopup, selectedRestaurant])
-
-  // Reset countdown when popup closes
-  useEffect(() => {
-    if (!showNewOrderPopup) {
-      setCountdownSeconds(300)
-    }
-  }, [showNewOrderPopup])
-
-  // Simulate audio playback for Earnings Guarantee
-  useEffect(() => {
-    if (earningsGuaranteeIsPlaying) {
-      // Simulate audio time progression
-      let time = 0
-      const interval = setInterval(() => {
-        time += 1
-        const minutes = Math.floor(time / 60)
-        const seconds = time % 60
-        setEarningsGuaranteeAudioTime(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`)
-
-        // Stop after 10 seconds (simulating audio length)
-        if (time >= 10) {
-          setEarningsGuaranteeIsPlaying(false)
-          clearInterval(interval)
-        }
-      }, 1000)
-
-      return () => clearInterval(interval)
-    }
-  }, [earningsGuaranteeIsPlaying])
-
-  const toggleEarningsGuaranteeAudio = () => {
-    setEarningsGuaranteeIsPlaying(!earningsGuaranteeIsPlaying)
-  }
-
-  // Reject reasons for order cancellation
-  const rejectReasons = [
-    "Too far from current location",
-    "Vehicle issue",
-    "Personal emergency",
-    "Weather conditions",
-    "Already have too many orders",
-    "Other reason"
-  ]
-
-  // Handle reject order
-  const handleRejectClick = () => {
-    setShowRejectPopup(true)
-  }
-
-  const handleRejectConfirm = () => {
-    if (alertAudioRef.current) {
-      alertAudioRef.current.pause()
-      alertAudioRef.current.currentTime = 0
-    }
-    setShowRejectPopup(false)
-    setShowNewOrderPopup(false)
-    setIsNewOrderPopupMinimized(false) // Reset minimized state
-    setNewOrderDragY(0) // Reset drag position
-    setRejectReason("")
-    setCountdownSeconds(300)
-    // Here you would typically send the rejection to your backend
-    console.log("Order rejected with reason:", rejectReason)
-  }
-
-  const handleRejectCancel = () => {
-    setShowRejectPopup(false)
-    setRejectReason("")
-  }
-
-  // Reset popup state on page load/refresh - ensure no popup shows on refresh
-  useEffect(() => {
-    // Clear any popup state on mount
-    setShowNewOrderPopup(false)
-    setSelectedRestaurant(null)
-    setHasAutoShown(false)
-    setCountdownSeconds(300)
-
-    // Clear any timers
-    if (autoShowTimerRef.current) {
-      clearTimeout(autoShowTimerRef.current)
-      autoShowTimerRef.current = null
-    }
-    if (countdownTimerRef.current) {
-      clearInterval(countdownTimerRef.current)
-      countdownTimerRef.current = null
-    }
-
-    // Stop and cleanup audio
-    if (alertAudioRef.current) {
-      alertAudioRef.current.pause()
-      alertAudioRef.current.currentTime = 0
-      alertAudioRef.current = null
-    }
-  }, []) // Only run on mount
-
-  // Get rider location - App open होते ही location fetch करें
-  useEffect(() => {
-    // First, check if we have saved location in localStorage (for refresh handling)
-    const savedLocation = localStorage.getItem('deliveryBoyLastLocation')
-    if (savedLocation) {
-      try {
-        const parsed = JSON.parse(savedLocation)
-        if (parsed && Array.isArray(parsed) && parsed.length === 2) {
-          const [lat, lng] = parsed
-
-          // Validate saved coordinates
-          if (typeof lat === 'number' && typeof lng === 'number' &&
-            lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-            // Check if coordinates might be swapped (common issue)
-            // If lat > 90 or lng > 180, they're definitely swapped
-            // If lat is in lng range (68-98 for India) and lng is in lat range (8-38), they might be swapped
-            const mightBeSwapped = (lat >= 68 && lat <= 98 && lng >= 8 && lng <= 38)
-
-            if (mightBeSwapped) {
-              console.warn('⚠️ Saved coordinates might be swapped - correcting:', {
-                original: [lat, lng],
-                corrected: [lng, lat],
-                note: 'Swapping lat/lng based on India coordinate ranges'
-              })
-              // Swap coordinates
-              const correctedLocation = [lng, lat]
-              setRiderLocation(correctedLocation)
-              lastLocationRef.current = correctedLocation
-              routeHistoryRef.current = [{
-                lat: correctedLocation[0],
-                lng: correctedLocation[1]
-              }]
-              // Update localStorage with corrected coordinates
-              localStorage.setItem('deliveryBoyLastLocation', JSON.stringify(correctedLocation))
-              console.log('✅ Corrected and saved location:', correctedLocation)
-            } else {
-              setRiderLocation(parsed)
-              lastLocationRef.current = parsed
-              routeHistoryRef.current = [{
-                lat: parsed[0],
-                lng: parsed[1]
-              }]
-              console.log('📍 Restored location from localStorage:', {
-                location: parsed,
-                format: "[lat, lng]",
-                validated: true
-              })
-            }
-          } else {
-            console.warn('⚠️ Invalid saved coordinates in localStorage:', parsed)
-          }
-        }
-      } catch (e) {
-        console.warn('⚠️ Error parsing saved location:', e)
-      }
-    }
-
-    if (navigator.geolocation) {
-      // Get current position first - App open होते ही location लें
-      console.log('📍 Fetching current location on app open...')
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          // Validate coordinates
-          const latitude = position.coords.latitude
-          const longitude = position.coords.longitude
-          const accuracy = position.coords.accuracy || 0
-
-          // Validate coordinates are valid numbers
-          if (typeof latitude !== 'number' || typeof longitude !== 'number' ||
-            isNaN(latitude) || isNaN(longitude) ||
-            latitude < -90 || latitude > 90 ||
-            longitude < -180 || longitude > 180) {
-            console.warn("⚠️ Invalid coordinates received:", { latitude, longitude })
-            // Don't use default location - keep trying or use saved location
-            // Retry after a delay
-            setTimeout(() => {
-              if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                  (pos) => {
-                    const lat = pos.coords.latitude
-                    const lng = pos.coords.longitude
-                    if (typeof lat === 'number' && typeof lng === 'number' &&
-                      !isNaN(lat) && !isNaN(lng) &&
-                      lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                      setRiderLocation([lat, lng])
-                      lastLocationRef.current = [lat, lng]
-                    }
-                  },
-                  (err) => console.warn("⚠️ Retry failed:", err),
-                  { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                )
-              }
-            }, 2000)
-            return
-          }
-
-          // Check for coordinate swap (common issue: lat/lng swapped)
-          // India coordinates: lat ~8-37, lng ~68-97
-          if ((latitude > 90 || latitude < -90) || (longitude > 180 || longitude < -180)) {
-            console.error("❌ Coordinates out of valid range - possible swap:", { latitude, longitude })
-            // Don't use default location - retry
-            setTimeout(() => {
-              if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                  (pos) => {
-                    const lat = pos.coords.latitude
-                    const lng = pos.coords.longitude
-                    if (typeof lat === 'number' && typeof lng === 'number' &&
-                      !isNaN(lat) && !isNaN(lng) &&
-                      lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                      setRiderLocation([lat, lng])
-                      lastLocationRef.current = [lat, lng]
-                    }
-                  },
-                  (err) => console.warn("⚠️ Retry failed:", err),
-                  { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                )
-              }
-            }, 2000)
-            return
-          }
-
-          // Validate coordinates are reasonable for India (basic sanity check)
-          // India: Latitude 8.4° to 37.6°, Longitude 68.7° to 97.25°
-          const isInIndiaRange = latitude >= 8 && latitude <= 38 && longitude >= 68 && longitude <= 98
-          if (!isInIndiaRange) {
-            console.warn("⚠️ Coordinates outside India range - might be incorrect:", {
-              latitude,
-              longitude,
-              note: "India range: lat 8-38, lng 68-98"
-            })
-            // Still use the location but log warning
-          }
-
-          // Apply stable tracking filter
-          const shouldAccept = shouldAcceptLocation(
-            position,
-            lastValidLocationRef.current,
-            lastLocationTimeRef.current
-          )
-
-          if (!shouldAccept) {
-            console.log('🚫 Initial location rejected by filter, will wait for better GPS signal')
-            return
-          }
-
-          const rawLocation = [latitude, longitude]
-
-          // Initialize location history with first valid point
-          locationHistoryRef.current = [rawLocation]
-          const smoothedLocation = rawLocation // First point, no smoothing needed yet
-
-          // Update refs
-          lastValidLocationRef.current = smoothedLocation
-          lastLocationTimeRef.current = Date.now()
-          smoothedLocationRef.current = smoothedLocation
-
-          let heading = position.coords.heading !== null && position.coords.heading !== undefined
-            ? position.coords.heading
-            : null
-
-          // Initialize route history
-          routeHistoryRef.current = [{
-            lat: smoothedLocation[0],
-            lng: smoothedLocation[1]
-          }]
-
-          // Save location to localStorage
-          localStorage.setItem('deliveryBoyLastLocation', JSON.stringify(smoothedLocation))
-
-          setRiderLocation(smoothedLocation)
-          lastLocationRef.current = smoothedLocation
-
-          // Initialize map if not already initialized (will use this location)
-          if (!window.deliveryMapInstance && window.google && window.google.maps && mapContainerRef.current) {
-            console.log('📍 Map not initialized yet, will initialize with GPS location')
-            // Map will be initialized in the map initialization useEffect with this location
-          } else if (window.deliveryMapInstance) {
-            // Map already initialized - recenter and update marker
-            window.deliveryMapInstance.setCenter({ lat: smoothedLocation[0], lng: smoothedLocation[1] })
-            window.deliveryMapInstance.setZoom(18)
-            createOrUpdateBikeMarker(smoothedLocation[0], smoothedLocation[1], heading, !isUserPanningRef.current)
-            updateRoutePolyline()
-            console.log('📍 Map recentered to GPS location')
-          }
-
-          console.log("📍 Current location obtained on app open (filtered):", {
-            raw: { lat: latitude, lng: longitude },
-            smoothed: { lat: smoothedLocation[0], lng: smoothedLocation[1] },
-            heading,
-            accuracy: `${accuracy.toFixed(0)}m`,
-            isOnline: isOnlineRef.current,
-            timestamp: new Date().toISOString()
-          })
-        },
-        (error) => {
-          console.warn("⚠️ Error getting current location:", error)
-          // Don't use default location - retry after delay
-          // Check if we have saved location from localStorage
-          const savedLoc = localStorage.getItem('deliveryBoyLastLocation')
-          if (!savedLoc) {
-            // No saved location, retry after 3 seconds
-            setTimeout(() => {
-              if (navigator.geolocation) {
-                console.log('🔄 Retrying location fetch...')
-                navigator.geolocation.getCurrentPosition(
-                  (position) => {
-                    const lat = position.coords.latitude
-                    const lng = position.coords.longitude
-                    if (typeof lat === 'number' && typeof lng === 'number' &&
-                      !isNaN(lat) && !isNaN(lng) &&
-                      lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                      const newLocation = [lat, lng]
-                      setRiderLocation(newLocation)
-                      lastLocationRef.current = newLocation
-                      smoothedLocationRef.current = newLocation
-                      lastValidLocationRef.current = newLocation
-                      locationHistoryRef.current = [newLocation]
-                      localStorage.setItem('deliveryBoyLastLocation', JSON.stringify(newLocation))
-                      console.log('✅ Location obtained on retry:', newLocation)
-
-                      // Recenter map if already initialized, otherwise it will initialize when location is set
-                      if (window.deliveryMapInstance) {
-                        window.deliveryMapInstance.setCenter({ lat, lng })
-                        window.deliveryMapInstance.setZoom(18)
-                        console.log('📍 Recentered map to GPS location')
-
-                        // Update bike marker
-                        if (bikeMarkerRef.current) {
-                          bikeMarkerRef.current.setPosition({ lat, lng })
-                        } else if (window.deliveryMapInstance) {
-                          createOrUpdateBikeMarker(lat, lng, null, true)
-                        }
-                      }
-                    }
-                  },
-                  (err) => {
-                    console.warn("⚠️ Retry also failed:", err)
-                    // Show toast to user to enable location
-                    toast.error('Location access required. Please enable location permissions.')
-                  },
-                  { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-                )
-              }
-            }, 3000)
-          } else {
-            console.log('📍 Using saved location from previous session')
-          }
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      )
-
-      // NOTE: watchPosition will be started/stopped based on isOnline status
-      // This is handled in a separate useEffect that depends on isOnline
-    } else {
-      // Geolocation not available - show error
-      console.error('❌ Geolocation API not available in this browser')
-      toast.error('Location services not available. Please use a device with GPS.')
-    }
-  }, []) // Run only on mount - get initial location
-
-  // Watch position updates - ONLY when online (Production Level Implementation)
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      return
-    }
-
-    // Clear any existing watch before starting new one
-    if (watchPositionIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchPositionIdRef.current)
-      watchPositionIdRef.current = null
-    }
-
-    // Keep location tracking running even when offline (bike should always show on map)
-    // But only send location to backend when online (for order assignment)
-    console.log('📍 Starting live location tracking (offline/online)')
-
-    // Watch position updates for live tracking with STABLE TRACKING SYSTEM
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        // Validate coordinates first
-        const latitude = position.coords.latitude
-        const longitude = position.coords.longitude
-        const accuracy = position.coords.accuracy || 0
-
-        // Basic validation
-        if (typeof latitude !== 'number' || typeof longitude !== 'number' ||
-          isNaN(latitude) || isNaN(longitude) ||
-          latitude < -90 || latitude > 90 ||
-          longitude < -180 || longitude > 180) {
-          console.warn("⚠️ Invalid coordinates received:", { latitude, longitude })
-          return
-        }
-
-        // ============================================
-        // STABLE TRACKING FILTERING (RAPIDO STYLE)
-        // ============================================
-
-        // Apply filtering: accuracy, distance jump, speed checks
-        const shouldAccept = shouldAcceptLocation(
-          position,
-          lastValidLocationRef.current,
-          lastLocationTimeRef.current
-        )
-
-        if (!shouldAccept) {
-          // Location rejected by filter - but send to backend if it's been > 30 seconds since last update
-          // This ensures admin map always shows delivery boy even with poor GPS
-          if (isOnlineRef.current && lastValidLocationRef.current) {
-            const now = Date.now();
             const lastSentTime = window.lastLocationSentTime || 0;
             const timeSinceLastSend = now - lastSentTime;
 
@@ -1817,16 +781,9 @@ export default function DeliveryHome() {
             if (timeSinceLastSend >= 30000) {
               const [lat, lng] = lastValidLocationRef.current;
               if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                console.log('📤 Sending fallback location to backend (filter rejected new location):', {
-                  lat,
-                  lng,
-                  accuracy: accuracy.toFixed(2) + 'm',
-                  timeSinceLastSend: (timeSinceLastSend / 1000).toFixed(0) + 's'
-                });
                 deliveryAPI.updateLocation(lat, lng, true)
                   .then(() => {
                     window.lastLocationSentTime = now;
-                    console.log('✅ Fallback location sent to backend successfully');
                   })
                   .catch(error => {
                     if (error.code !== 'ERR_NETWORK' && error.message !== 'Network Error') {
@@ -1874,46 +831,13 @@ export default function DeliveryHome() {
             // Update marker with correct location
             if (window.deliveryMapInstance) {
               const [lat, lng] = newLocation
-              console.log('📍 Updating bike marker with first location:', { lat, lng })
-
-              // Validate coordinates
-              if (typeof lat === 'number' && typeof lng === 'number' &&
-                !isNaN(lat) && !isNaN(lng) &&
-                lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                if (bikeMarkerRef.current) {
-                  bikeMarkerRef.current.setPosition({ lat, lng })
-                  console.log('✅ Bike marker position updated to first location')
-                } else {
-                  // Create marker if it doesn't exist
-                  createOrUpdateBikeMarker(lat, lng, null, true)
-                  console.log('✅ Bike marker created with first location')
-                }
-              } else {
-                console.error('❌ Invalid coordinates for bike marker:', { lat, lng })
-              }
-            }
-          }
-
-          // Send raw location to backend even if not smoothed yet
-          if (isOnlineRef.current) {
-            const [lat, lng] = newLocation
-            const now = Date.now();
             const lastSentTime = window.lastLocationSentTime || 0;
             const timeSinceLastSend = now - lastSentTime;
 
             // Send location every 5 seconds even if not smoothed
             if (timeSinceLastSend >= 5000) {
               if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                console.log('📤 Sending raw location to backend (not smoothed yet):', { lat, lng })
-                deliveryAPI.updateLocation(lat, lng, true)
-                  .then(() => {
-                    window.lastLocationSentTime = now;
                     window.lastSentLocation = newLocation;
-                    console.log('✅ Raw location sent to backend successfully')
-                  })
-                  .catch(error => {
-                    if (error.code !== 'ERR_NETWORK' && error.message !== 'Network Error') {
-                      console.error('❌ Error sending raw location to backend:', error);
                     }
                   });
               }
@@ -1978,26 +902,6 @@ export default function DeliveryHome() {
             animateMarkerSmoothly(bikeMarkerRef.current, newSmoothedLocation, 1500, markerAnimationRef)
           } else {
             // Marker doesn't exist yet, create it immediately with correct location
-            console.log('📍 Creating bike marker with smoothed location:', { lat: smoothedLat, lng: smoothedLng })
-            createOrUpdateBikeMarker(smoothedLat, smoothedLng, heading, !isUserPanningRef.current)
-          }
-        }
-
-        // Update route polyline
-        updateRoutePolyline()
-
-        console.log("📍 Live location updated (smoothed):", {
-          raw: { lat: latitude, lng: longitude },
-          smoothed: { lat: smoothedLat, lng: smoothedLng },
-          heading,
-          accuracy: `${accuracy.toFixed(0)}m`,
-          isOnline: isOnlineRef.current,
-          timestamp: new Date().toISOString()
-        })
-
-        // Send SMOOTHED location to backend if user is online (throttle to every 5 seconds)
-        if (isOnlineRef.current && smoothedLocation) {
-          const now = Date.now();
           const lastSentTime = window.lastLocationSentTime || 0;
           const timeSinceLastSend = now - lastSentTime;
 
@@ -2027,23 +931,11 @@ export default function DeliveryHome() {
             // Final validation before sending to backend
             // Ensure coordinates are in correct format [lat, lng] and within valid ranges
             if (smoothedLat >= -90 && smoothedLat <= 90 && smoothedLng >= -180 && smoothedLng <= 180) {
-              console.log('📤 Sending smoothed location to backend:', {
-                smoothed: { lat: smoothedLat, lng: smoothedLng },
-                raw: { lat: latitude, lng: longitude },
-                accuracy: `${accuracy.toFixed(0)}m`,
-                timeSinceLastSend: `${(timeSinceLastSend / 1000).toFixed(1)}s`
-              });
 
               deliveryAPI.updateLocation(smoothedLat, smoothedLng, true)
                 .then(() => {
                   window.lastLocationSentTime = now;
                   window.lastSentLocation = smoothedLocation; // Store last sent location
-                  console.log('✅ Smoothed location sent to backend successfully:', {
-                    latitude: smoothedLat,
-                    longitude: smoothedLng,
-                    format: "lat, lng (correct order)",
-                    accuracy: `${accuracy.toFixed(0)}m`
-                  });
                 })
                 .catch(error => {
                   // Only log non-network errors (backend might be down, which is expected in dev)
@@ -2145,113 +1037,6 @@ export default function DeliveryHome() {
         alertAudioRef.current.pause()
         alertAudioRef.current.currentTime = 0
         alertAudioRef.current = null
-        console.log('[NewOrder] 🔇 Audio stopped (order accepted)')
-      }
-
-      // Animate to completion
-      setNewOrderIsAnimatingToComplete(true)
-      setNewOrderAcceptButtonProgress(1)
-
-      // Accept order via backend API and get route
-      const acceptOrderAndShowRoute = async () => {
-        // Get order ID from selectedRestaurant or newOrder (define outside try-catch for error handling)
-        const orderId = selectedRestaurant?.id || newOrder?.orderMongoId || newOrder?.orderId
-
-        console.log('🔍 Order ID lookup:', {
-          selectedRestaurantId: selectedRestaurant?.id,
-          newOrderMongoId: newOrder?.orderMongoId,
-          newOrderId: newOrder?.orderId,
-          finalOrderId: orderId
-        })
-
-        if (!orderId) {
-          console.error('❌ No order ID found to accept')
-          toast.error('Order ID not found. Please try again.')
-          return
-        }
-
-        // Declare currentLocation in outer scope so it's accessible in catch block
-        let currentLocation = null
-
-        try {
-          // Get current LIVE location (prioritize riderLocation which is updated in real-time)
-          currentLocation = riderLocation
-
-          // If riderLocation is not available, try to get from lastLocationRef
-          if (!currentLocation || currentLocation.length !== 2) {
-            currentLocation = lastLocationRef.current
-          }
-
-          // If still not available, try to get current position
-          if (!currentLocation || currentLocation.length !== 2) {
-            try {
-              const position = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(
-                  (pos) => resolve([pos.coords.latitude, pos.coords.longitude]),
-                  reject,
-                  { timeout: 5000, enableHighAccuracy: true }
-                )
-              })
-              currentLocation = position
-              console.log('📍 Got fresh location from geolocation API')
-            } catch (geoError) {
-              console.error('❌ Could not get current location:', geoError)
-              toast.error('Location not available. Please enable location services.')
-              // Ensure currentLocation is set to null before returning
-              currentLocation = null
-              return
-            }
-          }
-
-          // Validate currentLocation before proceeding
-          if (!currentLocation || currentLocation.length !== 2) {
-            console.error('❌ No valid location available')
-            toast.error('Location not available. Please enable location services.')
-            return
-          }
-
-          console.log('📦 Accepting order:', orderId)
-          console.log('📍 Current LIVE location:', currentLocation)
-          console.log('📋 Order details:', {
-            orderId: orderId,
-            restaurantName: selectedRestaurant?.name || newOrder?.restaurantName,
-            orderStatus: newOrder?.status
-          })
-
-          // Call backend API to accept order
-          // Backend expects currentLat and currentLng
-          const response = await deliveryAPI.acceptOrder(orderId, {
-            lat: currentLocation[0], // latitude
-            lng: currentLocation[1]  // longitude
-          })
-
-          console.log('📡 API Response:', response.data)
-
-          if (response.data?.success && response.data.data) {
-            // Stop audio immediately when order is successfully accepted
-            if (alertAudioRef.current) {
-              alertAudioRef.current.pause()
-              alertAudioRef.current.currentTime = 0
-              alertAudioRef.current = null
-              console.log('[NewOrder] 🔇 Audio stopped (order accepted successfully)')
-            }
-
-            const orderData = response.data.data
-            const order = orderData.order || orderData // Backend returns { order, route }
-            const routeData = response.data.data.route
-
-            console.log('✅ Order accepted successfully')
-            console.log('📍 Route data:', routeData)
-            console.log('📋 Full order data from backend:', JSON.stringify(order, null, 2))
-            console.log('🏪 Restaurant name from backend:', {
-              restaurantName: order.restaurantName,
-              restaurantIdName: order.restaurantId?.name,
-              restaurantIdType: typeof order.restaurantId,
-              restaurantId: order.restaurantId
-            })
-
-            // Update selectedRestaurant with correct data from backend
-            let restaurantInfo = null;
             if (order) {
               // Extract restaurant location with robust fallbacks
               const restaurantCoords = extractLatLng(
@@ -2269,182 +1054,10 @@ export default function DeliveryHome() {
               const restaurantLocation = order.restaurantId?.location
 
               // Debug: Log order structure to understand data format
-              console.log('🔍 Order structure for address extraction:', {
-                hasRestaurantId: !!order.restaurantId,
-                restaurantIdType: typeof order.restaurantId,
-                restaurantIdKeys: order.restaurantId ? Object.keys(order.restaurantId) : [],
-                hasLocation: !!restaurantLocation,
-                locationKeys: restaurantLocation ? Object.keys(restaurantLocation) : [],
-                restaurantIdAddress: order.restaurantId?.address,
-                locationFormattedAddress: restaurantLocation?.formattedAddress,
-                locationAddress: restaurantLocation?.address,
-                locationStreet: restaurantLocation?.street,
-                orderRestaurantAddress: order.restaurantAddress
-              })
-
-              // Priority 1: Direct address fields on restaurantId
-              if (order.restaurantId?.address) {
-                restaurantAddress = order.restaurantId.address
-                console.log('✅ Using restaurantId.address:', restaurantAddress)
-              }
-              // Priority 2: formattedAddress from location
-              else if (restaurantLocation?.formattedAddress) {
-                restaurantAddress = restaurantLocation.formattedAddress
-                console.log('✅ Using location.formattedAddress:', restaurantAddress)
-              }
-              // Priority 3: address from location
-              else if (restaurantLocation?.address) {
-                restaurantAddress = restaurantLocation.address
-                console.log('✅ Using location.address:', restaurantAddress)
-              }
-              // Priority 4: Build from addressLine1 (with zone and pin code)
-              else if (restaurantLocation?.addressLine1) {
-                const addressParts = [
-                  restaurantLocation.addressLine1,
-                  restaurantLocation.addressLine2,
-                  restaurantLocation.area, // Zone
-                  restaurantLocation.city,
-                  restaurantLocation.state,
-                  restaurantLocation.pincode || restaurantLocation.zipCode || restaurantLocation.postalCode
-                ].filter(Boolean)
-                restaurantAddress = addressParts.join(', ')
-                console.log('✅ Built address from addressLine1 with zone and pin:', restaurantAddress)
-              }
-              // Priority 5: Build from street components (with zone and pin code)
-              else if (restaurantLocation?.street) {
-                const addressParts = [
-                  restaurantLocation.street,
-                  restaurantLocation.area, // Zone
-                  restaurantLocation.city,
-                  restaurantLocation.state,
-                  restaurantLocation.pincode || restaurantLocation.zipCode || restaurantLocation.postalCode
-                ].filter(Boolean)
-                restaurantAddress = addressParts.join(', ')
-                console.log('✅ Built address from street components with zone and pin:', restaurantAddress)
-              }
-              // Priority 6: Check restaurantId directly for address fields
-              else if (order.restaurantId?.street || order.restaurantId?.city) {
-                const addressParts = [
-                  order.restaurantId.street,
-                  order.restaurantId.area,
-                  order.restaurantId.city,
-                  order.restaurantId.state,
-                  order.restaurantId.zipCode || order.restaurantId.pincode || order.restaurantId.postalCode
-                ].filter(Boolean)
-                restaurantAddress = addressParts.join(', ')
-                console.log('✅ Built address from restaurantId fields:', restaurantAddress)
-              }
-              // Priority 7: Check order.restaurantAddress (if exists)
-              else if (order.restaurantAddress) {
-                restaurantAddress = order.restaurantAddress
-                console.log('✅ Using order.restaurantAddress:', restaurantAddress)
-              }
-              // Priority 8: Use coordinates if address not available
-              else if (hasValidCoordinates(restaurantLat, restaurantLng)) {
-                restaurantAddress = `${restaurantLat}, ${restaurantLng}`
-                console.log('⚠️ Using coordinates as address:', restaurantAddress)
-              } else {
-                console.warn('⚠️ Restaurant address not found in order, will try to fetch from restaurant API')
-                // Try to fetch restaurant address by ID if available
-                const restaurantId = order.restaurantId
-                if (restaurantId) {
-                  // Handle both string and object restaurantId
-                  const restaurantIdString = typeof restaurantId === 'string'
-                    ? restaurantId
-                    : (restaurantId._id || restaurantId.id || restaurantId.toString())
-
-                  if (restaurantIdString) {
-                    try {
-                      console.log('🔄 Fetching restaurant address by ID:', restaurantIdString)
-                      const restaurantResponse = await restaurantAPI.getRestaurantById(restaurantIdString)
-                      if (restaurantResponse.data?.success && restaurantResponse.data.data) {
-                        const restaurant = restaurantResponse.data.data.restaurant || restaurantResponse.data.data
-                        const restLocation = restaurant.location
-                        console.log('✅ Fetched restaurant data:', { restaurant, restLocation })
-
-                        // Priority: location.formattedAddress (this is what user wants)
-                        if (restLocation?.formattedAddress) {
-                          restaurantAddress = restLocation.formattedAddress
-                          console.log('✅ Fetched restaurant.location.formattedAddress:', restaurantAddress)
-                        } else if (restaurant.address) {
-                          restaurantAddress = restaurant.address
-                          console.log('✅ Fetched restaurant.address:', restaurantAddress)
-                        } else if (restLocation?.address) {
-                          restaurantAddress = restLocation.address
-                          console.log('✅ Fetched restaurant.location.address:', restaurantAddress)
-                        } else if (restLocation?.addressLine1) {
-                          const addressParts = [
-                            restLocation.addressLine1,
-                            restLocation.addressLine2,
-                            restLocation.area, // Zone
-                            restLocation.city,
-                            restLocation.state,
-                            restLocation.pincode || restLocation.zipCode || restLocation.postalCode
-                          ].filter(Boolean)
-                          restaurantAddress = addressParts.join(', ')
-                          console.log('✅ Built address from restaurant location addressLine1 with zone and pin:', restaurantAddress)
-                        } else if (restLocation?.street) {
-                          const addressParts = [
-                            restLocation.street,
-                            restLocation.area, // Zone
-                            restLocation.city,
-                            restLocation.state,
-                            restLocation.pincode || restLocation.zipCode || restLocation.postalCode
-                          ].filter(Boolean)
-                          restaurantAddress = addressParts.join(', ')
-                          console.log('✅ Built address from restaurant location components with zone and pin:', restaurantAddress)
-                        }
-                      }
-                    } catch (restaurantError) {
-                      console.error('❌ Error fetching restaurant address:', restaurantError)
-                    }
-                  }
-                }
-
-                if (restaurantAddress === 'Restaurant Address') {
-                  console.warn('⚠️ Restaurant address not found in any location, using default')
-                }
-              }
-
-              // Extract restaurant name - priority: restaurantName field > restaurantId.name > fallback
-              // Backend returns restaurantName as a direct field on order, and restaurantId is populated with name
-              let restaurantName = null
-
-              // Priority 1: Direct restaurantName field from order (stored in Order model)
-              if (order.restaurantName && typeof order.restaurantName === 'string' && order.restaurantName.trim()) {
-                restaurantName = order.restaurantName.trim()
-                console.log('✅ Using restaurantName from order:', restaurantName)
-              }
-              // Priority 2: Name from populated restaurantId object
-              else if (order.restaurantId && typeof order.restaurantId === 'object' && order.restaurantId.name) {
-                restaurantName = order.restaurantId.name.trim()
-                console.log('✅ Using restaurantId.name:', restaurantName)
-              }
-              // Priority 3: Fallback to existing selectedRestaurant name
-              else if (selectedRestaurant?.name) {
-                restaurantName = selectedRestaurant.name
-                console.warn('⚠️ Restaurant name not found in order, using selectedRestaurant.name:', restaurantName)
-              }
-              // Final fallback
-              else {
-                restaurantName = 'Restaurant'
-                console.error('❌ Restaurant name not found anywhere, using default:', restaurantName)
-              }
-
-              console.log('🏪 Final extracted restaurant name:', restaurantName)
-
-              // Extract earnings from backend response
-              const backendEarnings = orderData.estimatedEarnings || response.data.data.estimatedEarnings;
               const earningsValue = backendEarnings
                 ? (typeof backendEarnings === 'object' ? backendEarnings.totalEarning : backendEarnings)
                 : (selectedRestaurant?.estimatedEarnings || 0);
 
-              console.log('💰 Earnings from backend:', {
-                backendEarnings,
-                earningsValue,
-                orderDataEarnings: orderData.estimatedEarnings,
-                responseEarnings: response.data.data.estimatedEarnings
-              });
 
               restaurantInfo = {
                 id: order._id || order.orderId,
@@ -2480,14 +1093,6 @@ export default function DeliveryHome() {
                 deliveryPhase: 'en_route_to_pickup' // CRITICAL: Set to en_route_to_pickup after order acceptance so Reached Pickup popup can show
               }
 
-              console.log('🏪 Updated restaurant info from backend:', restaurantInfo)
-              // Update state immediately
-              setSelectedRestaurant(restaurantInfo)
-            }
-
-            // Ensure we have restaurantInfo before proceeding
-            if (!restaurantInfo) {
-              console.error('❌ Restaurant info not available, cannot proceed');
               return;
             }
 
@@ -2499,16 +1104,12 @@ export default function DeliveryHome() {
               // Backend returns coordinates as [[lat, lng], ...]
               routeCoordinates = routeData.coordinates;
               setRoutePolyline(routeCoordinates);
-              console.log('✅ Route set from backend:', routeCoordinates.length, 'points');
             }
 
             // Calculate route using Google Maps Directions API (Zomato-style road-based routing)
             // Use LIVE location from delivery boy to restaurant
             // Use restaurantInfo directly (not selectedRestaurant) since state update is async
             if (restaurantInfo && hasValidCoordinates(restaurantInfo?.lat, restaurantInfo?.lng) && currentLocation) {
-              console.log('🗺️ Calculating route with Google Maps Directions API...');
-              console.log('📍 From (Delivery Boy Live Location):', currentLocation);
-              console.log('📍 To (Restaurant):', { lat: restaurantInfo.lat, lng: restaurantInfo.lng });
 
               try {
                 // Calculate route immediately with current live location
@@ -2518,16 +1119,12 @@ export default function DeliveryHome() {
                 );
 
                 if (directionsResult) {
-                  console.log('✅ Route calculated with Directions API from live location');
-                  console.log('📍 Route distance:', directionsResult.routes[0]?.legs[0]?.distance?.text);
-                  console.log('📍 Route duration:', directionsResult.routes[0]?.legs[0]?.duration?.text);
 
                   // Store pickup route distance and time
                   const pickupDistance = directionsResult.routes[0]?.legs[0]?.distance?.value || 0; // in meters
                   const pickupDuration = directionsResult.routes[0]?.legs[0]?.duration?.value || 0; // in seconds
                   pickupRouteDistanceRef.current = pickupDistance;
                   pickupRouteTimeRef.current = pickupDuration;
-                  console.log('📊 Pickup route stored:', { distance: pickupDistance, duration: pickupDuration });
 
                   // Store directions result for rendering on main map
                   setDirectionsResponse(directionsResult);
@@ -2539,22 +1136,18 @@ export default function DeliveryHome() {
                     // Ensure map is ready before updating polyline
                     if (window.deliveryMapInstance) {
                       updateLiveTrackingPolyline(directionsResult, currentLocation);
-                      console.log('✅ Live tracking polyline initialized for pickup route');
                     } else {
                       // Wait for map to be ready
                       setTimeout(() => {
                         if (window.deliveryMapInstance && currentLocation) {
                           updateLiveTrackingPolyline(directionsResult, currentLocation);
-                          console.log('✅ Live tracking polyline initialized for pickup route (delayed)');
                         }
                       }, 500);
                     }
                   }
 
-                  console.log('✅ Route to restaurant initialized - polyline will update as delivery boy moves');
                 } else {
                   // Fallback: Use backend route or OSRM
-                  console.log('⚠️ Directions API failed, using fallback...');
                   if (!routeCoordinates || routeCoordinates.length === 0) {
                     try {
                       const url = `https://router.project-osrm.org/route/v1/driving/${currentLocation[1]},${currentLocation[0]};${restaurantInfo.lng},${restaurantInfo.lat}?overview=full&geometries=geojson`;
@@ -2564,12 +1157,10 @@ export default function DeliveryHome() {
                       if (osrmData.code === 'Ok' && osrmData.routes && osrmData.routes.length > 0) {
                         routeCoordinates = osrmData.routes[0].geometry.coordinates.map((coord) => [coord[1], coord[0]]);
                         setRoutePolyline(routeCoordinates);
-                        console.log('✅ Route calculated with OSRM:', routeCoordinates.length, 'points');
                       } else {
                         // Final fallback: straight line
                         routeCoordinates = [currentLocation, [restaurantInfo.lat, restaurantInfo.lng]];
                         setRoutePolyline(routeCoordinates);
-                        console.log('⚠️ Using straight line as fallback');
                       }
                     } catch (osrmError) {
                       console.error('❌ Error calculating route with OSRM:', osrmError);
@@ -2598,12 +1189,10 @@ export default function DeliveryHome() {
                     if (osrmData.code === 'Ok' && osrmData.routes && osrmData.routes.length > 0) {
                       routeCoordinates = osrmData.routes[0].geometry.coordinates.map((coord) => [coord[1], coord[0]]);
                       setRoutePolyline(routeCoordinates);
-                      console.log('✅ Route calculated with OSRM fallback:', routeCoordinates.length, 'points');
                     } else {
                       // Final fallback: straight line
                       routeCoordinates = [currentLocation, [restaurantInfo.lat, restaurantInfo.lng]];
                       setRoutePolyline(routeCoordinates);
-                      console.log('⚠️ Using straight line as final fallback');
                     }
                   } catch (osrmError) {
                     console.warn('⚠️ OSRM fallback failed, using straight line');
@@ -2628,7 +1217,6 @@ export default function DeliveryHome() {
             const acceptedOrderId = restaurantInfo.id || restaurantInfo.orderId || newOrder?.orderMongoId || newOrder?.orderId;
             if (acceptedOrderId) {
               acceptedOrderIdsRef.current.add(acceptedOrderId);
-              console.log('✅ Added order to accepted list:', acceptedOrderId);
             }
             clearNewOrder();
 
@@ -2646,19 +1234,15 @@ export default function DeliveryHome() {
                 currentDeliveryPhase === 'picked_up';
 
               if (!isAlreadyPastPickup) {
-                console.log('✅ Order accepted - showing Reached Pickup popup immediately');
                 setShowreachedPickupPopup(true);
                 // Close directions map if open
                 setShowDirectionsMap(false);
               } else {
-                console.log('🚫 Order already past pickup phase, skipping Reached Pickup popup');
               }
             }, 500); // Wait 500ms for state to update
 
             // Show route on main map instead of opening full-screen directions map
             setTimeout(() => {
-              console.log('✅ Showing route on main map from live location to restaurant');
-              console.log('📍 Flow: Order Accepted → Route to Restaurant → 500m Detection → Reached Pickup → Order ID → Route to Customer → 500m Detection → Reached Drop → Delivered → Review → Payment');
 
               // Show route on main map using DirectionsRenderer or polyline
               if (window.deliveryMapInstance && restaurantInfo) {
@@ -2667,7 +1251,6 @@ export default function DeliveryHome() {
                 const directionsResult = directionsResultForMap || (directionsResponse && directionsResponse.routes && directionsResponse.routes.length > 0 ? directionsResponse : null);
 
                 if (directionsResult && directionsResult.routes && directionsResult.routes.length > 0) {
-                  console.log('🗺️ Setting up DirectionsRenderer on main map with route:', directionsResult);
 
                   // Initialize DirectionsRenderer for main map if not exists
                   // Don't create DirectionsRenderer - it adds dots
@@ -2687,7 +1270,6 @@ export default function DeliveryHome() {
                       preserveViewport: true
                     });
                     // Explicitly don't set map - we use custom polyline instead
-                    console.log('✅ DirectionsRenderer created (not on map - using custom polyline)');
                   }
 
                   // Extract route path directly from directionsResult (don't use DirectionsRenderer - it adds dots)
@@ -2704,12 +1286,6 @@ export default function DeliveryHome() {
                       return;
                     }
 
-                    console.log('📍 Route details:', {
-                      routes: directionsResult.routes?.length || 0,
-                      legs: directionsResult.routes?.[0]?.legs?.length || 0,
-                      distance: directionsResult.routes?.[0]?.legs?.[0]?.distance?.text,
-                      duration: directionsResult.routes?.[0]?.legs?.[0]?.duration?.text
-                    });
 
                     // Don't create main route polyline - only live tracking polyline will be shown
                     // Remove old custom polyline if exists (cleanup)
@@ -2739,10 +1315,8 @@ export default function DeliveryHome() {
                           window.deliveryMapInstance.setZoom(currentZoom);
                         }
                       }, 100);
-                      console.log('✅ Map bounds fitted to route');
                     }
 
-                    console.log('✅ Route displayed on main map using custom polyline');
                   } catch (error) {
                     console.error('❌ Error extracting route path:', error);
                     console.error('❌ directionsResult type:', typeof directionsResult);
@@ -2751,9 +1325,7 @@ export default function DeliveryHome() {
                 } else if (routeCoordinates && routeCoordinates.length > 0) {
                   // Fallback: Use polyline if Directions API result not available
                   // setRoutePolyline will trigger useEffect that calls updateRoutePolyline
-                  console.log('📦 Using fallback polyline with', routeCoordinates.length, 'points');
                   setRoutePolyline(routeCoordinates);
-                  console.log('✅ Route polyline state set, will be displayed via useEffect');
                 } else {
                   console.warn('⚠️ No route data available to display (neither Directions API result nor coordinates)');
                 }
@@ -2791,7 +1363,6 @@ export default function DeliveryHome() {
                     zIndex: 10
                   });
 
-                  console.log('✅ Restaurant marker added to main map');
                 }
               } else {
                 console.warn('⚠️ Main map not ready, will show route when map loads');
@@ -2809,7 +1380,6 @@ export default function DeliveryHome() {
                   hasDirectionsAPI: !!directionsResultForMap // Flag to indicate we should recalculate with Directions API
                 };
                 localStorage.setItem('deliveryActiveOrder', JSON.stringify(activeOrderData));
-                console.log('💾 Saved active order to localStorage for refresh handling');
               } catch (storageError) {
                 console.error('❌ Error saving active order to localStorage:', storageError);
               }
@@ -3049,213 +1619,7 @@ export default function DeliveryHome() {
         // Backend accepts both _id and orderId, but orderId is more reliable
         const orderId = selectedRestaurant?.orderId || selectedRestaurant?.id || newOrder?.orderId || newOrder?.orderMongoId
 
-        console.log('🔍 Order ID lookup for reached pickup:', {
-          selectedRestaurantId: selectedRestaurant?.id,
-          selectedRestaurantOrderId: selectedRestaurant?.orderId,
-          newOrderMongoId: newOrder?.orderMongoId,
-          newOrderId: newOrder?.orderId,
-          finalOrderId: orderId
-        })
-
-        // CRITICAL: Check if order is already delivered/completed - don't call API
-        const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
-        const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
-        const deliveryStateStatus = selectedRestaurant?.deliveryState?.status || ''
-
-        const isDelivered = orderStatus === 'delivered' ||
-          deliveryPhase === 'completed' ||
-          deliveryPhase === 'delivered' ||
-          deliveryStateStatus === 'delivered'
-
-        if (isDelivered) {
-          console.warn('⚠️ Order is already delivered, skipping reached pickup confirmation')
-          toast.error('Order is already delivered. Cannot confirm reached pickup.')
-          setShowreachedPickupPopup(false)
-          return
-        }
-
-        // CRITICAL: Check if order is already past pickup phase (order ID confirmed or out for delivery)
-        const isPastPickupPhase = orderStatus === 'out_for_delivery' ||
-          deliveryPhase === 'en_route_to_delivery' ||
-          deliveryPhase === 'picked_up' ||
-          deliveryStateStatus === 'order_confirmed' ||
-          deliveryStateStatus === 'reached_pickup' ||
-          deliveryPhase === 'at_pickup'
-
-        if (isPastPickupPhase) {
-          console.warn('⚠️ Order is already past pickup phase, skipping reached pickup confirmation:', {
-            orderStatus,
-            deliveryPhase,
-            deliveryStateStatus
-          })
-          // If already at pickup or order ID confirmed, just show order ID popup after delay
-          if (deliveryPhase === 'at_pickup' || deliveryStateStatus === 'reached_pickup') {
-            // Ensure reached pickup popup is closed first
-            setShowreachedPickupPopup(false)
-            setTimeout(() => {
-              setShowOrderIdConfirmationPopup(true)
-            }, 300) // Delay to ensure reached pickup popup closes first
-            toast.info('Order is already at pickup. Showing order ID confirmation.')
-          } else {
-            toast.info('Order is already out for delivery.')
-          }
-          return
-        }
-
-        if (orderId) {
-          try {
-            // Call backend API to confirm reached pickup and save status in database
-            console.log('📦 Confirming reached pickup for order:', orderId)
-            console.log('📦 API endpoint: /delivery/orders/:orderId/reached-pickup')
-            const response = await deliveryAPI.confirmReachedPickup(orderId)
-
-            console.log('📦 Reached pickup API response:', response.data)
-
-            if (response.data?.success) {
-              console.log('✅ Reached pickup confirmed and status saved in database')
-              toast.success('Reached pickup confirmed!')
-
-              // Update local state to reflect the new status
-              if (selectedRestaurant) {
-                setSelectedRestaurant(prev => ({
-                  ...prev,
-                  deliveryState: {
-                    ...(prev?.deliveryState || {}),
-                    currentPhase: 'at_pickup',
-                    status: 'reached_pickup'
-                  }
-                }))
-              }
-
-              // Ensure reached pickup popup is closed first
-              setShowreachedPickupPopup(false)
-              // Wait for reached pickup popup to close, then show order ID confirmation popup
-              setTimeout(() => {
-                setShowOrderIdConfirmationPopup(true)
-                console.log('✅ Showing Order ID confirmation popup')
-              }, 300) // 300ms delay for smooth transition
-            } else {
-              console.error('❌ Failed to confirm reached pickup:', response.data)
-              toast.error(response.data?.message || 'Failed to confirm reached pickup. Please try again.')
-              // Ensure reached pickup popup is closed
-              setShowreachedPickupPopup(false)
-              // Still show order ID popup even if API call fails, after delay
-              setTimeout(() => {
-                setShowOrderIdConfirmationPopup(true)
-                console.log('⚠️ Showing Order ID confirmation popup despite API failure')
-              }, 300)
-            }
-          } catch (error) {
-            console.error('❌ Error confirming reached pickup:', error)
-            console.error('❌ Error details:', {
-              message: error.message,
-              response: error.response?.data,
-              status: error.response?.status,
-              orderId: orderId || 'unknown',
-              selectedRestaurant: selectedRestaurant
-            })
-
-            // Show specific error message
-            const errorMessage = error.response?.data?.message ||
-              (error.response?.status === 404 ? 'Order not found. Please refresh and try again.' : 'Failed to confirm reached pickup. Please try again.')
-            toast.error(errorMessage)
-
-            // Ensure reached pickup popup is closed
-            setShowreachedPickupPopup(false)
-            // Still show order ID popup even if API call fails, after delay
-            setTimeout(() => {
-              setShowOrderIdConfirmationPopup(true)
-              console.log('⚠️ Showing Order ID confirmation popup despite error')
-            }, 300)
-          }
-        } else {
-          console.error('❌ No order ID found for reached pickup confirmation')
-          toast.error('Order ID not found. Please refresh and try again.')
-          // Ensure reached pickup popup is closed
-          setShowreachedPickupPopup(false)
-          // Show order ID popup even if no order ID (fallback), after delay
-          setTimeout(() => {
-            setShowOrderIdConfirmationPopup(true)
-            console.log('⚠️ Showing Order ID confirmation popup without order ID (fallback)')
-          }, 300)
-        }
-
-        // DO NOT show reached drop here - it will only show after order ID is confirmed
-
-        // Reset after animation
-        setTimeout(() => {
-          setreachedPickupButtonProgress(0)
-          setreachedPickupIsAnimatingToComplete(false)
-        }, 500)
-      }, 200)
-    } else {
-      // Reset smoothly
-      setreachedPickupButtonProgress(0)
-    }
-
-    reachedPickupSwipeStartX.current = 0
-    reachedPickupSwipeStartY.current = 0
-    reachedPickupIsSwiping.current = false
-  }
-
-  // Handle Reached Drop button swipe
-  const handleReachedDropTouchStart = (e) => {
-    reachedDropSwipeStartX.current = e.touches[0].clientX
-    reachedDropSwipeStartY.current = e.touches[0].clientY
-    reachedDropIsSwiping.current = false
-    setReachedDropIsAnimatingToComplete(false)
-    setReachedDropButtonProgress(0)
-  }
-
-  const handleReachedDropTouchMove = (e) => {
-    const deltaX = e.touches[0].clientX - reachedDropSwipeStartX.current
-    const deltaY = e.touches[0].clientY - reachedDropSwipeStartY.current
-
-    // Only handle horizontal swipes (swipe right)
-    if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 0) {
-      reachedDropIsSwiping.current = true
-      // Don't call preventDefault - CSS touch-action handles scrolling prevention
-      // safePreventDefault(e) // Removed to avoid passive listener error
-
-      // Calculate max swipe distance
-      const buttonWidth = reachedDropButtonRef.current?.offsetWidth || 300
-      const circleWidth = 56 // w-14 = 56px
-      const padding = 16 // px-4 = 16px
-      const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-
-      const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
-      setReachedDropButtonProgress(progress)
-    }
-  }
-
-  const handleReachedDropTouchEnd = (e) => {
-    if (!reachedDropIsSwiping.current) {
-      setReachedDropButtonProgress(0)
-      return
-    }
-
-    const deltaX = e.changedTouches[0].clientX - reachedDropSwipeStartX.current
-    const buttonWidth = reachedDropButtonRef.current?.offsetWidth || 300
-    const circleWidth = 56
-    const padding = 16
-    const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-    const threshold = maxSwipe * 0.7 // 70% of max swipe
-
-    if (deltaX > threshold) {
-      // Animate to completion
-      setReachedDropIsAnimatingToComplete(true)
-      setReachedDropButtonProgress(1)
-
-      // Close popup, confirm reached drop, and show order delivered animation instantly (no delay)
-      // Close reached drop popup first
-      setShowReachedDropPopup(false)
-
-      // Show Order Delivered popup instantly after Reached Drop is confirmed
-      console.log('✅ Showing Order Delivered popup instantly after Reached Drop confirmation')
-      setShowOrderDeliveredAnimation(true)
-
-        // API call in background (async, doesn't block popup)
-        ; (async () => {
+ (async () => {
           // Get order ID - prioritize MongoDB _id over orderId string for API call
           // Backend expects _id (MongoDB ObjectId) in the URL parameter
           // Use _id (MongoDB ObjectId) if available, otherwise fallback to orderId string
@@ -3265,114 +1629,7 @@ export default function DeliveryHome() {
             selectedRestaurant?.orderId ||
             newOrder?.orderId
 
-          console.log('🔍 Order ID lookup for reached drop:', {
-            selectedRestaurantId: selectedRestaurant?.id,
-            selectedRestaurantOrderId: selectedRestaurant?.orderId,
-            newOrderMongoId: newOrder?.orderMongoId,
-            newOrderId: newOrder?.orderId,
-            finalOrderIdForApi: orderIdForApi
-          })
-
-          if (orderIdForApi) {
-            try {
-              // Call backend API to confirm reached drop (in background, don't block popup)
-              // Use MongoDB _id for API call to avoid ObjectId casting errors
-              console.log('📦 Confirming reached drop for order:', orderIdForApi)
-              const response = await deliveryAPI.confirmReachedDrop(orderIdForApi)
-
-              if (response.data?.success) {
-                console.log('✅ Reached drop confirmed')
-              } else {
-                console.error('❌ Failed to confirm reached drop:', response.data)
-                toast.error(response.data?.message || 'Failed to confirm reached drop. Please try again.')
-              }
-            } catch (error) {
-              const status = error.response?.status
-
-              // Handle 500 errors gracefully (server-side issue, popup already shown)
-              if (status === 500) {
-                // For 500 errors, just log warning - popup is already shown, backend will sync later
-                console.warn('⚠️ Server error confirming reached drop (500), but popup is shown. Backend will sync status automatically.', {
-                  orderIdForApi: orderIdForApi || 'unknown',
-                  message: error.response?.data?.message || error.message
-                })
-                // Don't show error toast or log as error - it's a server issue, not user action
-                return
-              }
-
-              // For other errors, log and show error message
-              console.error('❌ Error confirming reached drop:', error)
-              console.error('❌ Error details:', {
-                message: error.message,
-                response: error.response?.data,
-                status: status,
-                orderIdForApi: orderIdForApi || 'unknown',
-                selectedRestaurant: selectedRestaurant,
-                newOrder: newOrder
-              })
-
-              // Show specific error message based on status code
-              let errorMessage = 'Failed to confirm reached drop. Please try again.'
-              if (status === 404) {
-                errorMessage = 'Order not found. Please refresh and try again.'
-              } else if (error.response?.data?.message) {
-                errorMessage = error.response.data.message
-              }
-
-              toast.error(errorMessage)
-            }
-          }
-        })()
-    } else {
-      // Reset smoothly
-      setReachedDropButtonProgress(0)
-    }
-
-    reachedDropSwipeStartX.current = 0
-    reachedDropSwipeStartY.current = 0
-    reachedDropIsSwiping.current = false
-  }
-
-  // Handle Order ID Confirmation button swipe
-  const handleOrderIdConfirmTouchStart = (e) => {
-    orderIdConfirmSwipeStartX.current = e.touches[0].clientX
-    orderIdConfirmSwipeStartY.current = e.touches[0].clientY
-    orderIdConfirmIsSwiping.current = false
-    setOrderIdConfirmIsAnimatingToComplete(false)
-    setOrderIdConfirmButtonProgress(0)
-  }
-
-  const handleOrderIdConfirmTouchMove = (e) => {
-    const deltaX = e.touches[0].clientX - orderIdConfirmSwipeStartX.current
-    const deltaY = e.touches[0].clientY - orderIdConfirmSwipeStartY.current
-
-    // Only handle horizontal swipes (swipe right)
-    if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 0) {
-      orderIdConfirmIsSwiping.current = true
-      // Don't call preventDefault - CSS touch-action handles scrolling prevention
-      // safePreventDefault(e) // Removed to avoid passive listener error
-
-      // Calculate max swipe distance
-      const buttonWidth = orderIdConfirmButtonRef.current?.offsetWidth || 300
-      const circleWidth = 56 // w-14 = 56px
-      const padding = 16 // px-4 = 16px
-      const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-
-      const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
-      setOrderIdConfirmButtonProgress(progress)
-    }
-  }
-
-  /**
-   * Handle camera capture for bill image - Flutter InAppWebView compatible
-   * 
-   * Flutter Handler Requirements:
-   * Handler name: 'openCamera'
-   * Expected response format:
-   * {
-   *   success: true,
-   *   file?: File,              // Preferred: JavaScript File object
-   *   base64?: string,          // Alternative: Base64 encoded image (with or without data:image/jpeg;base64, prefix)
+base64, prefix)
    *   mimeType?: string,        // MIME type (e.g., 'image/jpeg', 'image/png')
    *   fileName?: string,        // File name (e.g., 'bill-image.jpg')
    *   filePath?: string         // Not recommended: File path (requires additional handler to read)
@@ -3385,363 +1642,34 @@ export default function DeliveryHome() {
     try {
       // Check if Flutter InAppWebView handler is available
       if (window.flutter_inappwebview && typeof window.flutter_inappwebview.callHandler === 'function') {
-        console.log('📸 Using Flutter InAppWebView camera handler')
-
-        // Call Flutter handler to open camera
-        const result = await window.flutter_inappwebview.callHandler('openCamera', {
-          source: 'camera', // 'camera' for camera, 'gallery' for file picker
-          accept: 'image/*',
-          multiple: false,
-          quality: 0.8 // Image quality (0.0 to 1.0)
-        })
-
-        console.log('📸 Flutter handler response:', result)
-
-        if (result && result.success) {
-          // Handle the result - could be base64, file path, or file object
-          let file = null
-
-          if (result.file) {
-            // If Flutter returns a File object (preferred method)
-            file = result.file
-            console.log('✅ Received File object from Flutter')
-          } else if (result.base64) {
-            // If Flutter returns base64, convert to File
-            console.log('📸 Converting base64 to File object')
-            let base64Data = result.base64
-
-            // Remove data URL prefix if present
-            if (base64Data.includes(',')) {
-              base64Data = base64Data.split(',')[1]
-            }
-
-            try {
-              const byteCharacters = atob(base64Data)
-              const byteNumbers = new Array(byteCharacters.length)
-              for (let i = 0; i < byteCharacters.length; i++) {
+ i < byteCharacters.length; i++) {
                 byteNumbers[i] = byteCharacters.charCodeAt(i)
               }
               const byteArray = new Uint8Array(byteNumbers)
               const mimeType = result.mimeType || 'image/jpeg'
               const blob = new Blob([byteArray], { type: mimeType })
               file = new File([blob], result.fileName || `bill-image-${Date.now()}.jpg`, { type: mimeType })
-              console.log('✅ Converted base64 to File:', { name: file.name, size: file.size, type: file.type })
-            } catch (base64Error) {
-              console.error('❌ Error converting base64 to File:', base64Error)
-              toast.error('Failed to process image. Please try again.')
-              return
-            }
-          } else if (result.filePath) {
-            // If Flutter returns file path, we need to fetch it
-            // This would require additional Flutter handler to read file
-            console.warn('⚠️ File path returned, but file reading not implemented')
-            toast.error('File path handling not implemented. Please use base64 or File object.')
-            return
-          }
-
-          if (file) {
-            // Process the file the same way as handleBillImageSelect
-            await processBillImageFile(file)
-          } else {
-            console.error('❌ No file data in Flutter response:', result)
-            toast.error('Failed to get image from camera')
-          }
-        } else {
-          console.log('ℹ️ Camera cancelled by user or failed')
-        }
-      } else {
-        // Fallback to standard file input for web browsers
-        console.log('📸 Flutter handler not available, using standard file input')
-        if (cameraInputRef.current) {
-          cameraInputRef.current.click()
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error opening camera:', error)
-      toast.error('Failed to open camera. Please try again.')
-
-      // Fallback to standard file input
-      if (cameraInputRef.current) {
-        cameraInputRef.current.click()
-      }
-    }
-  }
-
-  // Process bill image file (extracted from handleBillImageSelect for reuse)
-  const processBillImageFile = async (file) => {
-    if (!file) return
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file')
-      return
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size should be less than 5MB')
-      return
-    }
-
-    setIsUploadingBill(true)
-
-    try {
-      console.log('📸 Uploading bill image to Cloudinary...')
-
-      // Upload to Cloudinary via backend
-      const uploadResponse = await uploadAPI.uploadMedia(file, {
-        folder: 'appzeto/delivery/bills'
-      })
-
-      if (uploadResponse?.data?.success && uploadResponse?.data?.data) {
-        const imageUrl = uploadResponse.data.data.url || uploadResponse.data.data.secure_url
-        const publicId = uploadResponse.data.data.publicId || uploadResponse.data.data.public_id
-
-        if (imageUrl) {
-          console.log('✅ Bill image uploaded to Cloudinary:', imageUrl)
-          setBillImageUrl(imageUrl)
-
-          // Bill image is uploaded to Cloudinary, now enable the button
-          // The bill image URL will be sent when confirming order ID
-          console.log('✅ Bill image uploaded to Cloudinary, ready to save to database')
-          setBillImageUploaded(true)
-          toast.success('Bill image uploaded! You can now confirm order ID.')
-        } else {
-          throw new Error('Failed to get image URL from upload response')
-        }
-      } else {
-        throw new Error('Upload failed')
-      }
-    } catch (error) {
-      console.error('❌ Error uploading bill image:', error)
-      toast.error('Failed to upload bill image. Please try again.')
-      setBillImageUrl(null)
-      setBillImageUploaded(false)
-    } finally {
-      setIsUploadingBill(false)
-      // Reset file input
-      if (cameraInputRef.current) {
-        cameraInputRef.current.value = ''
-      }
-    }
-  }
-
-  // Handle bill image file selection and upload (fallback for web browsers)
-  const handleBillImageSelect = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    await processBillImageFile(file)
-  }
-
-  const handleOrderIdConfirmTouchEnd = (e) => {
-    if (!orderIdConfirmIsSwiping.current) {
-      setOrderIdConfirmButtonProgress(0)
-      return
-    }
-
-    if (!orderIdConfirmIsSwiping.current) {
-      setOrderIdConfirmButtonProgress(0)
-      return
-    }
-
-    const deltaX = e.changedTouches[0].clientX - orderIdConfirmSwipeStartX.current
-    const buttonWidth = orderIdConfirmButtonRef.current?.offsetWidth || 300
-    const circleWidth = 56
-    const padding = 16
-    const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-    const threshold = maxSwipe * 0.7 // 70% of max swipe
-
-    if (deltaX > threshold) {
-      // Animate to completion
-      setOrderIdConfirmIsAnimatingToComplete(true)
-      setOrderIdConfirmButtonProgress(1)
-
-      // Close popup after animation, then confirm order ID and show polyline to customer
-      setTimeout(async () => {
-        setShowOrderIdConfirmationPopup(false)
-
-        // Get order ID from selectedRestaurant
-        const orderId = selectedRestaurant?.id || selectedRestaurant?.orderId
-        const confirmedOrderId = selectedRestaurant?.orderId
-
-        // CRITICAL: Check if order is already delivered/completed - don't call API
-        const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
-        const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
-        const deliveryStateStatus = selectedRestaurant?.deliveryState?.status || ''
-
-        const isDelivered = orderStatus === 'delivered' ||
-          deliveryPhase === 'completed' ||
-          deliveryPhase === 'delivered' ||
-          deliveryStateStatus === 'delivered'
-
-        if (isDelivered) {
-          console.warn('⚠️ Order is already delivered, skipping order ID confirmation')
-          toast.error('Order is already delivered. Cannot confirm order ID.')
-          setShowOrderIdConfirmationPopup(false)
-          return
-        }
-
-        // CRITICAL: Check if order ID is already confirmed - don't call API again
-        const isOrderIdAlreadyConfirmed = orderStatus === 'out_for_delivery' ||
-          deliveryPhase === 'en_route_to_delivery' ||
-          deliveryPhase === 'picked_up' ||
-          deliveryStateStatus === 'order_confirmed' ||
-          selectedRestaurant?.deliveryState?.orderIdConfirmedAt
-
-        if (isOrderIdAlreadyConfirmed) {
-          console.warn('⚠️ Order ID is already confirmed, skipping confirmation:', {
-            orderStatus,
-            deliveryPhase,
-            deliveryStateStatus,
-            orderIdConfirmedAt: selectedRestaurant?.deliveryState?.orderIdConfirmedAt
-          })
-          // Don't show error, just update the UI state and close popup
-          setSelectedRestaurant(prev => ({
-            ...prev,
-            orderStatus: 'out_for_delivery',
-            status: 'out_for_delivery',
-            deliveryPhase: 'en_route_to_delivery',
-            deliveryState: {
-              ...prev.deliveryState,
-              currentPhase: 'en_route_to_delivery',
-              status: 'order_confirmed'
-            }
-          }))
-          setShowOrderIdConfirmationPopup(false)
-          toast.info('Order ID is already confirmed. Order is out for delivery.')
-          return
-        }
-
-        if (!orderId) {
-          console.error('❌ No order ID found to confirm')
-          toast.error('Order ID not found. Please try again.')
-          return
-        }
-
-        // Get current LIVE location
-        let currentLocation = riderLocation
-        if (!currentLocation || currentLocation.length !== 2) {
-          currentLocation = lastLocationRef.current
-        }
-
-        if (!currentLocation || currentLocation.length !== 2) {
-          try {
-            const position = await new Promise((resolve, reject) => {
-              navigator.geolocation.getCurrentPosition(
-                (pos) => resolve([pos.coords.latitude, pos.coords.longitude]),
-                reject,
-                { timeout: 5000, enableHighAccuracy: true }
-              )
-            })
-            currentLocation = position
-          } catch (geoError) {
-            console.error('❌ Could not get current location:', geoError)
-            toast.error('Location not available. Please enable location services.')
-            return
-          }
-        }
-
-        try {
-          // Prefer string orderId (ORD-xxx) for URL; backend accepts both _id and orderId
+ backend accepts both _id and orderId
           const orderIdForApi = selectedRestaurant?.orderId || selectedRestaurant?.id
           const confirmedOrderIdForApi = selectedRestaurant?.orderId || (orderIdForApi && String(orderIdForApi).startsWith('ORD-') ? orderIdForApi : undefined)
 
           // Call backend API to confirm order ID
-          console.log('📦 Confirming order ID:', {
-            orderIdForApi,
-            confirmedOrderIdForApi,
-            lat: currentLocation[0],
-            lng: currentLocation[1]
-          })
-
-          // Confirm order ID
-          const response = await deliveryAPI.confirmOrderId(orderIdForApi, confirmedOrderIdForApi, {
-            lat: currentLocation[0],
-            lng: currentLocation[1]
-          })
-
-          console.log('✅ Order ID confirmed, response:', response.data)
-
-          if (response.data?.success && response.data.data) {
-            const orderData = response.data.data
-            const order = orderData.order || orderData
-            const routeData = orderData.route || order.deliveryState?.routeToDelivery
-
-            // Update selectedRestaurant with customer address
-            if (order && selectedRestaurant) {
-              const customerCoords = order.address?.location?.coordinates
-              const customerLat = customerCoords?.[1]
-              const customerLng = customerCoords?.[0]
-
-              if (customerLat && customerLng) {
-                const updatedRestaurant = {
-                  ...selectedRestaurant,
-                  customerName: order.userId?.name || selectedRestaurant.customerName,
-                  customerPhone: order.userId?.phone || selectedRestaurant.customerPhone || null,
-                  customerAddress: order.address?.formattedAddress ||
-                    (order.address?.street ? `${order.address.street}, ${order.address.city || ''}, ${order.address.state || ''}`.trim() : '') ||
-                    selectedRestaurant.customerAddress,
-                  customerLat,
-                  customerLng
-                }
-                setSelectedRestaurant(updatedRestaurant)
-
-                // Calculate route from delivery boy's live location to customer using Directions API
-                console.log('🗺️ Calculating route to customer using Directions API...')
-                console.log('📍 From (Delivery Boy Live Location):', currentLocation)
-                console.log('📍 To (Customer):', { lat: customerLat, lng: customerLng })
-
-                try {
-                  const directionsResult = await calculateRouteWithDirectionsAPI(
-                    currentLocation,
-                    { lat: customerLat, lng: customerLng }
-                  )
-
-                  if (directionsResult) {
-                    console.log('✅ Route to customer calculated with Directions API')
-
-                    // Store delivery route distance and time
-                    const deliveryDistance = directionsResult.routes[0]?.legs[0]?.distance?.value || 0; // in meters
+ // in meters
                     const deliveryDuration = directionsResult.routes[0]?.legs[0]?.duration?.value || 0; // in seconds
                     deliveryRouteDistanceRef.current = deliveryDistance;
                     deliveryRouteTimeRef.current = deliveryDuration;
-                    console.log('📊 Delivery route stored:', { distance: deliveryDistance, duration: deliveryDuration });
 
                     // Calculate total trip distance and time
                     const totalDistance = pickupRouteDistanceRef.current + deliveryDistance;
                     const totalTime = pickupRouteTimeRef.current + deliveryDuration;
                     setTripDistance(totalDistance);
                     setTripTime(totalTime);
-                    console.log('📊 Total trip calculated:', {
-                      totalDistance: totalDistance,
-                      totalTime: totalTime,
-                      pickupDistance: pickupRouteDistanceRef.current,
-                      pickupTime: pickupRouteTimeRef.current,
-                      deliveryDistance: deliveryDistance,
-                      deliveryTime: deliveryDuration
-                    });
 
                     setDirectionsResponse(directionsResult)
                     directionsResponseRef.current = directionsResult
 
                     // Initialize / update live tracking polyline for customer delivery route
                     updateLiveTrackingPolyline(directionsResult, currentLocation)
-                    console.log('✅ Live tracking polyline initialized for customer delivery route')
-
-                    // Show route polyline on main Feed map
-                    if (window.deliveryMapInstance && window.google?.maps) {
-                      if (!directionsRendererRef.current) {
-                        directionsRendererRef.current = new window.google.maps.DirectionsRenderer({
-                          suppressMarkers: true,
-                          polylineOptions: { strokeColor: '#4285F4', strokeWeight: 0, strokeOpacity: 0, icons: [], zIndex: -1 },
-                          preserveViewport: true
-                        })
-                      }
-                      // Don't create main route polyline - only live tracking polyline will be shown
-                      // Remove old custom polyline if exists (cleanup)
-                      try {
-                        if (routePolylineRef.current) {
-                          routePolylineRef.current.setMap(null);
                           routePolylineRef.current = null;
                         }
 
@@ -3774,412 +1702,9 @@ export default function DeliveryHome() {
                   }
                 } catch (routeError) {
                   if (routeError.message?.includes('REQUEST_DENIED') || routeError.message?.includes('not available')) {
-                    console.log('⚠️ Directions API not available, using backend route fallback')
-                  } else {
-                    console.error('❌ Error calculating route to customer:', routeError)
-                  }
-                  if (routeData?.coordinates?.length > 0) {
-                    setRoutePolyline(routeData.coordinates)
-                    updateRoutePolyline(routeData.coordinates)
-                    setShowRoutePath(true)
-                  }
-                }
-              }
-            }
-
-            // Update status to out_for_delivery (merge if customer block didn't run)
-            setSelectedRestaurant(prev => ({
-              ...prev,
-              orderStatus: 'out_for_delivery',
-              status: 'out_for_delivery',
-              deliveryPhase: 'en_route_to_delivery',
-              deliveryState: {
-                ...prev.deliveryState,
-                currentPhase: 'en_route_to_delivery',
-                status: 'order_confirmed'
-              }
-            }))
-
-            // CRITICAL: Close Reached Pickup popup if it's still showing (shouldn't happen, but defensive)
-            setShowreachedPickupPopup(false)
-
-            // Close Order ID confirmation popup
-            setShowOrderIdConfirmationPopup(false)
-
-            toast.success('Order is out for delivery. Route to customer is on the map.', { duration: 4000 })
-
-            // Show Reached Drop popup instantly after Order Picked Up is confirmed
-            // Use setTimeout to ensure state updates are processed and useEffect doesn't block it
-            console.log('✅ Showing Reached Drop popup instantly after Order Picked Up confirmation')
-            setTimeout(() => {
-              setShowReachedDropPopup(true)
-              console.log('✅ Reached Drop popup state set to true')
-            }, 100) // Small delay to ensure showOrderIdConfirmationPopup state is updated
-
-          } else {
-            console.error('❌ Failed to confirm order ID:', response.data)
-            toast.error(response.data?.message || 'Failed to confirm order ID. Please try again.')
-          }
-        } catch (error) {
-          const status = error.response?.status
-          const msg = error.response?.data?.message || error.message || ''
-          console.error('❌ Error confirming order ID:', { status, message: msg, data: error.response?.data })
-          toast.error(msg || 'Failed to confirm order ID. Please try again.')
-        }
-
-        // Reset after animation
-        setTimeout(() => {
-          setOrderIdConfirmButtonProgress(0)
-          setOrderIdConfirmIsAnimatingToComplete(false)
-        }, 500)
-      }, 200)
-    } else {
-      // Reset smoothly
-      setOrderIdConfirmButtonProgress(0)
-    }
-
-    orderIdConfirmSwipeStartX.current = 0
-    orderIdConfirmSwipeStartY.current = 0
-    orderIdConfirmIsSwiping.current = false
-  }
-
-  // Handle Start Navigation Button - Opens Google Maps app in navigation mode
-  const handleStartNavigation = async () => {
-    let customerLat = toFiniteCoordinate(selectedRestaurant?.customerLat)
-    let customerLng = toFiniteCoordinate(selectedRestaurant?.customerLng)
-
-    if (!hasValidCoordinates(customerLat, customerLng)) {
-      const orderId = selectedRestaurant?.orderId || selectedRestaurant?.id
-      if (orderId) {
-        try {
-          const response = await deliveryAPI.getOrderDetails(orderId)
-          const order = response?.data?.data?.order || response?.data?.data || null
-          const coords = order?.address?.location?.coordinates
-          const fetchedLat = toFiniteCoordinate(coords?.[1] ?? order?.address?.location?.latitude ?? order?.address?.location?.lat)
-          const fetchedLng = toFiniteCoordinate(coords?.[0] ?? order?.address?.location?.longitude ?? order?.address?.location?.lng)
-
-          if (hasValidCoordinates(fetchedLat, fetchedLng)) {
-            customerLat = fetchedLat
-            customerLng = fetchedLng
-            setSelectedRestaurant(prev => prev ? {
-              ...prev,
-              customerLat: fetchedLat,
-              customerLng: fetchedLng
-            } : prev)
-          }
-        } catch (error) {
-          console.warn('Failed to fetch customer coords for map navigation:', error?.response?.data?.message || error.message)
-        }
-      }
-    }
-
-    if (!hasValidCoordinates(customerLat, customerLng)) {
-      console.error('Customer location not available', {
-        customerLat: selectedRestaurant?.customerLat,
-        customerLng: selectedRestaurant?.customerLng,
-        selectedRestaurant
-      })
-      toast.error('Customer location not found')
-      return
-    }
-
-    const userAgent = navigator.userAgent || navigator.vendor || window.opera
-    const isAndroid = /android/i.test(userAgent)
-    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream
-    const isLocalDevHost = ['localhost', '127.0.0.1'].includes(window.location.hostname)
-    const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${customerLat},${customerLng}&travelmode=bicycling`
-
-    if (isLocalDevHost) {
-      const opened = window.open(webUrl, '_blank')
-      if (!opened) window.location.href = webUrl
-      toast.success('Opening Google Maps navigation', { duration: 2000 })
-      return
-    }
-
-    if (isAndroid) {
-      window.location.href = `google.navigation:q=${customerLat},${customerLng}&mode=b`
-      setTimeout(() => {
-        window.open(webUrl, '_blank')
-      }, 500)
-    } else if (isIOS) {
-      window.location.href = `comgooglemaps://?daddr=${customerLat},${customerLng}&directionsmode=bicycling`
-      setTimeout(() => {
-        const iosWebUrl = `https://maps.google.com/?daddr=${customerLat},${customerLng}&directionsmode=bicycling`
-        window.open(iosWebUrl, '_blank')
-      }, 500)
-    } else {
-      const opened = window.open(webUrl, '_blank')
-      if (!opened) window.location.href = webUrl
-    }
-
-    toast.success('Opening Google Maps navigation', { duration: 2000 })
-  }
-
-  // Handle Order Delivered button swipe
-  const handleOrderDeliveredTouchStart = (e) => {
-    orderDeliveredSwipeStartX.current = e.touches[0].clientX
-    orderDeliveredSwipeStartY.current = e.touches[0].clientY
-    orderDeliveredIsSwiping.current = false
-    setOrderDeliveredIsAnimatingToComplete(false)
-    setOrderDeliveredButtonProgress(0)
-  }
-
-  const handleOrderDeliveredTouchMove = (e) => {
-    const deltaX = e.touches[0].clientX - orderDeliveredSwipeStartX.current
-    const deltaY = e.touches[0].clientY - orderDeliveredSwipeStartY.current
-
-    // Only handle horizontal swipes (swipe right)
-    if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 0) {
-      orderDeliveredIsSwiping.current = true
-      // Don't call preventDefault - CSS touch-action handles scrolling prevention
-      // safePreventDefault(e) // Removed to avoid passive listener error
-
-      // Calculate max swipe distance
-      const buttonWidth = orderDeliveredButtonRef.current?.offsetWidth || 300
-      const circleWidth = 56 // w-14 = 56px
-      const padding = 16 // px-4 = 16px
-      const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-
-      const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
-      setOrderDeliveredButtonProgress(progress)
-    }
-  }
-
-  const handleOrderDeliveredTouchEnd = (e) => {
-    if (!orderDeliveredIsSwiping.current) {
-      setOrderDeliveredButtonProgress(0)
-      return
-    }
-
-    const deltaX = e.changedTouches[0].clientX - orderDeliveredSwipeStartX.current
-    const buttonWidth = orderDeliveredButtonRef.current?.offsetWidth || 300
-    const circleWidth = 56
-    const padding = 16
-    const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-    const threshold = maxSwipe * 0.7 // 70% of max swipe
-
-    if (deltaX > threshold) {
-      // Animate to completion
-      setOrderDeliveredIsAnimatingToComplete(true)
-      setOrderDeliveredButtonProgress(1)
-
-      // Close popup after animation and show customer review (delivery will be completed when review is submitted)
-      setTimeout(() => {
-        setShowOrderDeliveredAnimation(false)
-
-        // CRITICAL: Clear all pickup/delivery related popups
-        setShowReachedDropPopup(false)
-        setShowreachedPickupPopup(false)
-        setShowOrderIdConfirmationPopup(false)
-
-        // Show customer review popup instantly
-        setShowCustomerReviewPopup(true)
-
-        // Reset after animation
-        setTimeout(() => {
-          setOrderDeliveredButtonProgress(0)
-          setOrderDeliveredIsAnimatingToComplete(false)
-        }, 500)
-      }, 200)
-    } else {
-      // Reset smoothly
-      setOrderDeliveredButtonProgress(0)
-    }
-
-    orderDeliveredSwipeStartX.current = 0
-    orderDeliveredSwipeStartY.current = 0
-    orderDeliveredIsSwiping.current = false
-  }
-
-  // Handle accept orders button swipe
-  const handleAcceptOrdersTouchStart = (e) => {
-    acceptButtonSwipeStartX.current = e.touches[0].clientX
-    acceptButtonSwipeStartY.current = e.touches[0].clientY
-    acceptButtonIsSwiping.current = false
-    setIsAnimatingToComplete(false)
-    setAcceptButtonProgress(0)
-  }
-
-  const handleAcceptOrdersTouchMove = (e) => {
-    const deltaX = e.touches[0].clientX - acceptButtonSwipeStartX.current
-    const deltaY = e.touches[0].clientY - acceptButtonSwipeStartY.current
-
-    // Only handle horizontal swipes (swipe right)
-    if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 0) {
-      acceptButtonIsSwiping.current = true
-      // Don't call preventDefault - CSS touch-action handles scrolling prevention
-      // safePreventDefault(e) // Removed to avoid passive listener error
-
-      // Calculate max swipe distance
-      const buttonWidth = acceptButtonRef.current?.offsetWidth || 300
-      const circleWidth = 56 // w-14 = 56px
-      const padding = 16 // px-4 = 16px
-      const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-
-      const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
-      setAcceptButtonProgress(progress)
-    }
-  }
-
-  const handleAcceptOrdersTouchEnd = (e) => {
-    if (!acceptButtonIsSwiping.current) {
-      setAcceptButtonProgress(0)
-      return
-    }
-
-    const deltaX = e.changedTouches[0].clientX - acceptButtonSwipeStartX.current
-    const buttonWidth = acceptButtonRef.current?.offsetWidth || 300
-    const circleWidth = 56
-    const padding = 16
-    const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-    const threshold = maxSwipe * 0.7 // 70% of max swipe
-
-    if (deltaX > threshold) {
-      // Animate to completion
-      setIsAnimatingToComplete(true)
-      setAcceptButtonProgress(1)
-
-      // Navigate to pickup directions page after animation
-      setTimeout(() => {
-        navigate("/delivery/pickup-directions", {
-          state: { restaurants: mockRestaurants },
-          replace: false
-        })
-
-        // Reset after navigation
-        setTimeout(() => {
-          setAcceptButtonProgress(0)
-          setIsAnimatingToComplete(false)
-        }, 500)
-      }, 200)
-    } else {
-      // Reset smoothly
-      setAcceptButtonProgress(0)
-    }
-
-    acceptButtonSwipeStartX.current = 0
-    acceptButtonSwipeStartY.current = 0
-    acceptButtonIsSwiping.current = false
-  }
-
-  // Handle bottom sheet swipe
-  const handleBottomSheetTouchStart = (e) => {
-    const target = e.target
-    const isHandle = handleRef.current?.contains(target)
-
-    // Check if touch is in handle area or top 15% of bottom sheet
-    const rect = bottomSheetRef.current?.getBoundingClientRect()
-    if (!rect) return
-
-    const touchY = e.touches[0].clientY
-    const handleArea = rect.top + 60 // Top 60px is handle area
-
-    // Allow swipe if touching handle or top area
-    if (isHandle || touchY <= handleArea) {
-      e.stopPropagation()
-      swipeStartY.current = touchY
-      isSwiping.current = true
-    }
-  }
-
-  const handleBottomSheetTouchMove = (e) => {
-    if (!isSwiping.current) return
-
-    const deltaY = swipeStartY.current - e.touches[0].clientY
-
-    if (Math.abs(deltaY) > 5) {
-      e.stopPropagation()
-
-      // Swipe up to expand
-      if (deltaY > 0 && !bottomSheetExpanded && bottomSheetRef.current) {
-        // Don't call preventDefault - CSS touch-action handles scrolling prevention
-        // safePreventDefault(e) // Removed to avoid passive listener error
-        bottomSheetRef.current.style.transform = `translateY(${-deltaY}px)`
-      }
-      // Swipe down to collapse
-      else if (deltaY < 0 && bottomSheetExpanded && bottomSheetRef.current) {
-        // Don't call preventDefault - CSS touch-action handles scrolling prevention
-        // safePreventDefault(e) // Removed to avoid passive listener error
-        bottomSheetRef.current.style.transform = `translateY(${-deltaY}px)`
-      }
-    }
-  }
-
-  const handleBottomSheetTouchEnd = (e) => {
-    if (!isSwiping.current) {
-      isSwiping.current = false
-      return
-    }
-
-    e.stopPropagation()
-
-    const deltaY = swipeStartY.current - e.changedTouches[0].clientY
-    const threshold = 50
-
-    if (bottomSheetRef.current) {
-      if (deltaY > threshold && !bottomSheetExpanded) {
-        setBottomSheetExpanded(true)
-      } else if (deltaY < -threshold && bottomSheetExpanded) {
-        setBottomSheetExpanded(false)
-      }
-      // Reset transform
-      bottomSheetRef.current.style.transform = ''
-    }
-
-    isSwiping.current = false
-    swipeStartY.current = 0
-  }
-
-  // Listen for refresh events
-  useEffect(() => {
-    const handleRefresh = () => {
-      setAnimationKey(prev => prev + 1)
-    }
-
-    const handleActiveOrderUpdate = () => {
-      const stored = localStorage.getItem('activeOrder')
-      setActiveOrder(stored ? JSON.parse(stored) : null)
-    }
-
-    const handleNotificationUpdate = () => {
-      setUnreadNotificationCount(getUnreadDeliveryNotificationCount())
-    }
-
-    window.addEventListener('deliveryHomeRefresh', handleRefresh)
-    window.addEventListener('gigStateUpdated', handleRefresh)
-    window.addEventListener('deliveryOrderStatusUpdated', handleRefresh)
-    window.addEventListener('activeOrderUpdated', handleActiveOrderUpdate)
-    window.addEventListener('storage', handleActiveOrderUpdate)
-    window.addEventListener('deliveryNotificationsUpdated', handleNotificationUpdate)
-
-    return () => {
-      window.removeEventListener('deliveryHomeRefresh', handleRefresh)
-      window.removeEventListener('gigStateUpdated', handleRefresh)
-      window.removeEventListener('deliveryOrderStatusUpdated', handleRefresh)
-      window.removeEventListener('activeOrderUpdated', handleActiveOrderUpdate)
-      window.removeEventListener('storage', handleActiveOrderUpdate)
-      window.removeEventListener('deliveryNotificationsUpdated', handleNotificationUpdate)
-    }
-  }, [])
-
-  // Helper function to calculate time away from distance
-  const calculateTimeAway = useCallback((distanceStr) => {
-    if (!distanceStr) return '0 mins'
-    const distance = parseFloat(distanceStr.replace(' km', ''))
-    if (isNaN(distance)) return '0 mins'
-    // Assume average speed of 30 km/h for delivery
-    const minutes = Math.ceil((distance / 30) * 60)
-    return `${minutes} mins`
-  }, [])
-
-  // Show new order popup when order is received from Socket.IO
-  useEffect(() => {
-    if (newOrder) {
-      const orderId = newOrder.orderMongoId || newOrder.orderId;
 
       // Check if this order has already been accepted
       if (acceptedOrderIdsRef.current.has(orderId)) {
-        console.log('⚠️ Order already accepted, ignoring duplicate notification:', orderId);
         clearNewOrder();
         return;
       }
@@ -4191,7 +1716,6 @@ export default function DeliveryHome() {
           const activeOrder = JSON.parse(activeOrderData);
           const activeOrderId = activeOrder.orderId || activeOrder.restaurantInfo?.id || activeOrder.restaurantInfo?.orderId;
           if (activeOrderId === orderId) {
-            console.log('⚠️ Order already accepted (found in localStorage), ignoring notification:', orderId);
             acceptedOrderIdsRef.current.add(orderId);
             clearNewOrder();
             return;
@@ -4206,17 +1730,6 @@ export default function DeliveryHome() {
       const isCodOrder = orderPaymentMethod === 'cash'
 
       if (isCodOrder && availableCashLimit <= 0) {
-        console.log('🚫 Cash limit reached, blocking COD order notification:', orderId)
-        toast.error('Cash limit reached. You cannot receive COD orders.')
-        clearNewOrder()
-        return
-      }
-
-      console.log('📦 New order received from Socket.IO:', newOrder)
-
-      // Transform newOrder data to match selectedRestaurant format
-      // Extract restaurant address with proper priority
-      let restaurantAddress = 'Restaurant address';
       if (newOrder.restaurantLocation?.address) {
         restaurantAddress = newOrder.restaurantLocation.address;
       } else if (newOrder.restaurantLocation?.formattedAddress) {
@@ -4246,13 +1759,6 @@ export default function DeliveryHome() {
         lng: extractedRestaurantCoords.lng ?? toFiniteCoordinate(newOrder.restaurantLng)
       }
 
-      console.log('💰 Earnings from notification:', {
-        earned,
-        earnedValue,
-        deliveryFee,
-        effectiveEarnings,
-        type: typeof effectiveEarnings
-      });
 
       // Calculate pickup distance if not provided
       let pickupDistance = newOrder.pickupDistance;
@@ -4278,7 +1784,6 @@ export default function DeliveryHome() {
           );
           const distanceInKm = distanceInMeters / 1000;
           pickupDistance = `${distanceInKm.toFixed(2)} km`;
-          console.log('📍 Calculated pickup distance:', pickupDistance);
         }
       }
 
@@ -4349,72 +1854,6 @@ export default function DeliveryHome() {
       const distanceInKm = distanceInMeters / 1000
       const pickupDistance = `${distanceInKm.toFixed(2)} km`
 
-      console.log('📍 Recalculated pickup distance:', pickupDistance)
-
-      setSelectedRestaurant(prev => ({
-        ...prev,
-        distance: pickupDistance,
-        pickupDistance: pickupDistance,
-        timeAway: calculateTimeAway(pickupDistance)
-      }))
-    }
-  }, [riderLocation, selectedRestaurant, showNewOrderPopup, calculateTimeAway])
-
-  // Fetch restaurant address if missing when selectedRestaurant is set
-  useEffect(() => {
-    if (!selectedRestaurant?.orderId && !selectedRestaurant?.id) return
-    if (!isValidAddress(getRestaurantDisplayAddress(selectedRestaurant))) {
-      // Address is missing, fetch order details to get restaurant address
-      const orderId = selectedRestaurant.orderId || selectedRestaurant.id
-      console.log('🔄 Fetching restaurant address for order:', orderId)
-
-      const fetchAddress = async () => {
-        try {
-          const response = await deliveryAPI.getOrderDetails(orderId)
-          if (response?.data?.success && response?.data?.data) {
-            const order = response.data.data.order || response.data.data
-
-            // Extract restaurant address using the same unified helper as slider
-            const restaurantAddress = getRestaurantDisplayAddress(order)
-
-            if (isValidAddress(restaurantAddress)) {
-              setSelectedRestaurant(prev => ({
-                ...prev,
-                address: restaurantAddress
-              }))
-              console.log('✅ Restaurant address fetched and updated:', restaurantAddress)
-            }
-          }
-        } catch (error) {
-          console.error('❌ Error fetching restaurant address:', error)
-        }
-      }
-
-      fetchAddress()
-    }
-  }, [selectedRestaurant?.orderId, selectedRestaurant?.id, selectedRestaurant?.address])
-
-  // Handle online toggle - check for booked gigs
-  const handleToggleOnline = () => {
-    if (isOnline) {
-      goOffline()
-    } else {
-      // Check if there are any booked gigs
-      // if (bookedGigs.length === 0) {
-      //   // Show popup to book gigs
-      //   setShowBookGigsPopup(true)
-      //   return
-      // }
-
-      // // If gigs exist, proceed with going online
-      // const success = goOnline()
-      // if (!success) {
-      //   // If goOnline fails (no gig), just set online status directly
-      //   useGigStore.setState({ isOnline: true })
-      //   localStorage.setItem('delivery_online_status', 'true')
-      //   window.dispatchEvent(new CustomEvent('deliveryOnlineStatusChanged'))
-      // }
-      goOnline();
     }
   }
 
@@ -4570,67 +2009,6 @@ export default function DeliveryHome() {
   // Fetch assigned orders from API when delivery person goes online
   const fetchAssignedOrders = useCallback(async () => {
     if (!isOnline) {
-      console.log('âš ï¸ Delivery person is offline, skipping order fetch')
-      return
-    }
-
-    // Keep currently visible new-order card stable until rider accepts/rejects it.
-    if (showNewOrderPopup) {
-      return
-    }
-
-    try {
-      console.log('📦 Fetching assigned orders from API...')
-      const response = await deliveryAPI.getOrders({
-        limit: 50, // Get up to 50 pending orders
-        page: 1,
-        includeDelivered: false // Only get active orders
-      })
-
-      if (response?.data?.success && response?.data?.data?.orders) {
-        const orders = response.data.data.orders
-        console.log(`✅ Found ${orders.length} assigned order(s)`)
-
-        // Filter out orders that are already accepted or delivered
-        const pendingOrders = orders.filter(order => {
-          const orderStatus = order.status
-          const deliveryPhase = order.deliveryState?.currentPhase
-
-          // Skip if already delivered or completed
-          if (orderStatus === 'delivered' || deliveryPhase === 'completed') {
-            return false
-          }
-
-          // Skip if already accepted (has deliveryState with accepted status)
-          if (order.deliveryState?.status === 'accepted' ||
-            order.deliveryState?.status === 'reached_pickup' ||
-            order.deliveryState?.status === 'order_confirmed' ||
-            deliveryPhase === 'en_route_to_pickup' ||
-            deliveryPhase === 'at_pickup' ||
-            deliveryPhase === 'en_route_to_delivery' ||
-            deliveryPhase === 'at_delivery') {
-            return false
-          }
-
-          return true
-        })
-
-        if (pendingOrders.length > 0) {
-          console.log(`📦 Found ${pendingOrders.length} new pending order(s) to show`)
-
-          // Show the first pending order as a new order notification
-          const firstOrder = pendingOrders[0]
-          const orderId = firstOrder.orderId || firstOrder._id?.toString()
-
-          // Check if this order is already being shown or accepted
-          if (acceptedOrderIdsRef.current.has(orderId)) {
-            console.log('⚠️ Order already accepted, skipping:', orderId)
-            return
-          }
-
-          // Transform order data to match selectedRestaurant format
-          // Fetch restaurant address with proper priority
-          let restaurantAddress = 'Restaurant address';
           if (firstOrder.restaurantId?.address) {
             restaurantAddress = firstOrder.restaurantId.address;
           } else if (firstOrder.restaurantId?.location?.formattedAddress) {
@@ -4644,11 +2022,6 @@ export default function DeliveryHome() {
             restaurantAddress = parts.join(', ') || 'Restaurant address';
           }
 
-          console.log('📍 Restaurant address extracted from assigned order:', {
-            address: restaurantAddress,
-            hasRestaurantId: !!firstOrder.restaurantId,
-            hasLocation: !!firstOrder.restaurantId?.location
-          });
 
           const assignedRestaurantCoords = extractLatLng(
             firstOrder.restaurantId?.location || firstOrder.restaurantLocation
@@ -4675,7 +2048,6 @@ export default function DeliveryHome() {
               );
               const distanceInKm = distanceInMeters / 1000;
               pickupDistance = `${distanceInKm.toFixed(2)} km`;
-              console.log('📍 Calculated pickup distance from assigned order:', pickupDistance);
             }
           }
 
@@ -4715,113 +2087,7 @@ export default function DeliveryHome() {
           setSelectedRestaurant(restaurantData)
           setShowNewOrderPopup(true)
           setCountdownSeconds(300) // Reset countdown to 5 minutes
-          console.log('✅ Showing pending order notification:', orderId)
-        } else {
-          console.log('ℹ️ No pending orders found')
-        }
-      } else {
-        console.log('ℹ️ No orders in response or response format unexpected')
-      }
-    } catch (error) {
-      console.error('❌ Error fetching assigned orders:', error)
-      // Don't show error to user, just log it
-    }
-  }, [isOnline, calculateTimeAway, riderLocation, showNewOrderPopup])
-
-  // Fetch assigned orders when delivery person goes online
-  useEffect(() => {
-    if (isOnline) {
-      // Small delay to ensure socket connection is established
-      const timeoutId = setTimeout(() => {
-        fetchAssignedOrders()
-      }, 2000) // Wait 2 seconds after going online
-
-      return () => clearTimeout(timeoutId)
-    }
-  }, [isOnline, fetchAssignedOrders])
-
-  // Fallback polling: fetch newly assigned orders without requiring page refresh.
-  useEffect(() => {
-    if (!isOnline) return undefined
-
-    const intervalId = setInterval(() => {
-      fetchAssignedOrders()
-    }, 10000)
-
-    return () => clearInterval(intervalId)
-  }, [isOnline, fetchAssignedOrders])
-
-  // On socket reconnect/connection, immediately sync assigned orders to avoid missed events.
-  useEffect(() => {
-    if (!isOnline || !isConnected) return
-    fetchAssignedOrders()
-  }, [isOnline, isConnected, fetchAssignedOrders])
-
-  // Also fetch orders on initial page load if already online
-  useEffect(() => {
-    // Check if delivery person is already online when component mounts
-    const storedOnlineStatus = localStorage.getItem('delivery_online_status')
-    const isCurrentlyOnline = storedOnlineStatus === 'true' || isOnline
-
-    if (isCurrentlyOnline) {
-      // Fetch orders after a short delay to ensure everything is initialized
-      const timeoutId = setTimeout(() => {
-        fetchAssignedOrders()
-      }, 3000) // Wait 3 seconds on page load
-
-      return () => clearTimeout(timeoutId)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Only run once on mount
-
-  // Fetch bank details status and delivery partner status
-  useEffect(() => {
-    const checkBankDetails = async () => {
-      try {
-        const response = await deliveryAPI.getProfile()
-        if (response?.data?.success && response?.data?.data?.profile) {
-          const profile = response.data.data.profile
-          const bankDetails = profile?.documents?.bankDetails
-
-          // Store delivery partner status first
-          if (profile?.status) {
-            setDeliveryStatus(profile.status)
-          }
-
-          // Store rejection reason if status is blocked
-          if (profile?.status === 'blocked' && profile?.rejectionReason) {
-            setRejectionReason(profile.rejectionReason)
-          } else {
-            setRejectionReason(null)
-          }
-
-          // Only check bank details if status is approved/active
-          // Pending users don't need bank details check
-          if (profile?.status && profile.status !== 'pending') {
-            // Check if all required bank details fields are filled
-            const isFilled = !!(
-              bankDetails?.accountHolderName?.trim() &&
-              bankDetails?.accountNumber?.trim() &&
-              bankDetails?.ifscCode?.trim() &&
-              bankDetails?.bankName?.trim()
-            )
-
-            setBankDetailsFilled(isFilled)
-          } else {
-            // For pending status, don't show bank details banner
-            setBankDetailsFilled(true) // Set to true to hide banner
-          }
-        }
-      } catch (error) {
-        // Only log error if it's not a network or timeout error (backend might be down/slow)
-        if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-          console.error("Error checking bank details:", error)
-        }
-        // Default to showing the bank details banner if we can't check (only for approved users)
-        // For network/timeout errors, DON'T override deliveryStatus to 'pending'
-        // so that already-approved riders don't see the verification banner again.
-        if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-          // Keep existing deliveryStatus; just hide bank-details banner so UI doesn't block
+ just hide bank-details banner so UI doesn't block
           setBankDetailsFilled(true)
         } else {
           setBankDetailsFilled(false)
@@ -4874,12 +2140,10 @@ export default function DeliveryHome() {
   // Initialize Google Map - Preserve map across navigation, re-attach when returning
   useEffect(() => {
     if (showHomeSections) {
-      console.log('📍 Map view hidden (showHomeSections is true)');
       return;
     }
 
     if (!mapContainerRef.current) {
-      console.log('📍 Map container ref not available yet, will retry...');
       if (mapInitRetry < 10) {
         const timer = setTimeout(() => setMapInitRetry((r) => r + 1), 200);
         return () => clearTimeout(timer);
@@ -4896,18 +2160,15 @@ export default function DeliveryHome() {
       const existingBikeMarker = bikeMarkerRef.current;
       const existingPolyline = routePolylineRef.current;
 
-      console.log('📍 Map instance exists, preserving state for re-initialization...');
 
       // Check if map is already attached to current container
       try {
         const mapDiv = existingMap.getDiv();
         if (mapDiv && mapDiv === mapContainerRef.current) {
-          console.log('📍 Map already attached to current container, skipping re-initialization');
           return; // Map is already properly attached, no need to re-initialize
         }
       } catch (error) {
         // Map div check failed, will re-initialize
-        console.log('📍 Map container check failed, will re-initialize');
       }
 
       // Store map state safely
@@ -4954,13 +2215,11 @@ export default function DeliveryHome() {
       window.deliveryMapInstance = null;
     }
 
-    console.log('📍 Starting map initialization...');
 
     // Load Google Maps if not already loaded
     const loadGoogleMapsIfNeeded = async () => {
       // Check if already loaded
       if (window.google && window.google.maps) {
-        console.log('✅ Google Maps already loaded');
         // Wait a bit to ensure ref is available
         await new Promise(resolve => setTimeout(resolve, 100));
         initializeGoogleMap();
@@ -4970,7 +2229,6 @@ export default function DeliveryHome() {
       // Check if script tag is already present (from main.jsx)
       const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
       if (existingScript || window.__googleMapsLoading) {
-        console.log('📍 Google Maps is already being loaded, waiting...');
         let attempts = 0;
         const maxAttempts = 50; // 5 seconds max wait
 
@@ -4980,7 +2238,6 @@ export default function DeliveryHome() {
         }
 
         if (window.google && window.google.maps) {
-          console.log('✅ Google Maps loaded via script tag');
           await initializeGoogleMap();
           return;
         }
@@ -4988,7 +2245,6 @@ export default function DeliveryHome() {
 
       // Only use Loader if no script tag exists and not already loading
       if (!existingScript && !window.__googleMapsLoading) {
-        console.log('📍 Google Maps not loaded, using Loader as fallback...');
         window.__googleMapsLoading = true;
         try {
           const apiKey = await getGoogleMapsApiKey();
@@ -4999,7 +2255,6 @@ export default function DeliveryHome() {
               libraries: ["places", "geometry", "drawing"]
             });
             await loader.load();
-            console.log('✅ Google Maps loaded via Loader');
             window.__googleMapsLoaded = true;
             window.__googleMapsLoading = false;
             await initializeGoogleMap();
@@ -5025,7 +2280,6 @@ export default function DeliveryHome() {
         }
 
         if (window.google && window.google.maps) {
-          console.log('✅ Google Maps loaded via script tag');
           await initializeGoogleMap();
         } else {
           console.error('❌ Google Maps failed to load');
@@ -5035,7 +2289,6 @@ export default function DeliveryHome() {
 
       // Wait for MapTypeId to be available (sometimes it loads slightly after maps)
       if (window.google && window.google.maps && !window.google.maps.MapTypeId) {
-        console.log('📍 Waiting for MapTypeId to be available...');
         let attempts = 0;
         const maxAttempts = 20; // 2 seconds max wait
 
@@ -5070,7 +2323,6 @@ export default function DeliveryHome() {
       try {
         // Wait for map container ref to be available
         if (!mapContainerRef.current) {
-          console.log('📍 Map container ref not available yet, waiting...');
           let attempts = 0;
           const maxAttempts = 50; // 5 seconds max wait
 
@@ -5092,7 +2344,6 @@ export default function DeliveryHome() {
           return;
         }
 
-        console.log('📍 Initializing Google Map with container:', mapContainerRef.current);
         setMapLoading(true);
 
         // Get location from multiple sources (priority: riderLocation > saved location > wait for GPS)
@@ -5101,7 +2352,6 @@ export default function DeliveryHome() {
         if (riderLocation && riderLocation.length === 2) {
           // Use current rider location
           initialCenter = { lat: riderLocation[0], lng: riderLocation[1] };
-          console.log('📍 Using current rider location for map center:', initialCenter);
         } else {
           // Try to get from localStorage (saved location from previous session)
           const savedLocation = localStorage.getItem('deliveryBoyLastLocation');
@@ -5114,7 +2364,6 @@ export default function DeliveryHome() {
                 if (typeof lat === 'number' && typeof lng === 'number' &&
                   lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
                   initialCenter = { lat, lng };
-                  console.log('📍 Using saved location from localStorage for map center:', initialCenter);
                 }
               }
             } catch (e) {
@@ -5127,10 +2376,8 @@ export default function DeliveryHome() {
         // When GPS location is received, map will recenter and show bike marker.
         if (!initialCenter) {
           initialCenter = { lat: 20.5937, lng: 78.9629 };
-          console.log('📍 No location yet, using default center (India). Map will recenter when GPS is available.');
         }
 
-        console.log('📍 Map center:', initialCenter);
 
         // Check if MapTypeId is available, use string fallback if not
         // Always use string 'roadmap' to avoid MapTypeId enum issues
@@ -5138,13 +2385,6 @@ export default function DeliveryHome() {
           ? window.google.maps.MapTypeId.ROADMAP
           : 'roadmap';
 
-        console.log('📍 MapTypeId:', mapTypeId);
-        console.log('📍 Google Maps API check:', {
-          google: !!window.google,
-          maps: !!window.google?.maps,
-          MapTypeId: !!window.google?.maps?.MapTypeId,
-          ROADMAP: window.google?.maps?.MapTypeId?.ROADMAP !== undefined
-        });
 
         // Wrap map initialization in try-catch to handle any Google Maps internal errors
         let map;
@@ -5176,13 +2416,11 @@ export default function DeliveryHome() {
 
         // Store map instance
         window.deliveryMapInstance = map;
-        console.log('✅ Map instance created and stored');
 
         // Add error listener for map errors (if available)
         try {
           if (window.google.maps.event) {
             window.google.maps.event.addListenerOnce(map, 'tilesloaded', () => {
-              console.log('✅ Map tiles loaded successfully');
             });
           }
         } catch (eventError) {
@@ -5191,7 +2429,6 @@ export default function DeliveryHome() {
 
         // Add error listener for map errors
         window.google.maps.event.addListenerOnce(map, 'tilesloaded', () => {
-          console.log('✅ Map tiles loaded successfully');
         });
 
         // Handle map errors
@@ -5236,12 +2473,10 @@ export default function DeliveryHome() {
           if (preservedState.center && preservedState.zoom) {
             map.setCenter(preservedState.center);
             map.setZoom(preservedState.zoom);
-            console.log('📍 Restored map center and zoom after navigation');
           }
 
           // Re-create bike marker if it existed before navigation
           if (preservedState.bikeMarkerPosition && isOnlineRef.current) {
-            console.log('📍 Re-creating bike marker after navigation:', preservedState.bikeMarkerPosition);
             createOrUpdateBikeMarker(
               preservedState.bikeMarkerPosition.lat,
               preservedState.bikeMarkerPosition.lng,
@@ -5256,7 +2491,6 @@ export default function DeliveryHome() {
             // Only re-attach if we have an active order
             if (routeHistoryRef.current.length >= 2) {
               routePolylineRef.current.setMap(map);
-              console.log('✅ Route polyline re-attached after navigation');
             }
           } else if (!selectedRestaurant && routePolylineRef.current) {
             // Clear polyline if no active order
@@ -5283,7 +2517,6 @@ export default function DeliveryHome() {
             lastLocationRef.current = riderLocation;
 
             // Always add bike marker if location is available (both online and offline)
-            console.log('📍 Creating bike marker on map init');
             createOrUpdateBikeMarker(riderLocation[0], riderLocation[1], null, true);
           }
         }
@@ -5294,7 +2527,6 @@ export default function DeliveryHome() {
           if (riderLocation && riderLocation.length === 2) {
             setTimeout(() => {
               if (!bikeMarkerRef.current || bikeMarkerRef.current.getMap() === null) {
-                console.log('📍 Re-adding bike marker after tiles loaded');
                 createOrUpdateBikeMarker(riderLocation[0], riderLocation[1], null);
               }
             }, 500);
@@ -5305,7 +2537,6 @@ export default function DeliveryHome() {
               try {
                 const parsed = JSON.parse(savedLocation);
                 if (parsed && Array.isArray(parsed) && parsed.length === 2) {
-                  console.log('📍 Creating bike marker from saved location after tiles loaded');
                   setTimeout(() => {
                     createOrUpdateBikeMarker(parsed[0], parsed[1], null);
                   }, 500);
@@ -5320,7 +2551,6 @@ export default function DeliveryHome() {
           if (selectedRestaurant && selectedRestaurant.lat && selectedRestaurant.lng) {
             setTimeout(() => {
               if (!restaurantMarkerRef.current || restaurantMarkerRef.current.getMap() === null) {
-                console.log('📍 Re-adding restaurant marker after tiles loaded');
                 const restaurantLocation = {
                   lat: selectedRestaurant.lat,
                   lng: selectedRestaurant.lng
@@ -5354,7 +2584,6 @@ export default function DeliveryHome() {
           }, 1000);
         });
 
-        console.log('✅ Google Map initialized');
       } catch (error) {
         console.error('❌ Error initializing Google Map:', error);
         setMapLoading(false);
@@ -5365,7 +2594,6 @@ export default function DeliveryHome() {
     return () => {
       // Preserve map instance and markers for navigation
       // Map will be re-initialized when component mounts again
-      console.log('📍 Component cleanup - preserving map instance for navigation');
 
       // Don't clear map instance - preserve it in window.deliveryMapInstance
       // Don't clear bike marker - preserve it in bikeMarkerRef
@@ -5385,54 +2613,6 @@ export default function DeliveryHome() {
     if (!window.google || !window.google.maps) return // Google Maps not loaded yet
     if (!mapContainerRef.current) return // Container not ready
 
-    console.log('📍 Rider location available, initializing map...')
-    // Map initialization will happen in the main useEffect, but we can trigger it
-    // by calling initializeGoogleMap directly
-    const initializeMap = async () => {
-      try {
-        const initialCenter = { lat: riderLocation[0], lng: riderLocation[1] }
-        console.log('📍 Initializing map with rider location:', initialCenter)
-
-        if (!window.google || !window.google.maps) return
-
-        const map = new window.google.maps.Map(mapContainerRef.current, {
-          center: initialCenter,
-          zoom: 18,
-          minZoom: 10,
-          maxZoom: 21,
-          mapTypeId: window.google.maps.MapTypeId?.ROADMAP || 'roadmap',
-          tilt: 45,
-          heading: 0,
-          disableDefaultUI: false,
-          zoomControl: true,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false
-        })
-
-        window.deliveryMapInstance = map
-        console.log('✅ Map initialized with rider location')
-
-        // Create bike marker
-        createOrUpdateBikeMarker(riderLocation[0], riderLocation[1], null, true)
-        setMapLoading(false)
-      } catch (error) {
-        console.error('❌ Error initializing map with rider location:', error)
-        setMapLoading(false)
-      }
-    }
-
-    initializeMap()
-  }, [riderLocation, showHomeSections]) // Initialize when location is available
-
-  // Update bike marker when going online - ensure bike appears immediately
-  useEffect(() => {
-    console.log('🔄 Online status effect triggered:', {
-      isOnline,
-      showHomeSections,
-      hasMap: !!window.deliveryMapInstance,
-      riderLocation
-    });
 
     if (showHomeSections || !window.deliveryMapInstance) {
       return;
@@ -5448,7 +2628,6 @@ export default function DeliveryHome() {
         heading = calculateHeading(prevLat, prevLng, riderLocation[0], riderLocation[1]);
       }
 
-      console.log('✅ User went ONLINE - creating/updating bike marker immediately at:', riderLocation);
 
       // Create or update bike marker IMMEDIATELY (blue dot की जगह bike icon)
       createOrUpdateBikeMarker(riderLocation[0], riderLocation[1], heading, true);
@@ -5486,7 +2665,6 @@ export default function DeliveryHome() {
         }
       }
 
-      console.log('✅ Bike marker created/updated when going online:', riderLocation);
     } else {
       // Try to get location from localStorage if current location not available
       const savedLocation = localStorage.getItem('deliveryBoyLastLocation')
@@ -5508,21 +2686,6 @@ export default function DeliveryHome() {
                 })
                 createOrUpdateBikeMarker(lng, lat, null, true)
               } else {
-                console.log('📍 Using saved location from localStorage:', {
-                  location: parsed,
-                  format: "[lat, lng]"
-                })
-                createOrUpdateBikeMarker(parsed[0], parsed[1], null, true)
-              }
-            } else {
-              console.warn('⚠️ Invalid saved coordinates:', parsed)
-            }
-          }
-        } catch (e) {
-          console.warn('⚠️ Error using saved location:', e)
-        }
-      } else {
-        console.warn('⚠️ Cannot create bike marker - invalid rider location:', riderLocation);
       }
     }
   }, [isOnline, riderLocation, showHomeSections])
@@ -5635,7 +2798,6 @@ export default function DeliveryHome() {
         zIndex: 10
       });
 
-      console.log('✅ Restaurant marker created/updated on main map');
     } else {
       // Update position if marker exists
       restaurantMarkerRef.current.setPosition({
@@ -5676,13 +2838,6 @@ export default function DeliveryHome() {
             },
             (result, status) => {
               if (status === window.google.maps.DirectionsStatus.OK) {
-                console.log(`✅ Directions API route calculated successfully (${modeName})`);
-                console.log('📍 Route details:', {
-                  distance: result.routes[0].legs[0].distance?.text,
-                  duration: result.routes[0].legs[0].duration?.text,
-                  steps: result.routes[0].legs[0].steps?.length,
-                  travelMode: modeName
-                });
                 setDirectionsResponse(result);
                 directionsResponseRef.current = result; // Store in ref for callbacks
                 resolve(result);
@@ -5711,7 +2866,6 @@ export default function DeliveryHome() {
           return await tryRoute(window.google.maps.TravelMode.TWO_WHEELER, 'TWO_WHEELER');
         }
       } catch (twoWheelerError) {
-        console.log('⚠️ TWO_WHEELER mode not available, trying DRIVING...');
       }
 
       // Fallback to DRIVING mode
@@ -5790,7 +2944,6 @@ export default function DeliveryHome() {
             liveTrackingPolylineShadowRef.current.setMap(window.deliveryMapInstance);
           }
         }
-        console.log('✅ Updated existing live tracking polyline');
       } else {
         // Create new polyline with professional Zomato/Rapido styling
         if (!window.deliveryMapInstance) {
@@ -5827,11 +2980,8 @@ export default function DeliveryHome() {
           liveTrackingPolylineShadowRef.current.setPath(path);
         }
 
-        console.log('✅ Created new live tracking polyline on map with Zomato/Rapido styling');
       }
 
-      console.log(`✅ Live tracking polyline updated: ${trimmedPolyline.length} points remaining, ${distance.toFixed(2)}m from route`);
-      console.log(`📍 Polyline path has ${path.length} points, map: ${window.deliveryMapInstance ? 'ready' : 'not ready'}`);
     } catch (error) {
       console.error('❌ Error updating live tracking polyline:', error);
     }
@@ -5951,9 +3101,6 @@ export default function DeliveryHome() {
           destinationName = selectedRestaurant.name || 'Restaurant';
         }
 
-        console.log('🗺️ Initializing Directions Map with LIVE location...');
-        console.log('📍 Origin (Delivery Boy LIVE Location):', currentLocation);
-        console.log('📍 Destination:', destinationName, destinationLocation);
 
         // Create map instance
         const map = new window.google.maps.Map(directionsMapContainerRef.current, {
@@ -6080,7 +3227,6 @@ export default function DeliveryHome() {
             directionsBikeMarkerRef.current.setMap(map);
           }
 
-          console.log('✅ Directions Map initialized with route');
         } else {
           console.warn('⚠️ Failed to calculate route, using fallback polyline');
           // Fallback to simple polyline if Directions API fails
@@ -6111,7 +3257,6 @@ export default function DeliveryHome() {
     // Cleanup function - only cleanup when showDirectionsMap becomes false
     return () => {
       if (!showDirectionsMap) {
-        console.log('🧹 Cleaning up directions map...');
         // Clean up directions renderer when map is closed
         try {
           if (directionsRendererRef.current) {
@@ -6177,7 +3322,6 @@ export default function DeliveryHome() {
         // Only recalculate if moved >50 meters AND last recalculation was >30 seconds ago
         const timeSinceLastRecalc = Date.now() - (lastRouteRecalculationRef.current || 0);
         if (distance > 50 && timeSinceLastRecalc > 30000 && selectedRestaurant) {
-          console.log('🔄 Significant deviation detected, recalculating route...');
           lastRouteRecalculationRef.current = Date.now();
           calculateRouteWithDirectionsAPI(
             [newPosition.lat, newPosition.lng],
@@ -6207,7 +3351,6 @@ export default function DeliveryHome() {
           }).catch(err => {
             // Handle REQUEST_DENIED gracefully - don't spam console
             if (err.message?.includes('REQUEST_DENIED') || err.message?.includes('not available')) {
-              console.log('⚠️ Directions API not available, route update skipped');
             } else {
               console.warn('⚠️ Route recalculation failed:', err);
             }
@@ -6259,7 +3402,6 @@ export default function DeliveryHome() {
       return;
     }
 
-    console.log('🗺️ Showing directions route on main map:', directionsResponse);
 
     // Clear any existing fallback polyline to avoid conflicts
     if (routePolylineRef.current) {
@@ -6268,7 +3410,6 @@ export default function DeliveryHome() {
 
     // Initialize DirectionsRenderer for main map if not exists
     if (!directionsRendererRef.current) {
-      console.log('📦 Creating DirectionsRenderer for main map');
       // Don't create DirectionsRenderer with map - it adds dots
       // We'll extract route path and use custom polyline instead
       directionsRendererRef.current = new window.google.maps.DirectionsRenderer({
@@ -6287,7 +3428,6 @@ export default function DeliveryHome() {
         preserveViewport: true
       });
       // Explicitly don't set map - we use custom polyline instead
-      console.log('✅ DirectionsRenderer created with bright blue polyline (markers suppressed)');
 
       // Ensure it's visible by explicitly setting map
       directionsRendererRef.current.setMap(window.deliveryMapInstance);
@@ -6310,7 +3450,6 @@ export default function DeliveryHome() {
         },
         preserveViewport: true
       });
-      console.log('✅ DirectionsRenderer re-attached to main map with updated styling (markers suppressed)');
     }
 
     // Set directions response to renderer
@@ -6344,12 +3483,6 @@ export default function DeliveryHome() {
             routePolylineRef.current = null;
           }
 
-          console.log('📍 Route details:', {
-            routes: directionsResponse.routes?.length || 0,
-            legs: directionsResponse.routes?.[0]?.legs?.length || 0,
-            distance: directionsResponse.routes?.[0]?.legs?.[0]?.distance?.text,
-            duration: directionsResponse.routes?.[0]?.legs?.[0]?.duration?.text
-          });
 
           // Completely remove DirectionsRenderer from map to prevent any dots/icons
           if (directionsRendererRef.current) {
@@ -6372,7 +3505,6 @@ export default function DeliveryHome() {
             window.deliveryMapInstance.setZoom(currentZoomBeforeFit);
           }
         }, 100);
-        console.log('✅ Map bounds fitted to route');
       }
 
       // Ensure DirectionsRenderer is removed from map (we use custom polyline instead)
@@ -6392,18 +3524,15 @@ export default function DeliveryHome() {
       try {
         const savedOrder = localStorage.getItem('deliveryActiveOrder');
         if (!savedOrder) {
-          console.log('📦 No active order found in localStorage');
           return;
         }
 
         const activeOrderData = JSON.parse(savedOrder);
-        console.log('📦 Found active order in localStorage:', activeOrderData);
 
         // Get order ID from saved data
         const orderId = activeOrderData.orderId || activeOrderData.restaurantInfo?.id || activeOrderData.restaurantInfo?.orderId;
 
         if (!orderId) {
-          console.log('⚠️ No order ID found in saved data, removing from localStorage');
           localStorage.removeItem('deliveryActiveOrder');
           setSelectedRestaurant(null);
           return;
@@ -6411,11 +3540,9 @@ export default function DeliveryHome() {
 
         // Verify order still exists in database before restoring
         try {
-          console.log('🔍 Verifying order exists in database:', orderId);
           const orderResponse = await deliveryAPI.getOrderDetails(orderId);
 
           if (!orderResponse.data?.success || !orderResponse.data?.data) {
-            console.log('⚠️ Order not found in database, removing from localStorage');
             localStorage.removeItem('deliveryActiveOrder');
             setSelectedRestaurant(null);
             return;
@@ -6429,7 +3556,6 @@ export default function DeliveryHome() {
             const status = remoteOrder.status;
             // Check if order is cancelled or delivered using the fresh data
             if (status === 'cancelled' || status === 'delivered') {
-              console.log(`⚠️ Order is ${status}, removing from localStorage`);
               localStorage.removeItem('deliveryActiveOrder');
               setSelectedRestaurant(null);
               return;
@@ -6437,19 +3563,15 @@ export default function DeliveryHome() {
 
             // Update activeOrderData with fresh info (e.g., digitalBillHtml)
             if (remoteOrder.digitalBillHtml && activeOrderData.restaurantInfo) {
-              console.log('✅ Found digitalBillHtml in fresh order data, updating local state');
               activeOrderData.restaurantInfo.digitalBillHtml = remoteOrder.digitalBillHtml;
               // Also update localStorage to persist this
               localStorage.setItem('deliveryActiveOrder', JSON.stringify(activeOrderData));
             }
           }
 
-          console.log('✅ Order verified in database, restoring...');
         } catch (verifyError) {
           // If order doesn't exist (404) or any other error, clear localStorage
-          console.log('⚠️ Error verifying order or order not found:', verifyError.response?.status || verifyError.message);
           if (verifyError.response?.status === 404 || verifyError.response?.status === 403) {
-            console.log('⚠️ Order not found or not assigned, removing from localStorage');
             localStorage.removeItem('deliveryActiveOrder');
             setSelectedRestaurant(null);
             return;
@@ -6462,7 +3584,6 @@ export default function DeliveryHome() {
         const acceptedAt = new Date(activeOrderData.acceptedAt);
         const hoursSinceAccepted = (Date.now() - acceptedAt.getTime()) / (1000 * 60 * 60);
         if (hoursSinceAccepted > 24) {
-          console.log('⚠️ Active order is too old, removing from localStorage');
           localStorage.removeItem('deliveryActiveOrder');
           setSelectedRestaurant(null);
           return;
@@ -6471,7 +3592,6 @@ export default function DeliveryHome() {
         // Restore selectedRestaurant state
         if (activeOrderData.restaurantInfo) {
           setSelectedRestaurant(activeOrderData.restaurantInfo);
-          console.log('✅ Restored selectedRestaurant from localStorage');
         }
 
         // Wait for map to be ready
@@ -6481,14 +3601,12 @@ export default function DeliveryHome() {
             return;
           }
 
-          console.log('🗺️ Map ready, restoring route...');
 
           // Recalculate route using Directions API (preferred) or use saved coordinates (fallback)
           // Don't restore directionsResponse from localStorage - Google Maps objects can't be serialized
           if (activeOrderData.restaurantInfo && activeOrderData.restaurantInfo.lat && activeOrderData.restaurantInfo.lng && riderLocation && riderLocation.length === 2) {
             // Try to recalculate with Directions API first (if flag indicates we had Directions API before)
             if (activeOrderData.hasDirectionsAPI) {
-              console.log('🔄 Recalculating route with Directions API for restored order...');
               calculateRouteWithDirectionsAPI(
                 riderLocation,
                 { lat: activeOrderData.restaurantInfo.lat, lng: activeOrderData.restaurantInfo.lng }
@@ -6496,7 +3614,6 @@ export default function DeliveryHome() {
                 if (result && result.routes && result.routes.length > 0) {
                   setDirectionsResponse(result);
                   directionsResponseRef.current = result; // Store in ref for callbacks
-                  console.log('✅ Route recalculated with Directions API and restored');
 
                   // Initialize live tracking polyline for restored route
                   if (riderLocation && riderLocation.length === 2) {
@@ -6506,7 +3623,6 @@ export default function DeliveryHome() {
                   // Fallback to coordinates if Directions API fails
                   if (activeOrderData.routeCoordinates && activeOrderData.routeCoordinates.length > 0) {
                     setRoutePolyline(activeOrderData.routeCoordinates);
-                    console.log('✅ Using fallback route coordinates from localStorage');
                   }
                 }
               }).catch(err => {
@@ -6514,18 +3630,15 @@ export default function DeliveryHome() {
                 // Fallback to coordinates
                 if (activeOrderData.routeCoordinates && activeOrderData.routeCoordinates.length > 0) {
                   setRoutePolyline(activeOrderData.routeCoordinates);
-                  console.log('✅ Using fallback route coordinates from localStorage');
                 }
               });
             } else if (activeOrderData.routeCoordinates && activeOrderData.routeCoordinates.length > 0) {
               // Use saved coordinates if we don't have Directions API flag
               setRoutePolyline(activeOrderData.routeCoordinates);
-              console.log('✅ Restored route polyline from localStorage');
             }
           } else if (activeOrderData.routeCoordinates && activeOrderData.routeCoordinates.length > 0) {
             // Fallback: Use coordinates if restaurant info or rider location not available
             setRoutePolyline(activeOrderData.routeCoordinates);
-            console.log('✅ Restored route polyline from localStorage (fallback)');
           }
         };
 
@@ -6562,14 +3675,12 @@ export default function DeliveryHome() {
       currentRiderLocation &&
       currentRiderLocation.length === 2 &&
       !liveTrackingPolylineRef.current) {
-      console.log('🗺️ Map ready with active route - initializing polyline');
       updateLiveTrackingPolyline(currentDirectionsResponse, currentRiderLocation);
     } else if (currentDirectionsResponse &&
       currentRiderLocation &&
       liveTrackingPolylineRef.current &&
       liveTrackingPolylineRef.current.getMap() === null) {
       // Polyline exists but not on map - reattach it
-      console.log('🗺️ Reattaching polyline to map');
       liveTrackingPolylineRef.current.setMap(window.deliveryMapInstance);
       // Also reattach shadow polyline if it exists
       if (liveTrackingPolylineShadowRef.current) {
@@ -6582,7 +3693,6 @@ export default function DeliveryHome() {
   useEffect(() => {
     // Clear immediately on mount if no active order
     if (!selectedRestaurant && window.deliveryMapInstance) {
-      console.log('🧹 No active order - clearing any default/mock routes immediately');
       // Clear route polyline
       if (routePolylineRef.current) {
         routePolylineRef.current.setMap(null);
@@ -6609,7 +3719,6 @@ export default function DeliveryHome() {
     // Wait a bit for restoreActiveOrder to complete, then check again
     const timer = setTimeout(() => {
       if (!selectedRestaurant && window.deliveryMapInstance) {
-        console.log('🧹 No active order after restore - clearing any default/mock routes');
         // Clear route polyline
         if (routePolylineRef.current) {
           routePolylineRef.current.setMap(null);
@@ -6677,7 +3786,6 @@ export default function DeliveryHome() {
   }, [selectedRestaurant])
 
   const clearOrderData = useCallback(() => {
-    console.log('🧹 Clearing order data...');
     localStorage.removeItem('deliveryActiveOrder');
     setSelectedRestaurant(null);
     setShowReachedDropPopup(false);
@@ -6717,7 +3825,6 @@ export default function DeliveryHome() {
         const orderResponse = await deliveryAPI.getOrderDetails(orderId);
 
         if (!orderResponse.data?.success || !orderResponse.data?.data) {
-          console.log('⚠️ Order no longer exists, clearing data');
           clearOrderData();
           return;
         }
@@ -6726,7 +3833,6 @@ export default function DeliveryHome() {
 
         // Check if order is cancelled, deleted, or delivered/completed
         if (order.status === 'cancelled') {
-          console.log('⚠️ Order is cancelled, clearing data');
           clearOrderData();
           return;
         }
@@ -6738,7 +3844,6 @@ export default function DeliveryHome() {
           order.deliveryState?.status === 'delivered'
 
         if (isOrderDelivered && !showPaymentPage && !showCustomerReviewPopup && !showOrderDeliveredAnimation) {
-          console.log('✅ Order is delivered/completed, clearing from UI');
           clearOrderData();
           return;
         }
@@ -6755,7 +3860,6 @@ export default function DeliveryHome() {
         }
       } catch (error) {
         if (error.response?.status === 404 || error.response?.status === 403) {
-          console.log('⚠️ Order not found or not assigned, clearing data');
           clearOrderData();
         }
         // Ignore other errors (network issues, etc.)
@@ -6804,501 +3908,6 @@ export default function DeliveryHome() {
   // Listen for order ready event from backend (when restaurant marks order ready)
   useEffect(() => {
     if (!orderReady) return
-    console.log('✅ Order ready event received:', orderReady)
-
-    let restaurantInfo = selectedRestaurant
-    const order = orderReady.order || orderReady
-
-    // Update selectedRestaurant with order data from orderReady if we don't have it
-    if ((orderReady.orderId || order?.orderId) && order && !selectedRestaurant?.orderId) {
-      // Extract restaurant address with multiple fallbacks
-      let restaurantAddress = selectedRestaurant?.address || 'Restaurant Address'
-      const restaurantLocation = order.restaurantId?.location
-
-      if (order.restaurantId?.address) {
-        restaurantAddress = order.restaurantId.address
-      } else if (restaurantLocation?.formattedAddress) {
-        restaurantAddress = restaurantLocation.formattedAddress
-      } else if (restaurantLocation?.address) {
-        restaurantAddress = restaurantLocation.address
-      } else if (restaurantLocation?.street) {
-        const addressParts = [
-          restaurantLocation.street,
-          restaurantLocation.area,
-          restaurantLocation.city,
-          restaurantLocation.state,
-          restaurantLocation.zipCode || restaurantLocation.pincode || restaurantLocation.postalCode
-        ].filter(Boolean)
-        restaurantAddress = addressParts.join(', ')
-      } else if (restaurantLocation?.addressLine1) {
-        const addressParts = [
-          restaurantLocation.addressLine1,
-          restaurantLocation.addressLine2,
-          restaurantLocation.city,
-          restaurantLocation.state
-        ].filter(Boolean)
-        restaurantAddress = addressParts.join(', ')
-      } else if (order.restaurantId?.addressLine1) {
-        const addressParts = [
-          order.restaurantId.addressLine1,
-          order.restaurantId.addressLine2,
-          order.restaurantId.area, // Zone
-          order.restaurantId.city,
-          order.restaurantId.state,
-          order.restaurantId.pincode || order.restaurantId.zipCode || order.restaurantId.postalCode
-        ].filter(Boolean)
-        restaurantAddress = addressParts.join(', ')
-      } else if (order.restaurantId?.street || order.restaurantId?.city) {
-        const addressParts = [
-          order.restaurantId.street,
-          order.restaurantId.area, // Zone
-          order.restaurantId.city,
-          order.restaurantId.state,
-          order.restaurantId.pincode || order.restaurantId.zipCode || order.restaurantId.postalCode
-        ].filter(Boolean)
-        restaurantAddress = addressParts.join(', ')
-      } else if (order.restaurantAddress) {
-        restaurantAddress = order.restaurantAddress
-      } else if (orderReady.restaurantAddress) {
-        restaurantAddress = orderReady.restaurantAddress
-      }
-
-      restaurantInfo = {
-        ...selectedRestaurant,
-        orderId: order.orderId || orderReady.orderId || selectedRestaurant?.orderId,
-        name: order.restaurantName || orderReady.restaurantName || order.restaurantId?.name || selectedRestaurant?.name,
-        address: restaurantAddress,
-        lat: order.restaurantId?.location?.coordinates?.[1] || orderReady.restaurantLat || selectedRestaurant?.lat,
-        lng: order.restaurantId?.location?.coordinates?.[0] || orderReady.restaurantLng || selectedRestaurant?.lng,
-        customerPhone: order.userId?.phone || orderReady.customerPhone || selectedRestaurant?.customerPhone || null,
-        orderStatus: 'ready'
-      }
-      setSelectedRestaurant(restaurantInfo)
-      console.log('🏪 Updated restaurant info from orderReady event:', restaurantInfo)
-    } else if (selectedRestaurant) {
-      // Always set orderStatus to 'ready' so location monitor shows Reached Pickup when rider is within 500m
-      setSelectedRestaurant(prev => ({ ...prev, orderStatus: 'ready' }))
-    }
-
-    setShowDirectionsMap(false)
-
-    const currentRestaurantInfo = {
-      ...(restaurantInfo || selectedRestaurant || {}),
-      lat: (restaurantInfo || selectedRestaurant)?.lat ?? orderReady?.restaurantLat,
-      lng: (restaurantInfo || selectedRestaurant)?.lng ?? orderReady?.restaurantLng
-    }
-    const orderStatus = currentRestaurantInfo?.orderStatus || currentRestaurantInfo?.status || ''
-    const deliveryPhase = currentRestaurantInfo?.deliveryPhase || currentRestaurantInfo?.deliveryState?.currentPhase || ''
-    const isDelivered = orderStatus === 'delivered' ||
-      deliveryPhase === 'completed' ||
-      deliveryPhase === 'delivered' ||
-      currentRestaurantInfo?.deliveryState?.status === 'delivered'
-
-    if (isDelivered) {
-      clearOrderReady()
-      return
-    }
-
-    // Order is ready: show Reached Pickup popup immediately (no 500m check)
-    console.log('✅ Order ready – showing Reached Pickup popup')
-    setShowreachedPickupPopup(true)
-
-    clearOrderReady()
-  }, [orderReady, selectedRestaurant])
-
-  // Fetch order details when Reached Pickup popup is shown to ensure we have restaurant address
-  useEffect(() => {
-    // Always log to see if useEffect is running
-    console.log('🔍 Reached Pickup popup useEffect triggered:', {
-      showreachedPickupPopup,
-      hasOrderId: !!selectedRestaurant?.orderId,
-      hasId: !!selectedRestaurant?.id,
-      currentAddress: selectedRestaurant?.address,
-      orderId: selectedRestaurant?.orderId,
-      id: selectedRestaurant?.id,
-      selectedRestaurantKeys: selectedRestaurant ? Object.keys(selectedRestaurant) : []
-    })
-
-    if (!showreachedPickupPopup) {
-      console.log('⏭️ Skipping fetch - popup not shown')
-      return
-    }
-
-    const orderId = selectedRestaurant?.orderId || selectedRestaurant?.id
-    if (!orderId) {
-      console.log('⏭️ Skipping fetch - no orderId or id found')
-      return
-    }
-
-    // Always fetch to ensure we have the latest address (even if one exists, it might be incomplete)
-    // Only skip if we have a valid non-default address
-    if (selectedRestaurant?.address &&
-      selectedRestaurant.address !== 'Restaurant Address' &&
-      selectedRestaurant.address.length > 20) { // Valid address should be longer than default
-      console.log('⏭️ Skipping fetch - address already exists and seems valid:', selectedRestaurant.address)
-      return
-    }
-
-    const fetchOrderDetails = async () => {
-      try {
-        console.log('📋 Fetching order details for restaurant address, orderId:', orderId)
-
-        const response = await deliveryAPI.getOrderDetails(orderId)
-
-        if (response.data?.success && response.data.data) {
-          const orderData = response.data.data
-          const order = orderData.order || orderData
-
-          // Debug: Log full order structure
-          console.log('🔍 Full order structure:', JSON.stringify(order, null, 2))
-          console.log('🔍 order.restaurantId:', order.restaurantId)
-          console.log('🔍 order.restaurantId?.location:', order.restaurantId?.location)
-
-          // Extract restaurant address with multiple fallbacks
-          let restaurantAddress = selectedRestaurant?.address || 'Restaurant Address'
-          const restaurantLocation = order.restaurantId?.location
-
-          if (order.restaurantId?.address) {
-            restaurantAddress = order.restaurantId.address
-            console.log('✅ Fetched restaurantId.address:', restaurantAddress)
-          } else if (restaurantLocation?.formattedAddress) {
-            restaurantAddress = restaurantLocation.formattedAddress
-            console.log('✅ Fetched location.formattedAddress:', restaurantAddress)
-          } else if (restaurantLocation?.address) {
-            restaurantAddress = restaurantLocation.address
-            console.log('✅ Fetched location.address:', restaurantAddress)
-          } else if (restaurantLocation?.street) {
-            const addressParts = [
-              restaurantLocation.street,
-              restaurantLocation.area,
-              restaurantLocation.city,
-              restaurantLocation.state,
-              restaurantLocation.zipCode || restaurantLocation.pincode || restaurantLocation.postalCode
-            ].filter(Boolean)
-            restaurantAddress = addressParts.join(', ')
-            console.log('✅ Built address from components:', restaurantAddress)
-          } else if (restaurantLocation?.addressLine1) {
-            const addressParts = [
-              restaurantLocation.addressLine1,
-              restaurantLocation.addressLine2,
-              restaurantLocation.city,
-              restaurantLocation.state
-            ].filter(Boolean)
-            restaurantAddress = addressParts.join(', ')
-            console.log('✅ Built address from addressLine1:', restaurantAddress)
-          } else if (order.restaurantId?.street || order.restaurantId?.city) {
-            const addressParts = [
-              order.restaurantId.street,
-              order.restaurantId.area,
-              order.restaurantId.city,
-              order.restaurantId.state,
-              order.restaurantId.zipCode || order.restaurantId.pincode || order.restaurantId.postalCode
-            ].filter(Boolean)
-            restaurantAddress = addressParts.join(', ')
-            console.log('✅ Built address from restaurantId fields:', restaurantAddress)
-          } else if (order.restaurantAddress) {
-            restaurantAddress = order.restaurantAddress
-            console.log('✅ Fetched order.restaurantAddress:', restaurantAddress)
-          } else if (order.restaurant?.address) {
-            restaurantAddress = order.restaurant.address
-            console.log('✅ Fetched order.restaurant.address:', restaurantAddress)
-          } else if (order.restaurant?.location?.formattedAddress) {
-            restaurantAddress = order.restaurant.location.formattedAddress
-            console.log('✅ Fetched order.restaurant.location.formattedAddress:', restaurantAddress)
-          } else if (order.restaurant?.location?.address) {
-            restaurantAddress = order.restaurant.location.address
-            console.log('✅ Fetched order.restaurant.location.address:', restaurantAddress)
-          }
-
-          // Update selectedRestaurant with fetched address
-          if (restaurantAddress && restaurantAddress !== 'Restaurant Address') {
-            setSelectedRestaurant(prev => {
-              const updated = {
-                ...prev,
-                address: restaurantAddress
-              }
-              console.log('✅ Updated selectedRestaurant with fetched address:', {
-                oldAddress: prev?.address,
-                newAddress: restaurantAddress,
-                fullUpdated: updated
-              })
-              return updated
-            })
-          } else {
-            // If address not found in order, try fetching restaurant details by ID
-            const restaurantId = order.restaurantId
-            if (restaurantId && (typeof restaurantId === 'string' || typeof restaurantId === 'object')) {
-              const restaurantIdString = typeof restaurantId === 'string' ? restaurantId : (restaurantId._id || restaurantId.id || restaurantId.toString())
-              console.log('🔄 Address not found in order, fetching restaurant details by ID:', restaurantIdString)
-
-              try {
-                const restaurantResponse = await restaurantAPI.getRestaurantById(restaurantIdString)
-                if (restaurantResponse.data?.success && restaurantResponse.data.data) {
-                  const restaurant = restaurantResponse.data.data.restaurant || restaurantResponse.data.data
-                  console.log('✅ Fetched restaurant details:', restaurant)
-
-                  // Extract address from restaurant location.formattedAddress (priority)
-                  let fetchedAddress = 'Restaurant Address'
-                  const restLocation = restaurant.location
-
-                  if (restLocation?.formattedAddress) {
-                    fetchedAddress = restLocation.formattedAddress
-                    console.log('✅ Using restaurant.location.formattedAddress:', fetchedAddress)
-                  } else if (restaurant.address) {
-                    fetchedAddress = restaurant.address
-                    console.log('✅ Using restaurant.address:', fetchedAddress)
-                  } else if (restLocation?.address) {
-                    fetchedAddress = restLocation.address
-                    console.log('✅ Using restaurant.location.address:', fetchedAddress)
-                  } else if (restLocation?.street) {
-                    const addressParts = [
-                      restLocation.street,
-                      restLocation.area,
-                      restLocation.city,
-                      restLocation.state,
-                      restLocation.zipCode || restLocation.pincode || restLocation.postalCode
-                    ].filter(Boolean)
-                    fetchedAddress = addressParts.join(', ')
-                    console.log('✅ Built address from restaurant location components:', fetchedAddress)
-                  } else if (restLocation?.addressLine1) {
-                    const addressParts = [
-                      restLocation.addressLine1,
-                      restLocation.addressLine2,
-                      restLocation.city,
-                      restLocation.state
-                    ].filter(Boolean)
-                    fetchedAddress = addressParts.join(', ')
-                    console.log('✅ Built address from restaurant location addressLine1:', fetchedAddress)
-                  } else if (restaurant.street || restaurant.city) {
-                    const addressParts = [
-                      restaurant.street,
-                      restaurant.area,
-                      restaurant.city,
-                      restaurant.state,
-                      restaurant.zipCode || restaurant.pincode || restaurant.postalCode
-                    ].filter(Boolean)
-                    fetchedAddress = addressParts.join(', ')
-                    console.log('✅ Built address from restaurant fields:', fetchedAddress)
-                  }
-
-                  // Update selectedRestaurant with fetched address and phone
-                  const updates = {}
-                  if (fetchedAddress && fetchedAddress !== 'Restaurant Address') {
-                    updates.address = fetchedAddress
-                  }
-
-                  // Also fetch phone number from restaurant data
-                  const restaurantPhone = restaurant.phone || restaurant.ownerPhone || restaurant.primaryContactNumber
-                  if (restaurantPhone) {
-                    updates.phone = restaurantPhone
-                    updates.ownerPhone = restaurant.ownerPhone || restaurantPhone
-                    console.log('✅ Fetched restaurant phone:', restaurantPhone)
-                  }
-
-                  if (Object.keys(updates).length > 0) {
-                    setSelectedRestaurant(prev => ({
-                      ...prev,
-                      ...updates
-                    }))
-                    console.log('✅ Updated selectedRestaurant with restaurant API data:', updates)
-                    return // Exit early since we got the data
-                  } else {
-                    console.warn('⚠️ Could not extract address or phone from restaurant data:', {
-                      restaurantKeys: Object.keys(restaurant),
-                      hasLocation: !!restLocation,
-                      locationKeys: restLocation ? Object.keys(restLocation) : [],
-                      hasPhone: !!restaurant.phone,
-                      hasOwnerPhone: !!restaurant.ownerPhone,
-                      hasPrimaryContact: !!restaurant.primaryContactNumber
-                    })
-                  }
-                }
-              } catch (restaurantError) {
-                console.error('❌ Error fetching restaurant details:', restaurantError)
-              }
-            }
-
-            console.warn('⚠️ Could not extract restaurant address from order or restaurant API:', {
-              orderKeys: Object.keys(order),
-              hasRestaurantId: !!order.restaurantId,
-              restaurantIdType: typeof order.restaurantId,
-              restaurantIdValue: order.restaurantId
-            })
-          }
-        }
-      } catch (error) {
-        console.error('❌ Error fetching order details for restaurant address:', error)
-      }
-    }
-
-    fetchOrderDetails()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showreachedPickupPopup, selectedRestaurant?.orderId, selectedRestaurant?.id])
-
-  // Monitor delivery boy's location for "Reached Pickup" detection
-  // Show "Reached Pickup" popup when delivery boy is within 500 meters of restaurant location
-  useEffect(() => {
-    // Don't show if popup is already showing, or if order hasn't been accepted yet
-    if (showreachedPickupPopup ||
-      showNewOrderPopup ||
-      showOrderIdConfirmationPopup || // Don't show if order ID is already being confirmed
-      showReachedDropPopup || // Don't show if already reached drop
-      showOrderDeliveredAnimation || // Don't show if order is delivered
-      showCustomerReviewPopup || // Don't show if showing review popup
-      showPaymentPage || // Don't show if showing payment page
-      !selectedRestaurant?.lat ||
-      !selectedRestaurant?.lng ||
-      !riderLocation ||
-      riderLocation.length !== 2) {
-      return
-    }
-
-    // Only show for orders that are in pickup phase (en_route_to_pickup or at_pickup)
-    const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
-    const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
-
-    // CRITICAL: Don't show if order is already delivered/completed
-    const isDelivered = orderStatus === 'delivered' ||
-      deliveryPhase === 'completed' ||
-      deliveryPhase === 'delivered' ||
-      selectedRestaurant?.deliveryState?.status === 'delivered'
-
-    if (isDelivered) {
-      // Hide popup if it's showing and order is delivered
-      if (showreachedPickupPopup) {
-        setShowreachedPickupPopup(false)
-      }
-      return
-    }
-
-    // CRITICAL: Don't show if order ID is already confirmed (en_route_to_delivery or order_confirmed)
-    const isOrderIdConfirmed = deliveryPhase === 'en_route_to_delivery' ||
-      deliveryPhase === 'picked_up' ||
-      deliveryPhase === 'en_route_to_drop' ||
-      orderStatus === 'out_for_delivery' ||
-      selectedRestaurant?.deliveryState?.status === 'order_confirmed' ||
-      selectedRestaurant?.deliveryState?.currentPhase === 'en_route_to_delivery' ||
-      selectedRestaurant?.deliveryState?.currentPhase === 'en_route_to_drop'
-
-    if (isOrderIdConfirmed) {
-      // Order ID is already confirmed, don't show Reached Pickup popup
-      if (showreachedPickupPopup) {
-        console.log('🚫 Order ID already confirmed, closing Reached Pickup popup')
-        setShowreachedPickupPopup(false)
-      }
-      return
-    }
-
-    // Only show if order is accepted and on the way to pickup or at pickup
-    const isInPickupPhase = deliveryPhase === 'en_route_to_pickup' ||
-      deliveryPhase === 'at_pickup' ||
-      orderStatus === 'ready' ||
-      orderStatus === 'preparing'
-
-    if (!isInPickupPhase) {
-      return
-    }
-
-    // Show "Reached Pickup" popup immediately when order is in pickup phase (no distance check)
-    if (!showreachedPickupPopup) {
-      console.log('✅ Order is in pickup phase, showing Reached Pickup popup immediately')
-      setShowreachedPickupPopup(true)
-
-      // Close directions map if open
-      setShowDirectionsMap(false)
-    }
-  }, [
-    riderLocation?.[0] ?? null,
-    riderLocation?.[1] ?? null,
-    selectedRestaurant?.lat ?? null,
-    selectedRestaurant?.lng ?? null,
-    selectedRestaurant?.deliveryPhase ?? selectedRestaurant?.deliveryState?.currentPhase ?? null,
-    selectedRestaurant?.orderStatus ?? selectedRestaurant?.status ?? null,
-    Boolean(showNewOrderPopup),
-    Boolean(showOrderIdConfirmationPopup),
-    Boolean(showreachedPickupPopup),
-    Boolean(showReachedDropPopup),
-    Boolean(showOrderDeliveredAnimation),
-    Boolean(showCustomerReviewPopup),
-    Boolean(showPaymentPage),
-    selectedRestaurant?.orderStatus,
-    selectedRestaurant?.status,
-    selectedRestaurant?.deliveryPhase,
-    selectedRestaurant?.deliveryState?.status,
-    calculateDistanceInMeters
-  ])
-
-  // CRITICAL: Monitor order status and close all pickup/delivery popups when order is delivered
-  // Also clear selectedRestaurant if order is completed and payment page is closed
-  useEffect(() => {
-    const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
-    const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
-    const deliveryStateStatus = selectedRestaurant?.deliveryState?.status || ''
-
-    const isDelivered = orderStatus === 'delivered' ||
-      orderStatus === 'completed' ||
-      deliveryPhase === 'completed' ||
-      deliveryPhase === 'delivered' ||
-      deliveryStateStatus === 'delivered' ||
-      showPaymentPage ||
-      showOrderDeliveredAnimation
-
-    if (isDelivered) {
-      // Close all pickup/delivery related popups when order is delivered
-      if (showreachedPickupPopup) {
-        console.log('🚫 Order is delivered, closing Reached Pickup popup')
-        setShowreachedPickupPopup(false)
-      }
-      if (showOrderIdConfirmationPopup) {
-        console.log('🚫 Order is delivered, closing Order ID Confirmation popup')
-        setShowOrderIdConfirmationPopup(false)
-      }
-      if (showReachedDropPopup && !showOrderDeliveredAnimation && !showCustomerReviewPopup) {
-        console.log('🚫 Order is delivered, closing Reached Drop popup')
-        setShowReachedDropPopup(false)
-      }
-
-      // If payment page is closed and order is delivered, clear selectedRestaurant
-      if (!showPaymentPage && !showCustomerReviewPopup && !showOrderDeliveredAnimation && selectedRestaurant) {
-        console.log('✅ Order is delivered and payment completed, clearing selectedRestaurant')
-        setSelectedRestaurant(null)
-        localStorage.removeItem('deliveryActiveOrder')
-        localStorage.removeItem('activeOrder')
-        if (typeof clearNewOrder === 'function') {
-          clearNewOrder()
-        }
-        acceptedOrderIdsRef.current.clear()
-
-        // Clear map markers and polylines
-        if (routePolylineRef.current) {
-          routePolylineRef.current.setMap(null)
-        }
-        if (liveTrackingPolylineRef.current) {
-          liveTrackingPolylineRef.current.setMap(null)
-        }
-        if (directionsRendererRef.current) {
-          directionsRendererRef.current.setMap(null)
-        }
-      }
-    }
-  }, [
-    selectedRestaurant?.orderStatus,
-    selectedRestaurant?.status,
-    selectedRestaurant?.deliveryPhase,
-    selectedRestaurant?.deliveryState?.currentPhase,
-    selectedRestaurant?.deliveryState?.status,
-    showPaymentPage,
-    showOrderDeliveredAnimation,
-    showCustomerReviewPopup,
-    showreachedPickupPopup,
-    showOrderIdConfirmationPopup,
-    showReachedDropPopup,
-    clearNewOrder
-  ])
-
-  // Monitor order status and switch route from restaurant to customer when order is picked up
-  useEffect(() => {
-    const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || '';
     const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || '';
 
     // Check if order is picked up or out for delivery
@@ -7319,7 +3928,6 @@ export default function DeliveryHome() {
         currentDirections.routes.length === 0;
 
       if (needsCustomerRoute) {
-        console.log('🔄 Order picked up - switching route to customer location');
 
         // Calculate route from current location to customer
         calculateRouteWithDirectionsAPI(
@@ -7327,7 +3935,6 @@ export default function DeliveryHome() {
           { lat: selectedRestaurant.customerLat, lng: selectedRestaurant.customerLng }
         ).then(directionsResult => {
           if (directionsResult) {
-            console.log('✅ Route to customer calculated after pickup');
             setDirectionsResponse(directionsResult);
             directionsResponseRef.current = directionsResult;
 
@@ -7335,13 +3942,11 @@ export default function DeliveryHome() {
             if (riderLocation && window.deliveryMapInstance) {
               // Update live tracking polyline with route to customer (Restaurant → Customer)
               updateLiveTrackingPolyline(directionsResult, riderLocation);
-              console.log('✅ Live tracking polyline updated for delivery route (Restaurant → Customer)');
             } else {
               // Wait for map to be ready
               setTimeout(() => {
                 if (riderLocation && window.deliveryMapInstance) {
                   updateLiveTrackingPolyline(directionsResult, riderLocation);
-                  console.log('✅ Live tracking polyline updated for delivery route (delayed)');
                 }
               }, 500);
             }
@@ -7418,176 +4023,13 @@ export default function DeliveryHome() {
         const lng = coords?.[0]
         if (lat != null && lng != null && !(lat === 0 && lng === 0) && selectedRestaurant) {
           setSelectedRestaurant(prev => prev ? { ...prev, customerLat: lat, customerLng: lng } : null)
-          console.log('✅ Reached Drop: customer location loaded from getOrderDetails', { lat, lng })
-        }
-      })
-      .catch(err => {
-        console.warn('⚠️ Reached Drop: getOrderDetails failed for customer coords:', err?.response?.data?.message || err.message)
-      })
-  }, [selectedRestaurant?.orderStatus, selectedRestaurant?.deliveryPhase, selectedRestaurant?.deliveryState?.currentPhase, selectedRestaurant?.customerLat, selectedRestaurant?.customerLng, selectedRestaurant?.orderId, selectedRestaurant?.id])
-
-  // Monitor delivery boy's location for "Reached Drop" detection
-  // Show "Reached Drop" popup when delivery boy is within 500 meters of customer location
-  // Use useMemo to ensure deliveryStateStatus is always defined (prevents dependency array size changes)
-  const deliveryStateStatus = useMemo(() => {
-    return selectedRestaurant?.deliveryState?.status ?? null
-  }, [selectedRestaurant?.deliveryState?.status])
-
-  useEffect(() => {
-    // CRITICAL: If payment page is showing, delivery is completed - do NOT show reached drop popup
-    if (showPaymentPage || showCustomerReviewPopup || showOrderDeliveredAnimation) {
-      if (showReachedDropPopup) setShowReachedDropPopup(false)
-      return
-    }
-
-    const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || newOrder?.status || ''
-    const deliveryPhase = selectedRestaurant?.deliveryState?.currentPhase || selectedRestaurant?.deliveryPhase || ''
-    const isDeliveredOrCompleted = orderStatus === 'delivered' ||
-      orderStatus === 'completed' ||
-      deliveryPhase === 'completed' ||
-      deliveryPhase === 'at_delivery'
-    // deliveryStateStatus is defined outside useEffect using useMemo (prevents dependency array size changes)
-    // More lenient check: allow if order ID is confirmed or order is out for delivery
-    const isOutForDelivery = !isDeliveredOrCompleted && (
-      orderStatus === 'out_for_delivery' ||
-      deliveryPhase === 'en_route_to_delivery' ||
-      deliveryPhase === 'picked_up' ||
-      deliveryPhase === 'at_delivery' ||
-      deliveryStateStatus === 'order_confirmed' ||
-      deliveryStateStatus === 'en_route_to_delivery' ||
-      orderStatus === 'ready')
-
-    // Rider position: prefer riderLocation, fallback lastLocationRef
-    const riderPos = (riderLocation && riderLocation.length === 2) ? riderLocation : (lastLocationRef.current && lastLocationRef.current.length === 2 ? lastLocationRef.current : null)
-
-    const hasCustomerCoords = selectedRestaurant?.customerLat != null && selectedRestaurant?.customerLng != null &&
-      !(selectedRestaurant.customerLat === 0 && selectedRestaurant.customerLng === 0)
-
-    if (!hasCustomerCoords) {
-      // Don't spam; only log when we're otherwise ready to monitor
+ only log when we're otherwise ready to monitor
       if (isOutForDelivery && !isDeliveredOrCompleted && selectedRestaurant) {
         console.warn('[Reached Drop] Customer location missing. Ensure order has delivery address or wait for fetch.')
       }
       return
     }
     if (!riderPos) {
-      console.log('[Reached Drop] No rider position available')
-      return
-    }
-
-    // Don't show if other popups are active (but allow if Order ID confirmation was just completed)
-    // NOTE: If showReachedDropPopup is already true, don't hide it - it was explicitly set after Order ID confirmation
-    if (isDeliveredOrCompleted || showNewOrderPopup || showreachedPickupPopup) {
-      return
-    }
-
-    // If Reached Drop popup is already showing, don't interfere (it was explicitly set)
-    if (showReachedDropPopup) {
-      return
-    }
-
-    // Only block if Order ID confirmation popup is still actively showing
-    // If it was just closed, allow Reached Drop to show
-    if (showOrderIdConfirmationPopup) {
-      return
-    }
-
-    // CRITICAL: Must be in delivery phase (after Order ID confirmation)
-    // Also allow if order ID confirmation was just completed (picked_up phase)
-    const isInDeliveryPhase = isOutForDelivery ||
-      deliveryPhase === 'picked_up' ||
-      deliveryStateStatus === 'order_confirmed' ||
-      orderStatus === 'out_for_delivery'
-
-    if (!isInDeliveryPhase) {
-      console.log('[Reached Drop] Order not in delivery phase:', {
-        orderStatus,
-        deliveryPhase,
-        deliveryStateStatus,
-        isOutForDelivery,
-        isInDeliveryPhase
-      })
-      return
-    }
-
-    const distanceInMeters = calculateDistanceInMeters(
-      riderPos[0],
-      riderPos[1],
-      selectedRestaurant.customerLat,
-      selectedRestaurant.customerLng
-    )
-
-    // Log distance check more frequently for debugging
-    if (distanceInMeters <= 600) { // Log when within 600m (slightly more than threshold)
-      console.log(`📍 Distance to customer: ${distanceInMeters.toFixed(2)} meters`, {
-        riderPos: riderPos,
-        customerLat: selectedRestaurant.customerLat,
-        customerLng: selectedRestaurant.customerLng,
-        orderId: selectedRestaurant?.orderId || selectedRestaurant?.id,
-        orderStatus,
-        deliveryPhase,
-        deliveryStateStatus,
-        isOutForDelivery,
-        isInDeliveryPhase,
-        showReachedDropPopup,
-        showOrderIdConfirmationPopup,
-        showreachedPickupPopup
-      })
-    }
-
-    // REMOVED: 500m distance check - Reached Drop popup now shows instantly after Order Picked Up
-    // This useEffect is kept for other monitoring but won't trigger Reached Drop popup
-    // The popup is now shown directly after Order Picked Up confirmation (see handleOrderIdConfirmTouchEnd)
-
-    // Log distance for debugging (but don't show popup based on distance)
-    if (distanceInMeters <= 1000) {
-      console.log(`📍 Distance to customer: ${distanceInMeters.toFixed(2)} meters (popup shown instantly, not based on distance)`, {
-        orderId: selectedRestaurant?.orderId || selectedRestaurant?.id,
-        customerLocation: { lat: selectedRestaurant.customerLat, lng: selectedRestaurant.customerLng },
-        riderLocation: riderPos,
-        orderStatus,
-        deliveryPhase,
-        deliveryStateStatus
-      })
-    }
-
-    // Live tracking polyline is already updated automatically via watchPosition callback
-    // No need to recalculate route here - it's handled in handleOrderIdConfirmTouchEnd
-  }, [
-    riderLocation?.[0] ?? null,
-    riderLocation?.[1] ?? null,
-    selectedRestaurant?.customerLat ?? null,
-    selectedRestaurant?.customerLng ?? null,
-    selectedRestaurant?.orderStatus ?? newOrder?.status ?? null,
-    selectedRestaurant?.deliveryPhase ?? selectedRestaurant?.deliveryState?.currentPhase ?? null,
-    deliveryStateStatus, // Use memoized value to ensure consistent dependency array size
-    Boolean(showNewOrderPopup),
-    Boolean(showOrderIdConfirmationPopup),
-    Boolean(showreachedPickupPopup),
-    Boolean(showReachedDropPopup),
-    Boolean(showOrderDeliveredAnimation),
-    Boolean(showCustomerReviewPopup),
-    Boolean(showPaymentPage),
-    calculateDistanceInMeters
-  ])
-
-  // Calculate heading from two coordinates (in degrees, 0-360)
-  const calculateHeading = (lat1, lng1, lat2, lng2) => {
-    const dLng = (lng2 - lng1) * Math.PI / 180
-    const lat1Rad = lat1 * Math.PI / 180
-    const lat2Rad = lat2 * Math.PI / 180
-
-    const y = Math.sin(dLng) * Math.cos(lat2Rad)
-    const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng)
-
-    let heading = Math.atan2(y, x) * 180 / Math.PI
-    heading = (heading + 360) % 360 // Normalize to 0-360
-
-    return heading
-  }
-
-  // Cache for rotated icons to avoid recreating them
-  const rotatedIconCache = useRef(new Map());
 
   // Function to rotate bike logo image based on heading
   const getRotatedBikeIcon = (heading = 0) => {
@@ -7660,7 +4102,6 @@ export default function DeliveryHome() {
     const rotatedIconUrl = await getRotatedBikeIcon(heading || 0);
 
     if (!bikeMarkerRef.current) {
-      console.log('📍 Creating new bike marker at:', { lat: latitude, lng: longitude });
       // Create bike marker with rotated icon - exact position
       const bikeIcon = {
         url: rotatedIconUrl,
@@ -7677,12 +4118,6 @@ export default function DeliveryHome() {
         zIndex: 1000 // High z-index to ensure it's above other markers
       });
 
-      console.log('✅ Bike marker created:', {
-        position: { lat: latitude, lng: longitude },
-        map: map,
-        iconUrl: rotatedIconUrl,
-        marker: bikeMarkerRef.current
-      });
 
       // Center map on bike location initially - preserve current zoom if user has zoomed in
       if (shouldCenterMap) {
@@ -7713,21 +4148,12 @@ export default function DeliveryHome() {
 
       // Update position EXACTLY - use setPosition for precise location
       // Verify coordinates are correct before setting
-      console.log('📍 Updating bike marker position:', {
-        lat: latitude,
-        lng: longitude,
-        heading: heading || 0,
-        currentMarkerPos: bikeMarkerRef.current.getPosition()
-          ? { lat: bikeMarkerRef.current.getPosition().lat(), lng: bikeMarkerRef.current.getPosition().lng() }
-          : 'null'
-      });
 
       // Validate coordinates before setting
       if (typeof latitude === 'number' && typeof longitude === 'number' &&
         !isNaN(latitude) && !isNaN(longitude) &&
         latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180) {
         bikeMarkerRef.current.setPosition(position);
-        console.log('✅ Bike marker position updated successfully');
       } else {
         console.error('❌ Invalid coordinates for bike marker:', { latitude, longitude });
         return; // Don't update if coordinates are invalid
@@ -7823,7 +4249,6 @@ export default function DeliveryHome() {
               map.setZoom(currentZoomBeforeFit);
             }
           }, 100);
-          console.log('✅ Map bounds adjusted to show route');
         }
       }
     } else {
@@ -8839,938 +5264,6 @@ export default function DeliveryHome() {
                       setRiderLocation(newLocation)
                       lastLocationRef.current = newLocation
 
-                      console.log("📍 Location refreshed:", {
-                        latitude,
-                        longitude,
-                        heading,
-                        accuracy: position.coords.accuracy,
-                        isOnline: isOnlineRef.current
-                      })
-
-                      // Stop refreshing animation after a short delay
-                      setTimeout(() => {
-                        setIsRefreshingLocation(false)
-                      }, 800)
-                    },
-                    (error) => {
-                      console.error('Error getting location:', error)
-                      setIsRefreshingLocation(false)
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                  )
-                }
-              }}
-              className="absolute bottom-44 right-3 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-[#fff8f7] transition-colors z-20 overflow-visible"
-              whileTap={{ scale: 0.92 }}
-              transition={{
-                type: "spring",
-                stiffness: 300,
-                damping: 25,
-                mass: 0.5
-              }}
-            >
-              <div className="relative w-full h-full flex items-center justify-center">
-                {/* Ripple effect */}
-                {isRefreshingLocation && (
-                  <motion.div
-                    className="absolute inset-0 rounded-full bg-[#FFC400]/20"
-                    initial={{ scale: 0.9, opacity: 0.6 }}
-                    animate={{
-                      scale: [0.9, 1.6, 1.8],
-                      opacity: [0.6, 0.3, 0]
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: [0.25, 0.46, 0.45, 0.94], // Smooth ease-out
-                      times: [0, 0.5, 1]
-                    }}
-                  />
-                )}
-
-                {/* Icon with smooth animations */}
-                <motion.div
-                  className="relative z-10"
-                  animate={{
-                    rotate: isRefreshingLocation ? 360 : 0,
-                    scale: isRefreshingLocation ? [1, 1.1, 1] : 1,
-                  }}
-                  transition={{
-                    rotate: {
-                      duration: 2,
-                      repeat: isRefreshingLocation ? Infinity : 0,
-                      ease: "linear", // Linear for smooth continuous rotation
-                      type: "tween"
-                    },
-                    scale: {
-                      duration: 1.5,
-                      repeat: isRefreshingLocation ? Infinity : 0,
-                      ease: [0.4, 0, 0.6, 1], // Smooth ease-in-out
-                      type: "tween",
-                      times: [0, 0.5, 1]
-                    }
-                  }}
-                >
-                  <MapPin
-                    className={`w-6 h-6 transition-colors duration-500 ease-in-out ${isRefreshingLocation ? 'text-[#1E1E1E]' : 'text-gray-700'
-                      }`}
-                  />
-                </motion.div>
-              </div>
-            </motion.button>
-
-            {/* Floating Banner - Status Message */}
-            {mapViewMode === "hotspot" && (deliveryStatus === "pending" || deliveryStatus === "blocked") && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-sm px-6 py-4 z-20 min-w-[96%] text-center"
-              >
-                {deliveryStatus === "pending" ? (
-                  <>
-                    <h3 className="text-lg font-bold text-[#1E1E1E] mb-1">Verification Done in 24 Hours</h3>
-                    <p className="text-sm text-gray-600">Your account is under verification. You'll be notified once approved.</p>
-                  </>
-                ) : deliveryStatus === "blocked" ? (
-                  <>
-                    <h3 className="text-lg font-bold text-[#e53935] mb-2">Denied Verification</h3>
-                    {rejectionReason && (
-                      <div className="bg-[#fff8f7] border border-[#F5F5F5] rounded-lg p-3 mb-3 text-left">
-                        <p className="text-xs font-semibold text-[#1E1E1E] mb-2">Reason for Rejection:</p>
-                        <div className="text-xs text-[#1E1E1E] space-y-1">
-                          {rejectionReason.split('\n').filter(line => line.trim()).length > 1 ? (
-                            <ul className="space-y-1 list-disc list-inside">
-                              {rejectionReason.split('\n').map((point, index) => (
-                                point.trim() && (
-                                  <li key={index}>{point.trim()}</li>
-                                )
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-[#1E1E1E]">{rejectionReason}</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    <p className="text-sm text-gray-700 mb-3">
-                      Please correct the above issues and click "Reverify" to resubmit your request for approval.
-                    </p>
-                    <button
-                      onClick={handleReverify}
-                      disabled={isReverifying}
-                      className="px-6 py-2.5 bg-[#e53935] text-white rounded-lg font-semibold text-sm hover:bg-[#c62828] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mx-auto"
-                    >
-                      {isReverifying ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Submitting...
-                        </>
-                      ) : (
-                        "Reverify"
-                      )}
-                    </button>
-                  </>
-                ) : null}
-              </motion.div>
-            )}
-
-            {/* Bottom Swipeable Bar - Can be dragged up to show home sections */}
-            {!showHomeSections && (
-              <motion.div
-                ref={swipeBarRef}
-                initial={{ y: "100%" }}
-                animate={{
-                  y: isDraggingSwipeBar
-                    ? `${-swipeBarPosition * (window.innerHeight * 0.8)}px`
-                    : 0
-                }}
-                transition={isDraggingSwipeBar ? { duration: 0 } : { type: "spring", damping: 30, stiffness: 300 }}
-                onTouchStart={handleSwipeBarTouchStart}
-                onTouchMove={handleSwipeBarTouchMove}
-                onTouchEnd={handleSwipeBarTouchEnd}
-                onMouseDown={handleSwipeBarMouseDown}
-                className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-20"
-                style={{
-                  touchAction: 'pan-y',
-                  pointerEvents: 'auto'
-                }}
-              >
-                {/* Swipe Handle */}
-                <div
-                  className="flex flex-col items-center pt-4 pb-2 cursor-grab active:cursor-grabbing"
-                  style={{ touchAction: 'none' }}
-                >
-                  <motion.div
-                    className="flex flex-col items-center gap-1"
-                    animate={{
-                      y: isDraggingSwipeBar ? swipeBarPosition * 5 : 0,
-                      opacity: isDraggingSwipeBar ? 0.7 : 1
-                    }}
-                    transition={{ duration: 0.1 }}
-                  >
-                    <button
-                      onClick={handleChevronUpClick}
-                      className="flex items-center justify-center p-2 -m-2 rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors"
-                      aria-label="Slide up"
-                    >
-                      <ChevronUp className="!w-12 !h-8 scale-x-150 text-gray-400 -mt-2 font-bold" strokeWidth={3} />
-                    </button>
-                  </motion.div>
-                </div>
-
-                {/* Content Area - Shows map info when down */}
-                <div className="px-4 pb-6">
-                  {mapViewMode === "hotspot" ? (
-                    <div className="flex flex-col items-center">
-                      {/* <h3 className="text-lg font-bold text-[#1E1E1E] mb-2">No hotspots are available</h3>
-                  <p className="text-sm text-gray-600 mb-4">Please go online to see hotspots</p> */}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      {/* <h3 className="text-lg font-bold text-[#1E1E1E] mb-2">Select drop location</h3>
-                  <p className="text-sm text-gray-600 mb-4">Choose a drop location on the map</p> */}
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </div>
-        </>
-      ) : (
-        <>
-          {/* Home Sections View - Full screen when swipe bar is dragged up */}
-          <motion.div
-            ref={swipeBarRef}
-            initial={{ y: "100%" }}
-            animate={{
-              y: isDraggingSwipeBar
-                ? `${(1 - swipeBarPosition) * (window.innerHeight * 0.8)}px`
-                : 0
-            }}
-            exit={{ y: "100%" }}
-            transition={isDraggingSwipeBar ? { duration: 0 } : { type: "spring", damping: 30, stiffness: 300 }}
-            onTouchStart={handleSwipeBarTouchStart}
-            onTouchMove={handleSwipeBarTouchMove}
-            onTouchEnd={handleSwipeBarTouchEnd}
-            onMouseDown={handleSwipeBarMouseDown}
-            className="relative flex-1 bg-white rounded-t-3xl shadow-2xl overflow-hidden"
-            style={{ height: 'calc(100vh - 200px)', touchAction: 'pan-y' }}
-          >
-            {/* Swipe Handle at Top - Can be dragged down to go back to map */}
-            <div
-              className="flex flex-col items-center pt-4 pb-2 cursor-grab active:cursor-grabbing bg-white sticky top-0 z-10"
-              style={{ touchAction: 'none' }}
-            >
-              <motion.div
-                className="flex flex-col items-center gap-1"
-                animate={{
-                  y: isDraggingSwipeBar ? -swipeBarPosition * 5 : 0,
-                  opacity: isDraggingSwipeBar ? 0.7 : 1
-                }}
-                transition={{ duration: 0.1 }}
-              >
-                <button
-                  onClick={handleChevronDownClick}
-                  className="flex items-center justify-center p-2 -m-2 rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors"
-                  aria-label="Slide down"
-                >
-                  <ChevronDown
-                    className="!w-12 !h-8 scale-x-150 text-gray-400 -mt-2 font-bold"
-                    strokeWidth={3}
-                  />
-                </button>
-              </motion.div>
-            </div>
-
-            <div
-              ref={homeSectionsScrollRef}
-              className="px-4 pt-4 pb-16 space-y-4 overflow-y-auto"
-              style={{
-                height: 'calc(100vh - 250px)',
-                touchAction: 'pan-y', // Allow vertical scrolling
-                WebkitOverflowScrolling: 'touch' // Smooth scrolling on iOS
-              }}
-            >
-              {/* Today's Progress Card */}
-
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.3 }}
-                className="w-full rounded-xl overflow-hidden shadow-lg bg-white"
-              >
-                {/* Header */}
-                <div className="bg-[#e53935] px-4 py-3 flex items-center gap-3">
-                  <div className="relative">
-                    <Calendar className="w-5 h-5 text-white" />
-                    <CheckCircle className="w-3 h-3 text-[#FFC400] absolute -top-1 -right-1 bg-white rounded-full" fill="currentColor" />
-                  </div>
-                  <span className="text-white font-semibold">Today's progress</span>
-                </div>
-
-                {/* Content */}
-                <div className="p-4">
-                  {/* Grid Layout - 2x2 */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Top Left - Trips (Moved from Top Right) */}
-                    <button
-                      onClick={() => navigate("/delivery/trip-history")}
-                      className="flex flex-col items-start gap-1 hover:opacity-80 transition-opacity"
-                    >
-                      <span className="text-2xl font-bold text-[#1E1E1E]">
-                        {todayTrips}
-                      </span>
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <span>Trips</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </button>
-
-                    {/* Bottom Left - Time on orders */}
-                    <button
-                      onClick={() => navigate("/delivery/time-on-orders")}
-                      className="flex flex-col items-start gap-1 hover:opacity-80 transition-opacity"
-                    >
-                      <span className="text-2xl font-bold text-[#1E1E1E]">
-                        {`${formatHours(todayHoursWorked)} hrs`}
-                      </span>
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <span>Time on orders</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </button>
-
-                    {/* Bottom Right - Gigs History */}
-                    <button
-                      onClick={() => navigate("/delivery/gig")}
-                      className="flex flex-col items-end gap-1 hover:opacity-80 transition-opacity"
-                    >
-                      <span className="text-2xl font-bold text-[#1E1E1E]">
-                        {`${todayGigsCount} Gigs`}
-                      </span>
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <span>History</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </motion.div>
-        </>
-      )}
-
-      {/* Help Popup */}
-      <BottomPopup
-        isOpen={showHelpPopup}
-        onClose={() => setShowHelpPopup(false)}
-        title="How can we help?"
-        showCloseButton={true}
-        closeOnBackdropClick={true}
-        maxHeight="70vh"
-        panelClassName={desktopBottomPopupPanelClass}
-      >
-        <div className="py-2">
-          {helpOptions.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => handleHelpOptionClick(option)}
-              className="w-full flex items-center gap-4 p-4 hover:bg-[#fff8f7] transition-colors border-b border-[#F5F5F5] last:border-b-0"
-            >
-              {/* Icon */}
-              <div className="shrink-0 w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                {option.icon === "helpCenter" && (
-                  <HelpCircle className="w-6 h-6 text-gray-700" />
-                )}
-                {option.icon === "ticket" && (
-                  <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                  </svg>
-                )}
-                {option.icon === "idCard" && (
-                  <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
-                  </svg>
-                )}
-                {option.icon === "language" && (
-                  <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-                  </svg>
-                )}
-              </div>
-
-              {/* Text Content */}
-              <div className="flex-1 text-left">
-                <h3 className="text-base font-semibold text-[#1E1E1E] mb-1">{option.title}</h3>
-                <p className="text-sm text-gray-600">{option.subtitle}</p>
-              </div>
-
-              {/* Arrow Icon */}
-              <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-            </button>
-          ))}
-        </div>
-      </BottomPopup>
-
-      {/* Emergency Help Popup */}
-      <BottomPopup
-        isOpen={showEmergencyPopup}
-        onClose={() => setShowEmergencyPopup(false)}
-        title="Emergency help"
-        showCloseButton={true}
-        closeOnBackdropClick={true}
-        maxHeight="70vh"
-        panelClassName={desktopBottomPopupPanelClass}
-      >
-        <div className="py-2">
-          {emergencyOptions.map((option, index) => (
-            <button
-              key={option.id}
-              onClick={() => handleEmergencyOptionClick(option)}
-              className="w-full flex items-center gap-4 p-4 hover:bg-[#fff8f7] transition-colors border-b border-[#F5F5F5] last:border-b-0"
-            >
-              {/* Icon */}
-              <div className="shrink-0 w-14 h-14 rounded-lg flex items-center justify-center">
-                {option.icon === "ambulance" && (
-                  <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-sm border border-[#F5F5F5] relative overflow-hidden">
-                    {/* Ambulance vehicle */}
-                    <div className="absolute inset-0 bg-[#FFC400]"></div>
-                    {/* Red and blue lights on roof */}
-                    <div className="absolute top-1 left-2 w-2 h-3 bg-[#e53935] rounded-sm"></div>
-                    <div className="absolute top-1 right-2 w-2 h-3 bg-[#FFC400] rounded-sm"></div>
-                    {/* Star of Life emblem */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6 text-[#1E1E1E]" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2L2 7v10l10 5 10-5V7l-10-5zm0 2.18l8 4v7.64l-8 4-8-4V8.18l8-4z" />
-                        <path d="M12 8L6 11v6l6 3 6-3v-6l-6-3z" />
-                      </svg>
-                    </div>
-                    {/* AMBULANCE text */}
-                    <div className="absolute bottom-1 left-0 right-0 text-[6px] font-bold text-white text-center">AMBULANCE</div>
-                  </div>
-                )}
-                {option.icon === "siren" && (
-                  <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-sm border border-[#F5F5F5] relative">
-                    {/* Red siren dome */}
-                    <div className="w-10 h-10 bg-[#e53935] rounded-full flex items-center justify-center relative">
-                      {/* Yellow light rays */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-12 h-12 border-2 border-[#FFC400] rounded-full animate-pulse"></div>
-                      </div>
-                      {/* Phone icon inside */}
-                      <Phone className="w-5 h-5 text-[#FFC400] z-10" />
-                    </div>
-                  </div>
-                )}
-                {option.icon === "police" && (
-                  <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-sm border border-[#F5F5F5]">
-                    {/* Police officer bust */}
-                    <div className="relative">
-                      {/* Head */}
-                      <div className="w-10 h-10 bg-gray-300 rounded-full"></div>
-                      {/* Cap */}
-                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-4 bg-amber-700 rounded-t-lg"></div>
-                      {/* Cap peak */}
-                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-10 h-1 bg-amber-800"></div>
-                      {/* Mustache */}
-                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-6 h-2 bg-gray-800 rounded-full"></div>
-                    </div>
-                  </div>
-                )}
-                {option.icon === "insurance" && (
-                  <div className="w-14 h-14 bg-[#FFC400] rounded-lg flex items-center justify-center shadow-sm border border-[#F5F5F5] relative">
-                    {/* Card shape */}
-                    <div className="w-12 h-8 bg-white rounded-sm relative">
-                      {/* Red heart and cross on left */}
-                      <div className="absolute left-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                        <svg className="w-3 h-3 text-[#e53935]" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                        </svg>
-                        <div className="w-0.5 h-3 bg-[#e53935]"></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Text Content */}
-              <div className="flex-1 text-left">
-                <h3 className="text-base font-semibold text-[#1E1E1E] mb-1">{option.title}</h3>
-                <p className="text-sm text-gray-600">{option.subtitle}</p>
-              </div>
-
-              {/* Arrow Icon */}
-              <ArrowRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
-            </button>
-          ))}
-        </div>
-      </BottomPopup>
-
-      {/* Book Gigs Popup */}
-      <BottomPopup
-        isOpen={showBookGigsPopup}
-        onClose={() => setShowBookGigsPopup(false)}
-        title="Book gigs to go online"
-        showCloseButton={true}
-        closeOnBackdropClick={true}
-        maxHeight="auto"
-        panelClassName={desktopBottomPopupPanelClass}
-      >
-        <div className="py-4">
-          {/* Gig Details Card */}
-          <div className="mb-6 rounded-lg overflow-hidden shadow-sm border border-[#F5F5F5]">
-            {/* Header - Teal background */}
-            <div className="bg-teal-100 px-4 py-3 flex items-center gap-3">
-              <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">g</span>
-              </div>
-              <span className="text-teal-700 font-semibold">Gig details</span>
-            </div>
-
-            {/* Body - White background */}
-            <div className="bg-white px-4 py-4">
-              <p className="text-[#1E1E1E] text-sm">Gig booking open in your zone</p>
-            </div>
-          </div>
-
-          {/* Description */}
-          <p className="text-[#1E1E1E] text-sm mb-6">
-            Book your Gigs now to go online and start delivering orders
-          </p>
-
-          {/* Book Gigs Button */}
-          <button
-            onClick={() => {
-              setShowBookGigsPopup(false)
-              navigate("/delivery/gig")
-            }}
-            className="w-full bg-[#e53935] hover:bg-[#c62828] text-white font-semibold py-4 rounded-lg transition-colors"
-          >
-            Book gigs
-          </button>
-        </div>
-      </BottomPopup>
-
-      {/* New Order Popup with Countdown Timer - Custom Implementation */}
-      <AnimatePresence>
-        {showNewOrderPopup && (newOrder || selectedRestaurant) && isOnline && (
-          <>
-            {/* Backdrop */}
-            {!isNewOrderPopupMinimized && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="fixed inset-0 bg-black/50 z-[100]"
-              />
-            )}
-
-            {/* Minimized Handle - Show when minimized for swipe up */}
-            {isNewOrderPopupMinimized && (
-              <motion.div
-                initial={{ y: 100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 100, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="fixed bottom-0 left-0 right-0 z-[115] flex justify-center pb-2 lg:left-1/2 lg:right-auto lg:-translate-x-1/2 lg:w-[min(920px,calc(100%-2.5rem))] lg:pb-4"
-                onTouchStart={handleNewOrderPopupTouchStart}
-                onTouchMove={handleNewOrderPopupTouchMove}
-                onTouchEnd={handleNewOrderPopupTouchEnd}
-                style={{ touchAction: 'none' }}
-              >
-                <div className="bg-[#e53935] rounded-t-2xl px-6 py-3 shadow-lg cursor-grab active:cursor-grabbing">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-1 bg-white/80 rounded-full" />
-                    <span className="text-white text-sm font-semibold">Swipe up to view order</span>
-                    <div className="w-8 h-1 bg-white/80 rounded-full" />
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Popup */}
-            <motion.div
-              ref={newOrderPopupRef}
-              initial={{ y: "100%" }}
-              animate={{
-                y: isDraggingNewOrderPopup
-                  ? newOrderDragY
-                  : isNewOrderPopupMinimized
-                    ? (newOrderPopupRef.current?.offsetHeight || 600)
-                    : 0
-              }}
-              transition={isDraggingNewOrderPopup
-                ? { duration: 0 }
-                : isNewOrderPopupMinimized
-                  ? { duration: 0.3, ease: "easeOut" } // Smooth transition when minimizing
-                  : {
-                    type: "spring",
-                    damping: 30,
-                    stiffness: 300
-                  }
-              }
-              exit={{ y: "100%" }}
-              onTouchStart={handleNewOrderPopupTouchStart}
-              onTouchMove={handleNewOrderPopupTouchMove}
-              onTouchEnd={handleNewOrderPopupTouchEnd}
-              className="fixed bottom-0 left-0 right-0 bg-transparent rounded-t-3xl z-[110] overflow-visible lg:left-1/2 lg:right-auto lg:-translate-x-1/2 lg:w-[min(920px,calc(100%-2.5rem))] lg:bottom-4"
-              style={{ touchAction: 'none' }}
-            >
-              {/* Swipe Handle */}
-              <div className="flex justify-center pt-4 pb-2 cursor-grab active:cursor-grabbing">
-                <div className="w-12 h-1.5 bg-white/30 rounded-full" />
-              </div>
-
-              {/* Green Countdown Header */}
-              <div className="relative scale-110 mb-0 bg-[#e53935] rounded-t-3xl overflow-visible lg:scale-100">
-                {/* Small countdown badge - positioned at center edge, half above popup */}
-                <div className="absolute left-1/2 -translate-x-1/2 -top-5 z-20">
-                  <div className="relative inline-flex items-center justify-center">
-                    {/* Animated green border around badge - positioned behind badge, wider */}
-                    <svg
-                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-                      style={{
-                        width: 'calc(100% + 10px)',
-                        height: 'calc(100% + 10px)',
-                        zIndex: 35
-                      }}
-                      viewBox="0 0 200 60"
-                      preserveAspectRatio="xMidYMid meet"
-                    >
-                      <defs>
-                        <linearGradient id="newOrderCountdownGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#e53935" stopOpacity="1" />
-                          <stop offset="100%" stopColor="#e53935" stopOpacity="1" />
-                        </linearGradient>
-                      </defs>
-
-                      {/* Full white border path - rounded rectangle (background) */}
-                      <path
-                        d="M 30,5 L 170,5 A 25,25 0 0,1 195,30 L 195,30 A 25,25 0 0,1 170,55 L 30,55 A 25,25 0 0,1 5,30 L 5,30 A 25,25 0 0,1 30,5 Z"
-                        fill="none"
-                        stroke="white"
-                        strokeWidth="8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-
-                      {/* Animated progress border - starts from top center, decreases clockwise */}
-                      <motion.path
-                        d="M 100,5 L 170,5 A 25,25 0 0,1 195,30 L 195,30 A 25,25 0 0,1 170,55 L 30,55 A 25,25 0 0,1 5,30 L 5,30 A 25,25 0 0,1 30,5 L 100,5"
-                        fill="none"
-                        stroke="#e53935"
-                        strokeWidth="8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeDasharray="450"
-                        initial={{ strokeDashoffset: 0 }}
-                        animate={{
-                          strokeDashoffset: 450 * (1 - countdownSeconds / 300)
-                        }}
-                        transition={{ duration: 1, ease: "linear" }}
-                      />
-
-                      {/* White segment indicator at top center */}
-                      <rect
-                        x="95"
-                        y="0"
-                        width="10"
-                        height="8"
-                        fill="white"
-                        rx="1"
-                      />
-                    </svg>
-
-                    {/* White pill-shaped badge - positioned above SVG */}
-                    <div className="relative bg-white rounded-full px-6 py-2 shadow-lg" style={{ zIndex: 30 }}>
-                      <div className="text-sm font-bold text-[#1E1E1E]">
-                        New order
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* White Content Card */}
-              <div className="bg-white rounded-t-3xl">
-                <div className="p-6">
-
-
-                  {/* Order ID */}
-                  <div className="mb-4">
-                    <p className="text-gray-500 text-xs mb-1">Order ID</p>
-                    <p className="text-base font-semibold text-[#1E1E1E]">
-                      {newOrder?.orderId || selectedRestaurant?.orderId || 'ORD1234567890'}
-                    </p>
-                  </div>
-
-                  {/* Pickup Details */}
-                  <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                    <div className="mb-3">
-                      <span className="bg-gray-200 text-gray-700 text-xs font-medium px-2 py-1 rounded-lg">
-                        Pick up
-                      </span>
-                    </div>
-
-                    <h3 className="text-lg font-bold text-[#1E1E1E] mb-1">
-                      {newOrder?.restaurantName || selectedRestaurant?.name || 'Restaurant'}
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                      {sliderRestaurantAddress || 'Address'}
-                    </p>
-
-                    {(() => {
-                      const timeVal = selectedRestaurant?.timeAway && selectedRestaurant.timeAway !== 'Calculating...'
-                        ? `${selectedRestaurant.timeAway} away`
-                        : (newOrder?.pickupDistance && newOrder.pickupDistance !== '0 km' && newOrder.pickupDistance !== 'Calculating...'
-                          ? `${calculateTimeAway(newOrder.pickupDistance)} away`
-                          : null)
-                      return timeVal ? (
-                        <div className="flex items-center gap-1.5 text-gray-500 text-sm mb-2">
-                          <Clock className="w-4 h-4" />
-                          <span>{timeVal}</span>
-                        </div>
-                      ) : null
-                    })()}
-
-                    {(() => {
-                      const distVal = selectedRestaurant?.distance && selectedRestaurant.distance !== '0 km' && selectedRestaurant.distance !== 'Calculating...'
-                        ? `${selectedRestaurant.distance} away`
-                        : (newOrder?.pickupDistance && newOrder.pickupDistance !== '0 km' && newOrder.pickupDistance !== 'Calculating...'
-                          ? `${newOrder.pickupDistance} away`
-                          : null)
-                      return distVal ? (
-                        <div className="flex items-center gap-1.5 text-gray-500 text-sm">
-                          <MapPin className="w-4 h-4" />
-                          <span>{distVal}</span>
-                        </div>
-                      ) : null
-                    })()}
-                  </div>
-
-                  {/* Accept Order Button with Swipe */}
-                  <div className="relative w-full">
-                    <motion.div
-                      ref={newOrderAcceptButtonRef}
-                      className="relative w-full bg-[#e53935] rounded-full overflow-hidden shadow-xl"
-                      style={{ touchAction: 'pan-x' }} // Prevent vertical scrolling, allow horizontal pan
-                      onTouchStart={handleNewOrderAcceptTouchStart}
-                      onTouchMove={handleNewOrderAcceptTouchMove}
-                      onTouchEnd={handleNewOrderAcceptTouchEnd}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      {/* Swipe progress background */}
-                      <motion.div
-                        className="absolute inset-0 bg-[#e53935] rounded-full"
-                        animate={{
-                          width: `${newOrderAcceptButtonProgress * 100}%`
-                        }}
-                        transition={newOrderIsAnimatingToComplete ? {
-                          type: "spring",
-                          stiffness: 200,
-                          damping: 25
-                        } : { duration: 0 }}
-                      />
-
-                      {/* Button content container */}
-                      <div className="relative flex items-center h-[64px] px-1">
-                        {/* Left: Black circle with arrow */}
-                        <motion.div
-                          className="w-14 h-14 bg-gray-900 rounded-full flex items-center justify-center shrink-0 relative z-20 shadow-2xl"
-                          animate={{
-                            x: newOrderAcceptButtonProgress * (newOrderAcceptButtonRef.current ? (newOrderAcceptButtonRef.current.offsetWidth - 56 - 32) : 240)
-                          }}
-                          transition={newOrderIsAnimatingToComplete ? {
-                            type: "spring",
-                            stiffness: 300,
-                            damping: 30
-                          } : { duration: 0 }}
-                        >
-                          <ArrowRight className="w-5 h-5 text-white" />
-                        </motion.div>
-
-                        {/* Text - centered and stays visible */}
-                        <div className="absolute inset-0 flex items-center justify-center left-16 right-4 pointer-events-none">
-                          <motion.span
-                            className="text-white font-semibold flex items-center justify-center text-center text-base select-none"
-                            animate={{
-                              opacity: newOrderAcceptButtonProgress > 0.5 ? Math.max(0.2, 1 - newOrderAcceptButtonProgress * 0.8) : 1,
-                              x: newOrderAcceptButtonProgress > 0.5 ? newOrderAcceptButtonProgress * 15 : 0
-                            }}
-                            transition={newOrderIsAnimatingToComplete ? {
-                              type: "spring",
-                              stiffness: 200,
-                              damping: 25
-                            } : { duration: 0 }}
-                          >
-                            {newOrderAcceptButtonProgress > 0.5 ? 'Release to Accept' : 'Accept order'}
-                          </motion.span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Reject Button - Outside the popup, positioned below */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              className="fixed top-4 right-4 z-[115] lg:top-6 lg:right-6"
-            >
-              <button
-                onClick={handleRejectConfirm}
-                className="bg-[#e53935] border-2 border-white text-white text-bold px-5 p-2 rounded-full font-semibold text-sm hover:bg-[#c62828] transition-colors shadow-2xl"
-              >
-                Deny
-              </button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Reject Order Popup */}
-      <AnimatePresence>
-        {showRejectPopup && (
-          <>
-            <motion.div
-              className="fixed inset-0 z-[120] bg-black/60 flex items-center justify-center p-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={handleRejectCancel}
-            >
-              <motion.div
-                className="w-[90%] max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Header */}
-                <div className="px-4 py-4 border-b border-[#F5F5F5]">
-                  <h3 className="text-lg font-bold text-[#1E1E1E]">Can't Accept Order</h3>
-                  <p className="text-sm text-gray-500 mt-1">Please select a reason for not accepting this order</p>
-                </div>
-
-                {/* Content */}
-                <div className="px-4 py-4 max-h-[60vh] overflow-y-auto">
-                  <div className="space-y-2">
-                    {rejectReasons.map((reason) => (
-                      <button
-                        key={reason}
-                        onClick={() => setRejectReason(reason)}
-                        className={`w-full text-left p-4 rounded-lg border-2 transition-all ${rejectReason === reason
-                          ? "border-[#e53935] bg-[#fff8f7]"
-                          : "border-[#F5F5F5] bg-white hover:border-[#F5F5F5]"
-                          }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className={`text-sm font-medium ${rejectReason === reason ? "text-[#1E1E1E]" : "text-[#1E1E1E]"
-                            }`}>
-                            {reason}
-                          </span>
-                          {rejectReason === reason && (
-                            <div className="w-5 h-5 rounded-full bg-[#e53935] flex items-center justify-center">
-                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="px-4 py-4 bg-gray-50 border-t border-[#F5F5F5] flex gap-3">
-                  <button
-                    onClick={handleRejectCancel}
-                    className="flex-1 bg-white border-2 border-[#F5F5F5] text-gray-700 py-3 rounded-lg font-semibold text-sm hover:bg-[#fff8f7] transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleRejectConfirm}
-                    disabled={!rejectReason}
-                    className={`flex-1 py-3 rounded-lg font-semibold text-sm transition-colors ${rejectReason
-                      ? "!bg-[#e53935] !text-white"
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      }`}
-                  >
-                    Confirm
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Directions Map View */}
-      <AnimatePresence>
-        {showDirectionsMap && selectedRestaurant && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[120] bg-white"
-          >
-            {/* Ola Maps Container for Directions */}
-            <div
-              ref={directionsMapContainerRef}
-              key="directions-map-container" // Fixed key - don't remount on location change
-              style={{ height: '100%', width: '100%', zIndex: 1 }}
-            />
-
-            {/* Loading indicator */}
-            {directionsMapLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10">
-                <div className="text-gray-600">Loading map...</div>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Reached Pickup Popup - shown when order is ready (from order_ready socket) or when rider is within 500m */}
-      {/* Don't show if Order ID confirmation popup is showing */}
-      <BottomPopup
-        isOpen={showreachedPickupPopup && !showOrderIdConfirmationPopup}
-        onClose={() => setShowreachedPickupPopup(false)}
-        showCloseButton={false}
-        closeOnBackdropClick={false}
-        disableSwipeToClose={true}
-        maxHeight="70vh"
-        showHandle={true}
-        showBackdrop={false}
-        backdropBlocksInteraction={false}
-        panelClassName={desktopBottomPopupPanelClass}
-      >
-        <div className="">
-          {/* Pickup Label */}
-          <div className="mb-4">
-            <span className="bg-gray-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg">
-              Pick up
-            </span>
-          </div>
-
-          {/* Restaurant Info */}
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-[#1E1E1E] mb-2">
-              {selectedRestaurant?.name || 'Restaurant Name'}
-            </h2>
-            <p className="text-gray-600 mb-2 leading-relaxed">
-              {(() => {
-                const address = selectedRestaurant?.address;
 
                 // If address is default or missing, try to find it in other fields
                 if (!address || address === 'Restaurant Address' || address === 'Restaurant address') {
@@ -9810,348 +5303,6 @@ export default function DeliveryHome() {
                   selectedRestaurant?.restaurant?.phone ||
                   null
 
-                console.log('📞 Checking phone in selectedRestaurant:', {
-                  phone: selectedRestaurant?.phone,
-                  restaurantIdPhone: selectedRestaurant?.restaurantId?.phone,
-                  ownerPhone: selectedRestaurant?.ownerPhone,
-                  restaurantPhone: selectedRestaurant?.restaurant?.phone,
-                  found: !!restaurantPhone
-                })
-
-                // If phone not found in selectedRestaurant, try to fetch order details from backend
-                if (!restaurantPhone && selectedRestaurant?.orderId) {
-                  try {
-                    console.log('📞 [CALL] Phone not found in selectedRestaurant, fetching order details from backend...')
-                    const orderId = selectedRestaurant.orderId || selectedRestaurant.id
-                    console.log('📞 [CALL] Fetching order details for orderId:', orderId)
-
-                    const response = await deliveryAPI.getOrderDetails(orderId)
-                    console.log('📞 [CALL] Order details API response:', JSON.stringify(response.data, null, 2))
-
-                    // Check multiple response formats
-                    const order = response.data?.data?.order || response.data?.order || null
-
-                    if (order) {
-                      console.log('📞 [CALL] Order data extracted from API:', {
-                        hasRestaurantId: !!order.restaurantId,
-                        restaurantIdType: typeof order.restaurantId,
-                        restaurantIdPhone: order.restaurantId?.phone,
-                        restaurantIdOwnerPhone: order.restaurantId?.ownerPhone,
-                        restaurantIdObject: order.restaurantId ? Object.keys(order.restaurantId) : null
-                      })
-
-                      // Try all possible paths in the API response
-                      // Restaurant model has both 'phone' and 'ownerPhone' fields
-                      restaurantPhone = order.restaurantId?.phone ||
-                        order.restaurantId?.ownerPhone ||
-                        order.restaurant?.phone ||
-                        order.restaurant?.ownerPhone ||
-                        order.restaurantId?.contact?.phone ||
-                        order.restaurantId?.owner?.phone ||
-                        null
-
-                      console.log('📞 [CALL] Phone extracted from order:', restaurantPhone)
-
-                      // If phone found, update selectedRestaurant for future use
-                      if (restaurantPhone && selectedRestaurant) {
-                        setSelectedRestaurant({
-                          ...selectedRestaurant,
-                          phone: restaurantPhone,
-                          ownerPhone: order.restaurantId?.ownerPhone || order.restaurant?.ownerPhone || restaurantPhone
-                        })
-                        console.log('✅ [CALL] Updated selectedRestaurant with phone:', restaurantPhone)
-                      }
-
-                      // If still not found, try restaurant API directly
-                      if (!restaurantPhone && order.restaurantId) {
-                        const restaurantId = typeof order.restaurantId === 'string'
-                          ? order.restaurantId
-                          : (order.restaurantId._id || order.restaurantId.id || order.restaurantId.toString())
-
-                        if (restaurantId) {
-                          try {
-                            console.log('📞 [CALL] Trying restaurant API directly with ID:', restaurantId)
-                            const restaurantResponse = await restaurantAPI.getRestaurantById(restaurantId)
-                            if (restaurantResponse.data?.success && restaurantResponse.data.data) {
-                              const restaurant = restaurantResponse.data.data.restaurant || restaurantResponse.data.data
-                              restaurantPhone = restaurant.phone || restaurant.ownerPhone || restaurant.primaryContactNumber
-
-                              if (restaurantPhone) {
-                                setSelectedRestaurant({
-                                  ...selectedRestaurant,
-                                  phone: restaurantPhone,
-                                  ownerPhone: restaurant.ownerPhone || restaurantPhone
-                                })
-                                console.log('✅ [CALL] Updated selectedRestaurant with phone from restaurant API:', restaurantPhone)
-                              }
-                            }
-                          } catch (restaurantError) {
-                            console.error('❌ [CALL] Error fetching restaurant by ID:', restaurantError)
-                          }
-                        }
-                      }
-
-                      if (!restaurantPhone) {
-                        console.warn('⚠️ [CALL] Phone not found in order.restaurantId object:', order.restaurantId)
-                      }
-                    } else {
-                      console.warn('⚠️ [CALL] Order details API response format unexpected - order not found in response:', {
-                        responseKeys: Object.keys(response.data || {}),
-                        responseData: response.data
-                      })
-                    }
-                  } catch (error) {
-                    console.error('❌ [CALL] Error fetching order details for phone:', error)
-                    console.error('❌ [CALL] Error message:', error.message)
-                    console.error('❌ [CALL] Error response:', error.response?.data)
-                    console.error('❌ [CALL] Error status:', error.response?.status)
-                  }
-                } else if (!selectedRestaurant?.orderId) {
-                  console.warn('⚠️ [CALL] Cannot fetch phone - orderId not found in selectedRestaurant:', selectedRestaurant)
-                }
-
-                if (restaurantPhone) {
-                  // Remove any spaces, dashes, or special characters except + and digits
-                  const cleanPhone = restaurantPhone.replace(/[^\d+]/g, '')
-                  console.log('📞 Calling restaurant:', { original: restaurantPhone, clean: cleanPhone })
-                  window.location.href = `tel:${cleanPhone}`
-                } else {
-                  toast.error('Restaurant phone number not available. Please contact support.')
-                  console.error('❌ Restaurant phone not found in any path:', {
-                    selectedRestaurant,
-                    hasPhone: !!selectedRestaurant?.phone,
-                    hasRestaurantIdPhone: !!selectedRestaurant?.restaurantId?.phone,
-                    hasOwnerPhone: !!selectedRestaurant?.ownerPhone,
-                    orderId: selectedRestaurant?.orderId
-                  })
-                }
-              }}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-[#F5F5F5] rounded-lg hover:bg-[#fff8f7] transition-colors"
-            >
-              <Phone className="w-5 h-5 text-gray-700" />
-              <span className="text-gray-700 font-medium">Call</span>
-            </button>
-            <button
-              onClick={() => {
-                // Get restaurant coordinates with robust fallbacks
-                const locationCandidates = [
-                  selectedRestaurant?.restaurant?.location,
-                  selectedRestaurant?.restaurantLocation,
-                  selectedRestaurant?.location,
-                  selectedRestaurant?.restaurantId?.location,
-                  selectedRestaurant?.fullOrder?.restaurantId?.location,
-                  selectedRestaurant?.order?.restaurantId?.location
-                ]
-
-                let extractedRestaurantCoords = { lat: null, lng: null }
-                for (const candidate of locationCandidates) {
-                  const parsed = extractLatLng(candidate)
-                  if (hasValidCoordinates(parsed.lat, parsed.lng)) {
-                    extractedRestaurantCoords = parsed
-                    break
-                  }
-                }
-
-                // Last fallback: use routeToPickup last coordinate [lat, lng]
-                let routeRestaurantLat = null
-                let routeRestaurantLng = null
-                const routeCoords = selectedRestaurant?.deliveryState?.routeToPickup?.coordinates
-                if (Array.isArray(routeCoords) && routeCoords.length > 0) {
-                  const lastPoint = routeCoords[routeCoords.length - 1]
-                  if (Array.isArray(lastPoint) && lastPoint.length >= 2) {
-                    routeRestaurantLat = toFiniteCoordinate(lastPoint[0])
-                    routeRestaurantLng = toFiniteCoordinate(lastPoint[1])
-                  }
-                }
-
-                const restaurantLat = toFiniteCoordinate(selectedRestaurant?.lat) ??
-                  extractedRestaurantCoords.lat ??
-                  toFiniteCoordinate(selectedRestaurant?.restaurantLat) ??
-                  routeRestaurantLat
-                const restaurantLng = toFiniteCoordinate(selectedRestaurant?.lng) ??
-                  extractedRestaurantCoords.lng ??
-                  toFiniteCoordinate(selectedRestaurant?.restaurantLng) ??
-                  routeRestaurantLng
-
-                if (!hasValidCoordinates(restaurantLat, restaurantLng)) {
-                  toast.error('Restaurant location not available')
-                  console.error('❌ Restaurant coordinates not found:', {
-                    lat: restaurantLat,
-                    lng: restaurantLng,
-                    selectedRestaurant
-                  })
-                  return
-                }
-
-                console.log('🗺️ Opening Google Maps navigation to restaurant:', {
-                  lat: restaurantLat,
-                  lng: restaurantLng,
-                  name: selectedRestaurant?.name
-                })
-
-                // Detect platform (Android or iOS)
-                const userAgent = navigator.userAgent || navigator.vendor || window.opera
-                const isAndroid = /android/i.test(userAgent)
-                const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream
-                const isLocalDevHost = ['localhost', '127.0.0.1'].includes(window.location.hostname)
-                const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${restaurantLat},${restaurantLng}&travelmode=bicycling`
-
-                let mapsUrl = ''
-
-                // In local dev browser, app URI schemes like google.navigation:// are usually unavailable.
-                // Open web URL directly to avoid handler errors in console.
-                if (isLocalDevHost) {
-                  window.open(webUrl, '_blank')
-                  toast.success('Opening Google Maps navigation 🗺️', {
-                    duration: 2000
-                  })
-                  return
-                }
-
-                if (isAndroid) {
-                  // Android: Use google.navigation: scheme (opens directly in navigation mode)
-                  mapsUrl = `google.navigation:q=${restaurantLat},${restaurantLng}&mode=b`
-
-                  // Try to open Google Maps app first
-                  window.location.href = mapsUrl
-
-                  // Fallback to web URL after a short delay (in case app is not installed)
-                  setTimeout(() => {
-                    window.open(webUrl, '_blank')
-                  }, 500)
-                } else if (isIOS) {
-                  // iOS: Use comgooglemaps:// scheme (opens Google Maps app)
-                  mapsUrl = `comgooglemaps://?daddr=${restaurantLat},${restaurantLng}&directionsmode=bicycling`
-
-                  // Try to open Google Maps app first
-                  window.location.href = mapsUrl
-
-                  // Fallback to web URL after a short delay (in case app is not installed)
-                  setTimeout(() => {
-                    const webUrl = `https://maps.google.com/?daddr=${restaurantLat},${restaurantLng}&directionsmode=bicycling`
-                    window.open(webUrl, '_blank')
-                  }, 500)
-                } else {
-                  // Web/Desktop: Use web URL with navigation
-                  mapsUrl = webUrl
-                  window.open(mapsUrl, '_blank')
-                }
-
-                // Show success message
-                toast.success('Opening Google Maps navigation 🗺️', {
-                  duration: 2000
-                })
-              }}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
-            >
-              <MapPin className="w-5 h-5 text-white" />
-              <span className="text-white font-medium">Map</span>
-            </button>
-          </div>
-
-          {/* Reached Pickup Button with Swipe */}
-          <div className="relative w-full">
-            <motion.div
-              ref={reachedPickupButtonRef}
-              className="relative w-full bg-[#e53935] rounded-full overflow-hidden shadow-xl"
-              style={{ touchAction: 'pan-x' }} // Prevent vertical scrolling, allow horizontal pan
-              onTouchStart={handlereachedPickupTouchStart}
-              onTouchMove={handlereachedPickupTouchMove}
-              onTouchEnd={handlereachedPickupTouchEnd}
-              whileTap={{ scale: 0.98 }}
-            >
-              {/* Swipe progress background */}
-              <motion.div
-                className="absolute inset-0 bg-[#e53935] rounded-full"
-                animate={{
-                  width: `${reachedPickupButtonProgress * 100}%`
-                }}
-                transition={reachedPickupIsAnimatingToComplete ? {
-                  type: "spring",
-                  stiffness: 200,
-                  damping: 25
-                } : { duration: 0 }}
-              />
-
-              {/* Button content container */}
-              <div className="relative flex items-center h-[64px] px-1">
-                {/* Left: Black circle with arrow */}
-                <motion.div
-                  className="w-14 h-14 bg-gray-900 rounded-full flex items-center justify-center shrink-0 relative z-20 shadow-2xl"
-                  animate={{
-                    x: reachedPickupButtonProgress * (reachedPickupButtonRef.current ? (reachedPickupButtonRef.current.offsetWidth - 56 - 32) : 240)
-                  }}
-                  transition={reachedPickupIsAnimatingToComplete ? {
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 30
-                  } : { duration: 0 }}
-                >
-                  <ArrowRight className="w-5 h-5 text-white" />
-                </motion.div>
-
-                {/* Text - centered and stays visible */}
-                <div className="absolute inset-0 flex items-center justify-center left-16 right-4 pointer-events-none">
-                  <motion.span
-                    className="text-white font-semibold flex items-center justify-center text-center text-base select-none"
-                    animate={{
-                      opacity: reachedPickupButtonProgress > 0.5 ? Math.max(0.2, 1 - reachedPickupButtonProgress * 0.8) : 1,
-                      x: reachedPickupButtonProgress > 0.5 ? reachedPickupButtonProgress * 15 : 0
-                    }}
-                    transition={reachedPickupIsAnimatingToComplete ? {
-                      type: "spring",
-                      stiffness: 200,
-                      damping: 25
-                    } : { duration: 0 }}
-                  >
-                    {reachedPickupButtonProgress > 0.5 ? 'Release to Confirm' : 'Reached Pickup'}
-                  </motion.span>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </BottomPopup>
-
-      {/* Order ID Confirmation Popup - shown after Reached Pickup swipe is confirmed */}
-      <BottomPopup
-        isOpen={showOrderIdConfirmationPopup}
-        onClose={() => setShowOrderIdConfirmationPopup(false)}
-        showCloseButton={false}
-        closeOnBackdropClick={false}
-        maxHeight="60vh"
-        showHandle={false}
-        showBackdrop={false}
-        backdropBlocksInteraction={false}
-        panelClassName={desktopBottomPopupPanelClass}
-      >
-        <div className="">
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-[#1E1E1E] mb-2">
-              Confirm Order ID
-            </h2>
-            <p className="text-gray-600 text-sm mb-4">
-              Please verify the order ID with the restaurant before pickup
-            </p>
-
-            {/* Order ID Display - single line, scroll horizontally if needed */}
-            <div className="bg-white rounded-xl p-6 mb-6 overflow-hidden border border-[#F5F5F5]">
-              <p className="text-gray-500 text-xs mb-2">Order ID</p>
-              <p className="text-2xl sm:text-3xl font-bold text-[#1E1E1E] tracking-wider whitespace-nowrap overflow-x-auto min-w-0">
-                {selectedRestaurant?.orderId || selectedRestaurant?.id || newOrder?.orderId || newOrder?.orderMongoId || 'ORD1234567890'}
-              </p>
-            </div>
-
-            {/* Digital Bill Section - Always show, check via API */}
-            <div className="bg-white rounded-xl p-4 mb-6 border border-[#F5F5F5]">
-              <h3 className="text-sm font-semibold text-[#1E1E1E] mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#FFC400]" />
-                Digital Bill
-              </h3>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={async () => {
-                    const orderId = selectedRestaurant?.orderId || selectedRestaurant?.id || newOrder?.orderId || newOrder?.orderMongoId;
                     setIsLoadingBill(true);
                     try {
                       const response = await deliveryAPI.getOrderDetails(orderId);
@@ -10898,89 +6049,6 @@ export default function DeliveryHome() {
                 // Save review by calling completeDelivery API with rating and review
                 if (orderIdForApi) {
                   try {
-                    console.log('📝 Submitting review and completing delivery:', {
-                      orderId: orderIdForApi,
-                      rating: customerRating,
-                      review: customerReviewText
-                    })
-
-                    // Call completeDelivery API with rating and review
-                    const response = await deliveryAPI.completeDelivery(
-                      orderIdForApi,
-                      customerRating > 0 ? customerRating : null,
-                      customerReviewText.trim() || ''
-                    )
-
-                    if (response.data?.success) {
-                      // Get updated earnings from response
-                      // Note: completeDelivery API already adds earnings and COD cash collected to wallet
-                      const earnings = response.data.data?.earnings?.amount ||
-                        response.data.data?.totalEarning ||
-                        orderEarnings
-                      setOrderEarnings(earnings)
-
-                      console.log('✅ Delivery completed and earnings added to wallet:', earnings)
-                      console.log('✅ Wallet transaction:', response.data.data?.walletTransaction)
-
-                      // Notify wallet listeners (Pocket balance, Pocket page) so cash collected updates
-                      window.dispatchEvent(new Event('deliveryWalletStateUpdated'))
-
-                      // Show success message
-                      if (earnings > 0) {
-                        toast.success(`₹${earnings.toFixed(2)} added to your wallet! 💰`)
-                      }
-
-                      // Close review popup and show payment page
-                      setShowCustomerReviewPopup(false)
-                      setShowPaymentPage(true)
-                    } else {
-                      console.error('❌ Failed to submit review:', response.data)
-                      toast.error(response.data?.message || 'Failed to submit review. Please try again.')
-                    }
-                  } catch (error) {
-                    console.error('❌ Error submitting review:', error)
-                    toast.error('Failed to submit review. Please try again.')
-                    // Still show payment page even if review fails
-                    setShowCustomerReviewPopup(false)
-                    setShowPaymentPage(true)
-                  }
-                } else {
-                  // If no order ID, just show payment page
-                  setShowCustomerReviewPopup(false)
-                  setShowPaymentPage(true)
-                }
-              }}
-              className="w-full bg-[#e53935] text-white py-4 rounded-xl font-semibold text-lg hover:bg-[#e53935] transition-colors shadow-lg"
-            >
-              Submit Review
-            </button>
-          </div>
-        </div>
-      </BottomPopup>
-
-      {/* Payment Page - shown after Customer Review is submitted */}
-      <AnimatePresence>
-        {showPaymentPage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[200] bg-white overflow-y-auto"
-          >
-            {/* Header */}
-            <div className="bg-[#e53935] text-white px-6 py-6">
-              <h1 className="text-2xl font-bold mb-2">Payment</h1>
-              <p className="text-white/90 text-sm">Order ID: {selectedRestaurant?.orderId || 'ORD1234567890'}</p>
-            </div>
-
-            {/* Payment Amount */}
-            <div className="px-6 py-8 text-center bg-gray-50">
-              <p className="text-gray-600 text-sm mb-2">Earnings from this order</p>
-              <p className="text-5xl font-bold text-[#1E1E1E]">
-                ₹{(() => {
-                  if (orderEarnings > 0) {
-                    return orderEarnings.toFixed(2);
                   }
                   // Handle estimatedEarnings - can be number or object
                   const earnings = selectedRestaurant?.amount || selectedRestaurant?.estimatedEarnings || 0;

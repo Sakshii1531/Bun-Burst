@@ -34,7 +34,6 @@ class SMSIndiaHubService {
           "   Please check SMSINDIAHUB_API_KEY and SMSINDIAHUB_SENDER_ID in .env file"
         );
       } else {
-        console.log("✅ SMSIndia Hub credentials loaded successfully");
       }
     }
   }
@@ -203,8 +202,6 @@ class SMSIndiaHubService {
         timeout: 15000, // 15 second timeout
       });
 
-      console.log("📱 SMSIndia Hub Response Status:", response.status);
-      console.log("📱 SMSIndia Hub Response Data:", response.data);
 
       // SMSIndia Hub can return JSON or plain text response
       let responseData = response.data;
@@ -212,7 +209,6 @@ class SMSIndiaHubService {
         ? responseData 
         : JSON.stringify(responseData);
       
-      console.log("📱 SMSIndia Hub Response Text:", responseText);
       
       // Try to parse as JSON first (SMSIndia Hub sometimes returns JSON)
       let parsedResponse = null;
@@ -229,7 +225,6 @@ class SMSIndiaHubService {
       // Check JSON response for error codes (like ErrorCode: "006" for template error)
       if (parsedResponse && typeof parsedResponse === "object") {
         if (parsedResponse.ErrorCode === "000" && parsedResponse.ErrorMessage === "Done") {
-          console.log("✅ SMS sent successfully - JSON success response");
           const messageId = parsedResponse.MessageData && parsedResponse.MessageData[0]
             ? parsedResponse.MessageData[0].MessageId
             : `sms_${Date.now()}`;
@@ -252,7 +247,6 @@ class SMSIndiaHubService {
       
       // Check for success indicators in text response (same logic as RentYatra)
       if (responseText.includes('success') || responseText.includes('sent') || responseText.includes('accepted')) {
-        console.log("✅ SMS sent successfully - success indicator found in text");
         return {
           success: true,
           messageId: `sms_${Date.now()}`,
@@ -267,7 +261,6 @@ class SMSIndiaHubService {
         throw new Error(`SMSIndia Hub API error: ${responseText}`);
       } else {
         // If we can't determine success/failure from response, assume success if we got a response (same as RentYatra)
-        console.log("⚠️ Ambiguous response - assuming success (same as RentYatra)");
         return {
           success: true,
           messageId: `sms_${Date.now()}`,

@@ -99,7 +99,6 @@ export const resendDeliveryNotification = asyncHandler(async (req, res) => {
 
         await notifyMultipleDeliveryBoys(populatedOrder, deliveryPartnerIds, 'priority');
         
-        console.log(`✅ Resent notification to ${deliveryPartnerIds.length} delivery partners for order ${order.orderId}`);
 
         return successResponse(res, 200, `Notification sent to ${deliveryPartnerIds.length} delivery partners`, {
           order: populatedOrder,
@@ -127,7 +126,6 @@ export const resendDeliveryNotification = asyncHandler(async (req, res) => {
 
         await notifyMultipleDeliveryBoys(populatedOrder, priorityIds, 'priority');
         
-        console.log(`✅ Resent notification to ${priorityIds.length} priority delivery partners for order ${order.orderId}`);
 
         return successResponse(res, 200, `Notification sent to ${priorityIds.length} delivery partners`, {
           order: populatedOrder,

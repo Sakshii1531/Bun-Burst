@@ -24,7 +24,6 @@ export async function testBackendHealth() {
     }
     
     const data = await response.json();
-    console.log('✅ Backend health check passed:', data);
     return { success: true, data };
   } catch (error) {
     console.error('❌ Backend health check failed:', error.message);
@@ -54,7 +53,6 @@ export async function testRestaurantAPI() {
     }
     
     const data = await response.json();
-    console.log('✅ Restaurant API test passed:', data);
     return { success: true, data };
   } catch (error) {
     console.error('❌ Restaurant API test failed:', error.message);
@@ -70,9 +68,6 @@ export async function testRestaurantAPI() {
  * Run all connection tests
  */
 export async function runConnectionTests() {
-  console.log('🚀 Starting backend connection tests...');
-  console.log('🌐 Backend URL:', BACKEND_URL);
-  console.log('🌐 API Base URL:', API_BASE_URL);
   
   const results = {
     health: await testBackendHealth(),
@@ -83,7 +78,6 @@ export async function runConnectionTests() {
   const allPassed = results.health.success && results.restaurantAPI.success;
   
   if (allPassed) {
-    console.log('✅ All connection tests passed!');
   } else {
     console.error('❌ Some connection tests failed');
     console.error('💡 Make sure backend server is running:');

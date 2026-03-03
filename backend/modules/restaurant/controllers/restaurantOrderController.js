@@ -70,14 +70,6 @@ export const getRestaurantOrders = asyncHandler(async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    console.log('🔍 Fetching orders for restaurant:', {
-      restaurantId: restaurantIdString,
-      restaurant_id: restaurant._id?.toString(),
-      restaurant_restaurantId: restaurant.restaurantId,
-      restaurantIdVariations: restaurantIdVariations,
-      query: JSON.stringify(query),
-      status: status || 'all'
-    });
 
     const orders = await Order.find(query)
       .populate('userId', 'name email phone')
@@ -102,19 +94,6 @@ export const getRestaurantOrders = asyncHandler(async (req, res) => {
     });
 
     // Log detailed order info for debugging
-    console.log('✅ Found orders:', {
-      count: orders.length,
-      total,
-      restaurantId: restaurantIdString,
-      queryUsed: JSON.stringify(query),
-      orders: orders.map(o => ({
-        orderId: o.orderId,
-        status: o.status,
-        restaurantId: o.restaurantId,
-        restaurantIdType: typeof o.restaurantId,
-        createdAt: o.createdAt
-      }))
-    });
 
     // If no orders found, log a warning with more details
     if (orders.length === 0 && total === 0) {
@@ -127,17 +106,10 @@ export const getRestaurantOrders = asyncHandler(async (req, res) => {
 
       // Try to find ANY orders in database for debugging
       const allOrdersCount = await Order.countDocuments({});
-      console.log(`📊 Total orders in database: ${allOrdersCount}`);
 
       // Check if orders exist with similar restaurantId
       const sampleOrders = await Order.find({}).limit(5).select('orderId restaurantId status').lean();
       if (sampleOrders.length > 0) {
-        console.log('📊 Sample orders in database (first 5):', sampleOrders.map(o => ({
-          orderId: o.orderId,
-          restaurantId: o.restaurantId,
-          restaurantIdType: typeof o.restaurantId,
-          status: o.status
-        })));
       }
     }
 
@@ -289,13 +261,6 @@ export const acceptOrder = asyncHandler(async (req, res) => {
         order.estimatedDeliveryTime = Math.ceil((order.eta.min + order.eta.max) / 2);
       }
 
-      console.log(`📋 Restaurant updated preparation time:`, {
-        initialPrepTime,
-        restaurantPrepTime,
-        additionalTime,
-        newETA: order.eta,
-        newEstimatedDeliveryTime: order.estimatedDeliveryTime
-      });
     }
 
     await order.save();
@@ -304,7 +269,6 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     try {
       const etaEventService = (await import('../../order/services/etaEventService.js')).default;
       await etaEventService.handleRestaurantAccepted(order._id.toString(), new Date());
-      console.log(`✅ ETA updated after restaurant accepted order ${order.orderId}`);
     } catch (etaError) {
       console.error('Error updating ETA after restaurant accept:', etaError);
       // Continue even if ETA update fails
@@ -331,7 +295,6 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     // }
 
     if (order.deliveryPartnerId) {
-      console.log(`ℹ️ Order ${order.orderId} already has delivery partner assigned: ${order.deliveryPartnerId}`);
     }
 
     return successResponse(res, 200, 'Order accepted successfully', {
@@ -358,12 +321,6 @@ export const rejectOrder = asyncHandler(async (req, res) => {
       restaurant.id;
 
     // Log for debugging
-    console.log('🔍 Reject order - Looking up order:', {
-      orderIdParam: id,
-      restaurantId: restaurantId,
-      restaurant_id: restaurant._id?.toString(),
-      restaurant_restaurantId: restaurant.restaurantId
-    });
 
     // Prepare restaurantId variations for query (handle both _id and restaurantId formats)
     const restaurantIdVariations = [restaurantId];
@@ -394,11 +351,6 @@ export const rejectOrder = asyncHandler(async (req, res) => {
         _id: id,
         restaurantId: { $in: restaurantIdVariations }
       });
-      console.log('🔍 Order lookup by _id:', {
-        orderId: id,
-        found: !!order,
-        orderRestaurantId: order?.restaurantId
-      });
     }
 
     // If not found, try by orderId (custom order ID like "ORD-123456-789")
@@ -406,12 +358,6 @@ export const rejectOrder = asyncHandler(async (req, res) => {
       order = await Order.findOne({
         orderId: id,
         restaurantId: { $in: restaurantIdVariations }
-      });
-      console.log('🔍 Order lookup by orderId:', {
-        orderId: id,
-        found: !!order,
-        orderRestaurantId: order?.restaurantId,
-        restaurantIdVariations
       });
     }
 
@@ -426,12 +372,6 @@ export const rejectOrder = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'Order not found');
     }
 
-    console.log('✅ Order found for rejection:', {
-      orderId: order.orderId,
-      orderMongoId: order._id.toString(),
-      orderRestaurantId: order.restaurantId,
-      orderStatus: order.status
-    });
 
     // Allow rejecting/cancelling orders with status 'pending', 'confirmed', or 'preparing'
     if (!['pending', 'confirmed', 'preparing'].includes(order.status)) {
@@ -449,7 +389,6 @@ export const rejectOrder = asyncHandler(async (req, res) => {
     try {
       const { calculateCancellationRefund } = await import('../../order/services/cancellationRefundService.js');
       await calculateCancellationRefund(order._id, reason || 'Rejected by restaurant');
-      console.log(`✅ Cancellation refund calculated for order ${order.orderId} - awaiting admin approval`);
     } catch (refundError) {
       console.error(`❌ Error calculating cancellation refund for order ${order.orderId}:`, refundError);
       // Don't fail order cancellation if refund calculation fails
@@ -535,7 +474,6 @@ export const markOrderPreparing = asyncHandler(async (req, res) => {
 
     // CRITICAL: Don't assign delivery partner if order is cancelled
     if (freshOrder.status === 'cancelled') {
-      console.log(`⚠️ Order ${freshOrder.orderId} is cancelled. Cannot assign delivery partner.`);
       return successResponse(res, 200, 'Order is cancelled. Cannot assign delivery partner.', {
         order: freshOrder
       });
@@ -552,7 +490,6 @@ export const markOrderPreparing = asyncHandler(async (req, res) => {
 
     // CRITICAL: Don't assign delivery partner if order is cancelled
     if (freshOrder.status === 'cancelled') {
-      console.log(`⚠️ Order ${freshOrder.orderId} is cancelled. Cannot assign delivery partner.`);
       return successResponse(res, 200, 'Order is cancelled. Cannot assign delivery partner.', {
         order: freshOrder
       });
@@ -560,9 +497,7 @@ export const markOrderPreparing = asyncHandler(async (req, res) => {
 
     // Checking assignment status only - Auto assignment disabled
     if (!freshOrder.deliveryPartnerId) {
-      console.log(`ℹ️ Order ${freshOrder.orderId} marked as preparing. Waiting for Admin manual assignment.`);
     } else {
-      console.log(`ℹ️ Order ${freshOrder.orderId} already has delivery partner assigned: ${freshOrder.deliveryPartnerId}`);
       // If resend request, we might want to notify existing partner, but for now we keep it simple as requested
     }
 
@@ -646,7 +581,6 @@ export const markOrderReady = asyncHandler(async (req, res) => {
         const { notifyDeliveryBoyOrderReady } = await import('../../order/services/deliveryNotificationService.js');
         const deliveryPartnerId = populatedOrder.deliveryPartnerId._id || populatedOrder.deliveryPartnerId;
         await notifyDeliveryBoyOrderReady(populatedOrder, deliveryPartnerId);
-        console.log(`✅ Order ready notification sent to delivery partner ${deliveryPartnerId}`);
       } catch (deliveryNotifError) {
         console.error('Error sending delivery boy notification:', deliveryNotifError);
       }
@@ -754,7 +688,6 @@ export const resendDeliveryNotification = asyncHandler(async (req, res) => {
 
         await notifyMultipleDeliveryBoys(populatedOrder, deliveryPartnerIds, 'priority');
 
-        console.log(`✅ Resent notification to ${deliveryPartnerIds.length} delivery partners for order ${order.orderId}`);
 
         return successResponse(res, 200, `Notification sent to ${deliveryPartnerIds.length} delivery partners`, {
           order: populatedOrder,
@@ -782,7 +715,6 @@ export const resendDeliveryNotification = asyncHandler(async (req, res) => {
 
         await notifyMultipleDeliveryBoys(populatedOrder, priorityIds, 'priority');
 
-        console.log(`✅ Resent notification to ${priorityIds.length} priority delivery partners for order ${order.orderId}`);
 
         return successResponse(res, 200, `Notification sent to ${priorityIds.length} delivery partners`, {
           order: populatedOrder,

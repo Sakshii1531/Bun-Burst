@@ -488,14 +488,12 @@ export const getOrderById = asyncHandler(async (req, res) => {
  */
 export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
   try {
-    console.log('🔍 Fetching searching deliveryman orders...');
     const {
       page = 1,
       limit = 50,
       search
     } = req.query;
 
-    console.log('📋 Query params:', { page, limit, search });
 
     // Build base conditions for orders that are ready but don't have delivery partner assigned
     // deliveryPartnerId is ObjectId, so we only check for null or missing
@@ -553,7 +551,6 @@ export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    console.log('🔎 Final query:', JSON.stringify(finalQuery, null, 2));
 
     // Fetch orders with population
     const orders = await Order.find(finalQuery)
@@ -567,7 +564,6 @@ export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
     // Get total count
     const total = await Order.countDocuments(finalQuery);
 
-    console.log(`✅ Found ${orders.length} orders (total: ${total})`);
 
     // Transform orders to match frontend format
     const transformedOrders = orders.map((order, index) => {
@@ -672,14 +668,12 @@ export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
  */
 export const getOngoingOrders = asyncHandler(async (req, res) => {
   try {
-    console.log('🔍 Fetching ongoing orders...');
     const {
       page = 1,
       limit = 50,
       search
     } = req.query;
 
-    console.log('📋 Query params:', { page, limit, search });
 
     // Build base conditions for ongoing orders
     // Orders that have deliveryPartnerId assigned but are not delivered/cancelled
@@ -734,7 +728,6 @@ export const getOngoingOrders = asyncHandler(async (req, res) => {
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    console.log('🔎 Final query:', JSON.stringify(finalQuery, null, 2));
 
     // Fetch orders with population
     const orders = await Order.find(finalQuery)
@@ -749,7 +742,6 @@ export const getOngoingOrders = asyncHandler(async (req, res) => {
     // Get total count
     const total = await Order.countDocuments(finalQuery);
 
-    console.log(`✅ Found ${orders.length} ongoing orders (total: ${total})`);
 
     // Transform orders to match frontend format
     const transformedOrders = orders.map((order, index) => {
@@ -868,7 +860,6 @@ export const getOngoingOrders = asyncHandler(async (req, res) => {
  */
 export const getTransactionReport = asyncHandler(async (req, res) => {
   try {
-    console.log('🔍 Fetching transaction report...');
     const {
       page = 1,
       limit = 50,
@@ -879,7 +870,6 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
       toDate
     } = req.query;
 
-    console.log('📋 Query params:', { page, limit, search, zone, restaurant, fromDate, toDate });
 
     // Build query for orders
     const query = {};
@@ -1076,7 +1066,6 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
  */
 export const getRestaurantReport = asyncHandler(async (req, res) => {
   try {
-    console.log('🔍 Fetching restaurant report...');
     const {
       zone,
       all,
@@ -1085,7 +1074,6 @@ export const getRestaurantReport = asyncHandler(async (req, res) => {
       search
     } = req.query;
 
-    console.log('📋 Query params:', { zone, all, type, time, search });
 
     const Restaurant = (await import('../../restaurant/models/Restaurant.js')).default;
     const FeedbackExperience = (await import('../models/FeedbackExperience.js')).default;
@@ -1136,7 +1124,6 @@ export const getRestaurantReport = asyncHandler(async (req, res) => {
       .select('_id restaurantId name profileImage rating totalRatings isActive')
       .lean();
 
-    console.log(`📊 Found ${restaurants.length} restaurants`);
 
     // Date range filter for orders
     let dateQuery = {};
@@ -1276,10 +1263,6 @@ export const getRestaurantReport = asyncHandler(async (req, res) => {
  */
 export const getRefundRequests = asyncHandler(async (req, res) => {
   try {
-    console.log('✅ getRefundRequests route hit!');
-    console.log('Request URL:', req.url);
-    console.log('Request method:', req.method);
-    console.log('Request query:', req.query);
 
     const {
       page = 1,
@@ -1290,7 +1273,6 @@ export const getRefundRequests = asyncHandler(async (req, res) => {
       restaurant
     } = req.query;
 
-    console.log('🔍 Fetching refund requests with params:', { page, limit, search, fromDate, toDate, restaurant });
 
     // Build query for restaurant cancelled orders with pending refunds
     const query = {
@@ -1300,7 +1282,6 @@ export const getRefundRequests = asyncHandler(async (req, res) => {
       }
     };
 
-    console.log('📋 Initial query:', JSON.stringify(query, null, 2));
 
     // Restaurant filter
     if (restaurant && restaurant !== 'All restaurants') {
@@ -1367,7 +1348,6 @@ export const getRefundRequests = asyncHandler(async (req, res) => {
       }
     }
 
-    console.log('📋 Final query:', JSON.stringify(query, null, 2));
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -1395,7 +1375,6 @@ export const getRefundRequests = asyncHandler(async (req, res) => {
     }
 
     const total = await Order.countDocuments(query);
-    console.log(`✅ Found ${total} restaurant cancelled orders`);
 
     // Get settlement info for each order to check refund status
     let OrderSettlement;
@@ -1461,7 +1440,6 @@ export const getRefundRequests = asyncHandler(async (req, res) => {
       };
     }));
 
-    console.log(`✅ Returning ${transformedOrders.length} refund requests`);
 
     return successResponse(res, 200, 'Refund requests retrieved successfully', {
       orders: transformedOrders || [],
@@ -1490,61 +1468,28 @@ export const getRefundRequests = asyncHandler(async (req, res) => {
  */
 export const processRefund = asyncHandler(async (req, res) => {
   try {
-    console.log('🔍 [processRefund] ========== ROUTE HIT ==========');
-    console.log('🔍 [processRefund] Method:', req.method);
-    console.log('🔍 [processRefund] URL:', req.url);
-    console.log('🔍 [processRefund] Original URL:', req.originalUrl);
-    console.log('🔍 [processRefund] Path:', req.path);
-    console.log('🔍 [processRefund] Base URL:', req.baseUrl);
-    console.log('🔍 [processRefund] Params:', req.params);
-    console.log('🔍 [processRefund] Headers:', {
-      authorization: req.headers.authorization ? 'Present' : 'Missing',
-      'content-type': req.headers['content-type']
-    });
 
     const { orderId } = req.params;
     const { notes, refundAmount } = req.body;
     const adminId = req.user?.id || req.admin?.id || null;
 
-    console.log('🔍 [processRefund] Processing refund request:', {
-      orderId,
-      orderIdType: typeof orderId,
-      orderIdLength: orderId?.length,
-      isObjectId: mongoose.Types.ObjectId.isValid(orderId),
-      adminId,
-      url: req.url,
-      method: req.method,
-      params: req.params,
-      body: req.body,
-      refundAmount: refundAmount,
-      refundAmountType: typeof refundAmount,
-      notes: notes
-    });
 
     // Find order in database - try both MongoDB _id and orderId string
     let order = null;
 
-    console.log('🔍 [processRefund] Searching order in database...', {
-      searchId: orderId,
-      isObjectId: mongoose.Types.ObjectId.isValid(orderId) && orderId.length === 24
-    });
 
     // First try MongoDB _id if it's a valid ObjectId
     if (mongoose.Types.ObjectId.isValid(orderId) && orderId.length === 24) {
-      console.log('🔍 [processRefund] Searching by MongoDB _id:', orderId);
       order = await Order.findById(orderId)
         .populate('userId', 'name email phone _id')
         .lean();
-      console.log('🔍 [processRefund] Order found by _id:', order ? 'Yes' : 'No');
     }
 
     // If not found by _id, try orderId string
     if (!order) {
-      console.log('🔍 [processRefund] Searching by orderId string:', orderId);
       order = await Order.findOne({ orderId: orderId })
         .populate('userId', 'name email phone _id')
         .lean();
-      console.log('🔍 [processRefund] Order found by orderId:', order ? 'Yes' : 'No');
     }
 
     if (!order) {
@@ -1569,11 +1514,6 @@ export const processRefund = asyncHandler(async (req, res) => {
           .lean();
 
         if (similarOrders.length > 0) {
-          console.log('💡 [processRefund] Found similar orders:', similarOrders.map(o => ({
-            mongoId: o._id.toString(),
-            orderId: o.orderId,
-            status: o.status
-          })));
         }
       } catch (debugError) {
         console.error('Error searching for similar orders:', debugError.message);
@@ -1582,7 +1522,6 @@ export const processRefund = asyncHandler(async (req, res) => {
       // Check total orders count
       try {
         const totalOrders = await Order.countDocuments();
-        console.log(`📊 [processRefund] Total orders in database: ${totalOrders}`);
       } catch (countError) {
         console.error('Error counting orders:', countError.message);
       }
@@ -1591,19 +1530,6 @@ export const processRefund = asyncHandler(async (req, res) => {
     }
 
     // Verify order exists and log complete details
-    console.log('✅✅✅ [processRefund] ORDER FOUND IN DATABASE ✅✅✅');
-    console.log('📋 [processRefund] Complete Order Details:', {
-      mongoId: order._id.toString(),
-      orderId: order.orderId,
-      status: order.status,
-      paymentMethod: order.payment?.method || 'unknown',
-      paymentType: order.paymentType || 'unknown',
-      total: order.pricing?.total || 0,
-      cancelledBy: order.cancelledBy || 'unknown',
-      userId: order.userId?._id?.toString() || order.userId?.toString() || 'unknown',
-      userName: order.userId?.name || 'unknown',
-      userPhone: order.userId?.phone || 'unknown'
-    });
 
     if (order.status !== 'cancelled') {
       return errorResponse(res, 400, 'Order is not cancelled');
@@ -1642,7 +1568,6 @@ export const processRefund = asyncHandler(async (req, res) => {
 
     // For wallet payments, if settlement doesn't exist, create a proper one with all required fields
     if (!settlement && paymentMethod === 'wallet') {
-      console.log('📝 [processRefund] Settlement not found for wallet order, creating settlement with order data...');
 
       const pricing = order.pricing || {};
       const subtotal = pricing.subtotal || 0;
@@ -1707,7 +1632,6 @@ export const processRefund = asyncHandler(async (req, res) => {
         }
       });
       await settlement.save();
-      console.log('✅ [processRefund] Settlement created for wallet refund');
     } else if (!settlement) {
       // For non-wallet payments, settlement is required
       return errorResponse(res, 404, 'Settlement not found for this order');
@@ -1730,12 +1654,6 @@ export const processRefund = asyncHandler(async (req, res) => {
       // If refundAmount is provided in request body, use it (validate it)
       if (refundAmount !== undefined && refundAmount !== null && refundAmount !== '') {
         const requestedAmount = parseFloat(refundAmount);
-        console.log('💰 [processRefund] Validating refund amount:', {
-          original: refundAmount,
-          parsed: requestedAmount,
-          isNaN: isNaN(requestedAmount),
-          orderTotal: orderTotal
-        });
 
         if (isNaN(requestedAmount) || requestedAmount <= 0) {
           console.error('❌ [processRefund] Invalid refund amount:', requestedAmount);
@@ -1749,14 +1667,12 @@ export const processRefund = asyncHandler(async (req, res) => {
           return errorResponse(res, 400, `Refund amount (₹${requestedAmount}) cannot exceed order total (₹${orderTotal})`);
         }
         finalRefundAmount = requestedAmount;
-        console.log('✅ [processRefund] Wallet payment - using provided refund amount:', finalRefundAmount);
       } else {
         // If no amount provided, use calculated refund or order total
         const calculatedRefund = settlement.cancellationDetails?.refundAmount || 0;
 
         // For wallet, always use order total if calculated refund is 0
         if (calculatedRefund <= 0 && orderTotal > 0) {
-          console.log('💰 [processRefund] Wallet payment - using full order total for refund:', orderTotal);
           finalRefundAmount = orderTotal;
         } else if (calculatedRefund > 0) {
           finalRefundAmount = calculatedRefund;
@@ -1817,7 +1733,6 @@ export const manualAssignOrder = asyncHandler(async (req, res) => {
     const { orderId } = req.params;
     const { deliveryBoyId } = req.body;
 
-    console.log(`👤 Manual assign order request - Order: ${orderId}, DeliveryBoy: ${deliveryBoyId}`);
 
     if (!deliveryBoyId) {
       return errorResponse(res, 400, 'Delivery Boy ID is required');
@@ -1906,7 +1821,6 @@ export const manualAssignOrder = asyncHandler(async (req, res) => {
         .lean();
 
       await notifyDeliveryBoyNewOrder(populatedOrder, deliveryBoyId);
-      console.log(`✅ Notification sent to delivery boy ${deliveryBoyId}`);
     } catch (notifyError) {
       console.error(`❌ Failed to notify delivery boy: ${notifyError.message}`);
       // Don't fail the request

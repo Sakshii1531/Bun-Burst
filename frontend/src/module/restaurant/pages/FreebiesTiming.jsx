@@ -44,62 +44,7 @@ export default function FreebiesTiming() {
     if (!isFormValid) return
 
     // TODO: Save offer to backend here
-    console.log("Offer data:", {
-      customerGroup,
-      offerPreference: "all",
-      discountType: "freebies",
-      goalId: "delight-customers",
-      offerDays,
-      startDate,
-      targetMealtime,
-      minOrderValue: selectedMinOrderValue,
-      freebieItems: selectedFreebies,
-    })
-    
-    // Navigate back to create offers page
-    alert("Offer created successfully!")
-    navigate("/restaurant/hub-growth/create-offers")
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-1 rounded-full hover:bg-gray-100"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
-          </button>
-          <h1 className="text-lg font-bold text-gray-900">Freebies</h1>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 px-4 py-6 space-y-6">
-        {/* Customer target */}
-        <div>
-          <h2 className="text-lg font-bold text-gray-900 tracking-wider mb-3">Customer target</h2>
-          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-            <label className="flex items-start justify-between gap-3 cursor-pointer">
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-gray-900">All customers</p>
-              </div>
-              <input
-                type="radio"
-                name="customerGroupFreebies"
-                value="all"
-                checked={customerGroup === "all"}
-                onChange={(e) => setCustomerGroup(e.target.value)}
-                className="mt-1 w-5 h-5 text-black border-gray-400 focus:ring-black"
-                style={{ accentColor: "#000000" }}
-              />
-            </label>
-            <label className="flex items-start justify-between gap-3 cursor-pointer">
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-gray-900">New customers</p>
-                <p className="text-xs text-gray-500 mt-1">Customers who haven&apos;t ordered in the last 90 days</p>
+t ordered in the last 90 days</p>
               </div>
               <input
                 type="radio"

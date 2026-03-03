@@ -169,7 +169,6 @@ export async function sendPushNotificationToAudience({
     docs.flatMap((doc) => [doc.fcmTokenWeb, doc.fcmTokenMobile])
   );
 
-  console.log('[Push] Audience:', audience, 'Total docs:', docs.length, 'Unique tokens:', allTokens.length);
 
   if (allTokens.length === 0) {
     return {
@@ -187,10 +186,6 @@ export async function sendPushNotificationToAudience({
   };
 
   const response = await admin.messaging().sendEachForMulticast(message);
-  console.log('[Push] Multicast result:', {
-    successCount: response.successCount,
-    failureCount: response.failureCount
-  });
 
   const failedTokens = [];
   response.responses.forEach((r, i) => {
@@ -200,7 +195,6 @@ export async function sendPushNotificationToAudience({
   const invalidTokens = extractInvalidTokens(allTokens, response);
   if (invalidTokens.length > 0) {
     await removeInvalidTokensFromDatabase(invalidTokens);
-    console.log('[Push] Removed invalid tokens from DB:', invalidTokens.length);
   }
 
   return {
@@ -240,10 +234,6 @@ export async function sendPushNotificationToSingleToken({
     ...buildPushPayload({ title, body, data })
   });
 
-  console.log('[Push] Single token notification sent:', {
-    tokenPreview: `${cleanToken.slice(0, 12)}...`,
-    responseId: response
-  });
 
   return {
     success: true,

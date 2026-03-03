@@ -80,8 +80,6 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
         .lean();
     }
 
-    console.log(`📊 Finance API - Current cycle orders found: ${currentCycleOrders.length} for restaurant ${restaurantId}`);
-    console.log(`📅 Date range: ${currentCycleStart.toISOString()} to ${currentCycleEnd.toISOString()}`);
 
     // Get all unique user IDs from orders
     const userIds = [...new Set(currentCycleOrders.map(order => {
@@ -96,7 +94,6 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
       }
     }).filter(Boolean))];
 
-    console.log(`📋 Found ${userIds.length} unique user IDs:`, userIds);
 
     // Fetch user data in bulk
     let usersMap = {};
@@ -114,11 +111,9 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
         const users = await UserModel.find({ _id: { $in: objectIds } })
           .select('name phone email')
           .lean();
-        console.log(`👥 Fetched ${users.length} users from database`);
         users.forEach(user => {
           usersMap[user._id.toString()] = user;
         });
-        console.log(`📝 Users map created with ${Object.keys(usersMap).length} entries`);
       } catch (error) {
         console.error('❌ Error fetching users:', error);
       }
@@ -161,11 +156,9 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
             customerEmail = user.email || 'N/A';
           } else {
             // Debug: log if user not found
-            console.log(`⚠️ User not found in map for userId: ${userIdStr}, orderId: ${order.orderId}`);
           }
         }
       } else {
-        console.log(`⚠️ No userId found for order: ${order.orderId}`);
       }
 
       // Format payment method - fetch full order if payment not available
@@ -184,7 +177,6 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
             paymentMethod = method.charAt(0).toUpperCase() + method.slice(1);
           }
         } catch (err) {
-          console.log(`⚠️ Could not fetch payment for order ${order.orderId}:`, err.message);
         }
       }
 
@@ -204,7 +196,6 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
             orderStatus = status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
           }
         } catch (err) {
-          console.log(`⚠️ Could not fetch status for order ${order.orderId}:`, err.message);
         }
       }
 
@@ -271,7 +262,6 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
           .lean();
       }
 
-      console.log(`📊 Finance API - Past cycle orders found: ${pastCycleOrders.length} for date range ${startDate} to ${endDate}`);
 
       // Get all unique user IDs from past cycle orders
       const pastUserIds = [...new Set(pastCycleOrders.map(order => {
@@ -286,7 +276,6 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
         }
       }).filter(Boolean))];
 
-      console.log(`📋 Found ${pastUserIds.length} unique user IDs for past cycle:`, pastUserIds);
 
       // Fetch user data in bulk for past cycle
       let pastUsersMap = {};
@@ -296,11 +285,9 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
           const users = await UserModel.find({ _id: { $in: pastUserIds.map(id => new mongoose.Types.ObjectId(id)) } })
             .select('name phone email')
             .lean();
-          console.log(`👥 Fetched ${users.length} users for past cycle from database`);
           users.forEach(user => {
             pastUsersMap[user._id.toString()] = user;
           });
-          console.log(`📝 Past users map keys:`, Object.keys(pastUsersMap));
         } catch (error) {
           console.error('❌ Error fetching users for past cycle:', error);
         }
@@ -341,11 +328,9 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
               customerEmail = user.email || 'N/A';
             } else {
               // Debug: log if user not found
-              console.log(`⚠️ User not found in pastUsersMap for userId: ${userIdStr}, orderId: ${order.orderId}`);
             }
           }
         } else {
-          console.log(`⚠️ No userId found for order: ${order.orderId}`);
         }
 
         // Format payment method
@@ -354,7 +339,6 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
           const method = order.payment.method;
           paymentMethod = method.charAt(0).toUpperCase() + method.slice(1);
         } else {
-          console.log(`⚠️ No payment method found for past order: ${order.orderId}, payment object:`, order.payment);
         }
 
         // Format order status
@@ -363,7 +347,6 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
           const status = order.status;
           orderStatus = status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
         } else {
-          console.log(`⚠️ No status found for past order: ${order.orderId}`);
         }
 
         return {
@@ -414,13 +397,6 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
     // This ensures end-to-end withdrawal calculation works correctly
     const availablePayout = Math.max(0, Math.round((currentCyclePayout - totalWithdrawals) * 100) / 100);
 
-    console.log('💰 Finance Calculation:', {
-      currentCyclePayout,
-      totalWithdrawals,
-      availablePayout,
-      withdrawalsCount: allWithdrawals.length,
-      withdrawals: allWithdrawals.map(w => ({ id: w._id, amount: w.amount, status: w.status }))
-    });
 
     return successResponse(res, 200, 'Finance data retrieved successfully', {
       currentCycle: {

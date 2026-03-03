@@ -28,14 +28,6 @@ async function initializeCloudinary() {
     const apiKey = cleanEnv(credentials.apiKey || process.env.CLOUDINARY_API_KEY);
     const apiSecret = cleanEnv(credentials.apiSecret || process.env.CLOUDINARY_API_SECRET);
 
-    console.log('🔧 Cloudinary initialization check:', {
-      hasCloudName: !!cloudName,
-      hasApiKey: !!apiKey,
-      hasApiSecret: !!apiSecret,
-      cloudNameLength: cloudName?.length || 0,
-      apiKeyLength: apiKey?.length || 0,
-      apiSecretLength: apiSecret?.length || 0
-    });
 
     if (!cloudName || !apiKey || !apiSecret) {
       const missing = [];
@@ -56,7 +48,6 @@ async function initializeCloudinary() {
     });
 
     cloudinaryInitialized = true;
-    console.log('✅ Cloudinary initialized successfully');
   } catch (error) {
     console.error('❌ Error initializing Cloudinary:', {
       message: error.message,
