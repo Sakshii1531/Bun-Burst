@@ -99,7 +99,215 @@ export default function DeliveryBoyViewMap() {
         includeAvailability: true // Request availability data
       })
       
- min-width: 200px;">
+      console.log("📦 Delivery Partners API Response:", response.data)
+      
+      if (response.data?.success && response.data.data?.deliveryPartners) {
+        // Filter only online delivery boys with valid location
+        // Check both formatted data and fullData, and also top-level availability
+        const onlineBoys = response.data.data.deliveryPartners.filter(boy => {
+          // Try multiple sources for availability data
+          const availability = boy.availability || boy.fullData?.availability || (boy.fullData && boy.fullData.availability)
+          
+          if (!availability) {
+            console.log("⚠️ No availability data for:", boy.name || boy.fullData?.name)
+            return false
+          }
+          
+          const isOnline = availability.isOnline === true
+          
+          // Check for location in different possible formats
+          const currentLocation = availability.currentLocation
+          const coordinates = currentLocation?.coordinates
+          
+          const hasLocation = coordinates && 
+                            Array.isArray(coordinates) &&
+                            coordinates.length >= 2 &&
+                            coordinates[0] !== 0 && 
+                            coordinates[1] !== 0
+          
+          if (isOnline && hasLocation) {
+            console.log("✅ Found online delivery boy:", {
+              name: boy.name || boy.fullData?.name,
+              isOnline,
+              coordinates,
+              hasLocation: true
+            })
+          } else {
+            console.log("⚠️ Delivery boy filtered out:", {
+              name: boy.name || boy.fullData?.name,
+              isOnline,
+              hasLocation: !!hasLocation,
+              coordinates: coordinates ? `[${coordinates[0]}, ${coordinates[1]}]` : 'none'
+            })
+          }
+          
+          return isOnline && hasLocation
+        })
+        
+        // Remove duplicates based on delivery boy ID
+        const uniqueBoysMap = new Map()
+        onlineBoys.forEach(boy => {
+          // Get unique ID from multiple possible sources
+          const boyId = boy._id || boy.id || boy.deliveryId || boy.fullData?._id || boy.fullData?.id || boy.fullData?.deliveryId
+          
+          if (boyId) {
+            const idString = boyId.toString()
+            // Only keep the first occurrence (or the one with better data)
+            if (!uniqueBoysMap.has(idString)) {
+              uniqueBoysMap.set(idString, boy)
+            } else {
+              // If duplicate found, keep the one with more complete data
+              const existing = uniqueBoysMap.get(idString)
+              const existingHasFullData = existing.fullData || existing.availability
+              const newHasFullData = boy.fullData || boy.availability
+              
+              // Prefer the one with more complete data
+              if (newHasFullData && !existingHasFullData) {
+                uniqueBoysMap.set(idString, boy)
+              }
+            }
+          } else {
+            console.warn("⚠️ Delivery boy without ID:", boy.name || boy.fullData?.name)
+          }
+        })
+        
+        const uniqueBoys = Array.from(uniqueBoysMap.values())
+        console.log(`🚴 Found ${onlineBoys.length} online delivery boys, ${uniqueBoys.length} unique after deduplication`)
+        setDeliveryBoys(uniqueBoys)
+      } else {
+        console.warn("⚠️ No delivery partners in response:", response.data)
+        setDeliveryBoys([])
+      }
+    } catch (error) {
+      console.error("❌ Error fetching delivery boys:", error)
+      setDeliveryBoys([])
+    }
+  }
+
+  const loadGoogleMaps = async () => {
+    try {
+      const apiKey = await getGoogleMapsApiKey()
+      setGoogleMapsApiKey(apiKey || "loaded")
+      
+      let retries = 0
+      const maxRetries = 50
+      
+      while (!window.google && retries < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        retries++
+      }
+
+      if (window.google && window.google.maps) {
+        initializeMap(window.google)
+        return
+      }
+
+      if (apiKey) {
+        const loader = new Loader({
+          apiKey: apiKey,
+          version: "weekly",
+          libraries: ["places", "drawing", "geometry"]
+        })
+
+        const google = await loader.load()
+        initializeMap(google)
+      } else {
+        setMapLoading(false)
+      }
+    } catch (error) {
+      console.error("Error loading Google Maps:", error)
+      setMapLoading(false)
+    }
+  }
+
+  const initializeMap = (google) => {
+    if (!mapRef.current) return
+
+    const initialLocation = { lat: 20.5937, lng: 78.9629 }
+
+    const map = new google.maps.Map(mapRef.current, {
+      center: initialLocation,
+      zoom: 5,
+      mapTypeControl: true,
+      mapTypeControlOptions: {
+        style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+        position: google.maps.ControlPosition.TOP_RIGHT,
+        mapTypeIds: [google.maps.MapTypeId.ROADMAP, google.maps.MapTypeId.SATELLITE]
+      },
+      zoomControl: true,
+      streetViewControl: false,
+      fullscreenControl: true,
+      scrollwheel: true,
+      gestureHandling: 'greedy',
+      disableDoubleClickZoom: false,
+    })
+
+    mapInstanceRef.current = map
+    setMapLoading(false)
+  }
+
+  // Draw all zones on the map
+  const drawAllZonesOnMap = (google, map) => {
+    if (!zones || zones.length === 0) {
+      zonesPolygonsRef.current.forEach(polygon => {
+        if (polygon) polygon.setMap(null)
+      })
+      zonesPolygonsRef.current = []
+      return
+    }
+
+    zonesPolygonsRef.current.forEach(polygon => {
+      if (polygon) polygon.setMap(null)
+    })
+    zonesPolygonsRef.current = []
+
+    infoWindowsRef.current.forEach(infoWindow => {
+      if (infoWindow) infoWindow.close()
+    })
+    infoWindowsRef.current = []
+
+    const colors = [
+      "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
+      "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16",
+    ]
+
+    const bounds = new google.maps.LatLngBounds()
+
+    zones.forEach((zone, index) => {
+      if (!zone.coordinates || zone.coordinates.length < 3) return
+
+      const path = zone.coordinates.map(coord => {
+        const lat = typeof coord === 'object' ? (coord.latitude || coord.lat) : null
+        const lng = typeof coord === 'object' ? (coord.longitude || coord.lng) : null
+        if (lat === null || lng === null) return null
+        const latLng = new google.maps.LatLng(lat, lng)
+        bounds.extend(latLng)
+        return latLng
+      }).filter(Boolean)
+
+      if (path.length < 3) return
+
+      const color = colors[index % colors.length]
+
+      const polygon = new google.maps.Polygon({
+        paths: path,
+        strokeColor: color,
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: color,
+        fillOpacity: 0.25,
+        editable: false,
+        draggable: false,
+        clickable: true,
+        zIndex: 1
+      })
+
+      polygon.setMap(map)
+      zonesPolygonsRef.current.push(polygon)
+
+      const infoWindow = new google.maps.InfoWindow({
+        content: `
+          <div style="padding: 12px; min-width: 200px;">
             <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1e293b;">
               ${zone.name || 'Unnamed Zone'}
             </h3>
@@ -275,7 +483,37 @@ export default function DeliveryBoyViewMap() {
       const boyName = fullData.name || "Delivery Boy"
       const boyPhone = fullData.phone || "N/A"
       
- min-width: 200px;">
+      console.log("🚴 Creating bike marker for:", {
+        name: boyName,
+        lat,
+        lng,
+        heading
+      })
+
+      // Get rotated bike icon
+      const rotatedIconUrl = await getRotatedBikeIcon(heading)
+
+      // Create bike icon using rotated bike logo image
+      const bikeIcon = {
+        url: rotatedIconUrl,
+        scaledSize: new google.maps.Size(50, 50), // Size of bike icon
+        anchor: new google.maps.Point(25, 25) // Center point
+      }
+      const lastUpdate = availability?.lastLocationUpdate || currentLocation?.lastUpdate
+
+      // Create marker
+      const marker = new google.maps.Marker({
+        position: { lat, lng },
+        map: map,
+        icon: bikeIcon,
+        title: boyName,
+        zIndex: 1000, // Show above zones
+      })
+
+      // Create info window
+      const infoWindow = new google.maps.InfoWindow({
+        content: `
+          <div style="padding: 12px; min-width: 200px;">
             <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1e293b;">
               ${boyName}
             </h3>

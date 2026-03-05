@@ -260,6 +260,60 @@ export default function GoogleMapsTracking({
   // Calculate and display route using Google Directions Service
   const calculateAndDisplayRoute = useCallback((origin, destination, waypoints = []) => {
     if (!isLoaded || !mapRef.current || !window.google?.maps) {
+      console.log('⚠️ Cannot calculate route: map not loaded or not ready')
+      return
+    }
+
+    // Validate origin and destination
+    if (!origin || !destination || !origin.lat || !origin.lng || !destination.lat || !destination.lng) {
+      console.log('⚠️ Cannot calculate route: invalid origin or destination', { origin, destination })
+      return
+    }
+
+    // Optimization: Throttle route calculation (min 5 seconds between calls)
+    // unless origin has moved significantly (> 50m)
+    const now = Date.now()
+    const lastCalc = lastRouteCalcRef.current
+    const timeDiff = now - lastCalc.time
+    if (timeDiff < 5000) {
+      // Check if origin moved significantly
+      const latDiff = Math.abs(origin.lat - lastCalc.origin.lat)
+      const lngDiff = Math.abs(origin.lng - lastCalc.origin.lng)
+      // Rough approximation: 0.0005 degrees is ~50m
+      if (latDiff < 0.0005 && lngDiff < 0.0005) {
+        return // Skip calculation
+      }
+    }
+    lastRouteCalcRef.current = { time: now, origin: { ...origin } }
+
+    // Initialize DirectionsService if not already initialized
+    if (!directionsServiceRef.current) {
+      directionsServiceRef.current = new window.google.maps.DirectionsService()
+    }
+
+    // Initialize or reuse DirectionsRenderer
+    if (!directionsRendererRef.current) {
+      directionsRendererRef.current = new window.google.maps.DirectionsRenderer({
+        map: mapRef.current,
+        suppressMarkers: true, // We'll use custom markers
+        preserveViewport: true, // Preserve viewport - we'll center manually
+                      polylineOptions: {
+                        strokeColor: '#3b82f6', // Bright blue like Zomato/Swiggy
+                        strokeWeight: 6,
+                        strokeOpacity: 1.0, // Fully visible - plain solid line
+                        icons: [], // No icons/dots - plain solid line only
+                      },
+      })
+    } else {
+      // Ensure preserveViewport is true so route updates don't change viewport
+      directionsRendererRef.current.setOptions({ preserveViewport: true })
+    }
+
+    // Prepare waypoints
+    const googleWaypoints = waypoints.map(wp => ({
+      location: new window.google.maps.LatLng(wp.lat, wp.lng),
+      stopover: true
+    }));
 
     // Calculate route with DRIVING mode
     directionsServiceRef.current.route(

@@ -169,3 +169,201 @@ export default function EditRestaurantAddress() {
               
               if (data.status === 'OK' && data.results && data.results.length > 0) {
                 formattedAddress = data.results[0].formatted_address
+                console.log("✅ Fetched formattedAddress from coordinates:", formattedAddress)
+              }
+            } catch (error) {
+              console.warn("⚠️ Failed to fetch formattedAddress, using existing:", error)
+            }
+          }
+          
+          // Update location with coordinates array and formattedAddress
+          const updatedLocation = {
+            ...location,
+            latitude: lat,
+            longitude: lng,
+            coordinates: [lng, lat], // GeoJSON format: [longitude, latitude]
+            formattedAddress: formattedAddress || location?.formattedAddress || ""
+          }
+          
+          const response = await restaurantAPI.updateProfile({ location: updatedLocation })
+          
+          if (response?.data?.data?.restaurant) {
+            // Update local state
+            setLocation(updatedLocation)
+            // Dispatch event to notify other components
+            window.dispatchEvent(new Event("addressUpdated"))
+            setShowSelectOptionDialog(false)
+            navigate(-1)
+          } else {
+            throw new Error("Invalid response from server")
+          }
+        } catch (updateError) {
+          console.error("Error updating address:", updateError)
+          alert(`Failed to update address: ${updateError.response?.data?.message || updateError.message || "Please try again."}`)
+        }
+      }
+    } catch (error) {
+      console.error("Error updating address:", error)
+      alert(`Failed to update address: ${error.response?.data?.message || error.message || "Please try again."}`)
+    }
+  }
+
+  // Get simplified address for navbar (last two parts: area, city)
+  const getSimplifiedAddress = (fullAddress) => {
+    const parts = fullAddress.split(",").map(p => p.trim())
+    if (parts.length >= 2) {
+      // Return last two parts (e.g., "By Pass Road (South), Indore")
+      return parts.slice(-2).join(", ")
+    }
+    return fullAddress
+  }
+  
+  const simplifiedAddress = getSimplifiedAddress(address)
+
+  return (
+    <div className="h-screen bg-white overflow-hidden flex flex-col">
+      {/* Sticky Header */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-50 flex items-center gap-3 shrink-0">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-6 h-6 text-gray-900" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1">
+            <h1 className="text-base font-bold text-gray-900 truncate">{restaurantName}</h1>
+            <ChevronDown className="w-4 h-4 text-gray-900 shrink-0" />
+          </div>
+          <p className="text-xs text-gray-600 truncate">{simplifiedAddress}</p>
+        </div>
+      </div>
+
+      {/* Map Section - Takes remaining space */}
+      <div className="relative flex-1 min-h-0 overflow-hidden">
+        {/* Google Maps Embed */}
+        <iframe
+          src={`https://www.google.com/maps?q=${lat},${lng}&hl=en&z=15&output=embed`}
+          width="100%"
+          height="100%"
+          style={{ border: 0 }}
+          allowFullScreen
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          className="absolute inset-0"
+        />
+        
+        {/* Custom Marker Tooltip Overlay */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10">
+          {/* Tooltip */}
+          <div className="bg-black text-white px-3 py-2 rounded-lg mb-2 whitespace-nowrap shadow-lg">
+            <p className="text-xs font-semibold">Your outlet location</p>
+            <p className="text-[10px] text-gray-300">Orders will be picked up from here</p>
+          </div>
+          {/* Marker Pin */}
+          <div className="w-6 h-6 bg-black rounded-full border-2 border-white shadow-lg mx-auto"></div>
+        </div>
+
+        {/* Address Details Section - Overlays map at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl z-20 px-4 pt-6">
+          <h2 className="text-xl font-bold text-gray-900 text-center mb-3">Outlet address</h2>
+          
+          {/* Informational Banner */}
+          <div className="bg-blue-100 rounded-lg px-4 py-3 mb-4">
+            <p className="text-sm text-gray-900">
+              Customers and Zomato delivery partners will use this to locate your outlet.
+            </p>
+          </div>
+
+          {/* Current Address Display */}
+          <div className="mb-4">
+            <p className="text-base text-gray-900">{address}</p>
+          </div>
+
+          {/* Update Button */}
+          <div className="pb-4">
+            <button
+              onClick={handleUpdateClick}
+              className="w-full bg-black text-white font-semibold py-4 text-base rounded-lg"
+            >
+              Update
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Select Option Bottom Popup */}
+      <BottomPopup
+        isOpen={showSelectOptionDialog}
+        onClose={() => setShowSelectOptionDialog(false)}
+        title="Select an option"
+        maxHeight="auto"
+      >
+        <div className=" space-y-0">
+          {/* Option 1: Update outlet address */}
+          <button
+            onClick={() => setSelectedOption("update_address")}
+            className="w-full flex items-start justify-between py-4 border-b border-dashed border-gray-300"
+          >
+            <div className="flex-1 text-left">
+              <p className="text-base font-semibold text-gray-900 mb-1">
+                Update outlet address (FSSAI required)
+              </p>
+              <p className="text-sm text-gray-500">{address}</p>
+            </div>
+            <div className="ml-4 shrink-0">
+              <div
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                  selectedOption === "update_address"
+                    ? "border-black bg-black"
+                    : "border-gray-300"
+                }`}
+              >
+                {selectedOption === "update_address" && (
+                  <div className="w-2 h-2 rounded-full bg-white"></div>
+                )}
+              </div>
+            </div>
+          </button>
+
+          {/* Option 2: Minor correction */}
+          <button
+            onClick={() => setSelectedOption("minor_correction")}
+            className="w-full flex items-start justify-between py-4"
+          >
+            <div className="flex-1 text-left">
+              <p className="text-base font-semibold text-gray-900 mb-1">
+                Make a minor correction to the location pin
+              </p>
+              <p className="text-sm text-gray-500">
+                If location pin on the map is slightly misplaced
+              </p>
+            </div>
+            <div className="ml-4 shrink-0">
+              <div
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                  selectedOption === "minor_correction"
+                    ? "border-black bg-black"
+                    : "border-gray-300"
+                }`}
+              >
+                {selectedOption === "minor_correction" && (
+                  <div className="w-2 h-2 rounded-full bg-white"></div>
+                )}
+              </div>
+            </div>
+          </button>
+
+          {/* Proceed Button */}
+          <button
+            onClick={handleProceedUpdate}
+            className="w-full bg-black text-white font-semibold py-4 rounded-lg mt-6"
+          >
+            Proceed to update
+          </button>
+        </div>
+      </BottomPopup>
+    </div>
+  )
+}

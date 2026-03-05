@@ -85,3 +85,51 @@ export default function Conversation() {
                 className="bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
                 onClick={() => {
                   // Navigate to chat detail page
+                  console.log("Open conversation:", conversation.id)
+                }}
+              >
+                <CardContent className="px-2 md:px-4 py-1.5 md:py-3 gap-0">
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-shrink-0">
+                      <img 
+                        src={conversation.avatar}
+                        alt={conversation.name}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                      {conversation.unread > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                          {conversation.unread}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-gray-900 font-semibold text-sm md:text-base truncate">
+                          {conversation.name}
+                        </p>
+                        <span className="text-gray-500 text-xs flex-shrink-0 ml-2">
+                          {conversation.time}
+                        </span>
+                      </div>
+                      <p className="text-gray-600 text-xs md:text-sm truncate">
+                        {conversation.lastMessage}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+
+        {filteredConversations.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-600">No conversations found</p>
+          </div>
+        )}
+      </div>
+
+    </div>
+  )
+}
+

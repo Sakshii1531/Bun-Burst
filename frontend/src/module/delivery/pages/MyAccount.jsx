@@ -85,3 +85,123 @@ export default function MyAccount() {
               <Button 
                 onClick={() => {
                   // TODO: Process payment
+                  console.log("Pay Now clicked")
+                  alert("Payment processing feature coming soon")
+                }}
+                className="bg-[#ff8100] hover:bg-[#e67300] text-white font-semibold px-3 py-2 md:px-4 md:py-2 rounded-lg text-xs md:text-sm w-full md:w-auto"
+              >
+                Pay Now
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
+            <p className="text-[#ff8100] text-2xl md:text-3xl font-bold mb-2">
+              {formatCurrency(balances.cashInHand)}
+            </p>
+            <p className="text-gray-600 text-sm md:text-base">Cash in Hand</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
+            <p className="text-[#ff8100] text-2xl md:text-3xl font-bold mb-2">
+              {formatCurrency(balances.totalWithdrawn)}
+            </p>
+            <p className="text-gray-600 text-sm md:text-base">Total Withdrawn</p>
+          </div>
+        </div>
+
+        {/* Transaction History */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg md:text-xl font-bold text-gray-900">Transaction History</h2>
+            <button 
+              onClick={() => navigate("/delivery/transactions")}
+              className="text-[#ff8100] text-sm md:text-base font-medium hover:underline"
+            >
+              View All
+            </button>
+          </div>
+          
+          <div className="text-center py-12">
+            <p className="text-gray-900 text-base md:text-lg">No transaction found</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Confirmation Dialog */}
+      <AnimatePresence>
+        {showConfirmDialog && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setShowConfirmDialog(false)}
+              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            >
+              {/* Dialog Box */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ 
+                  type: "spring", 
+                  stiffness: 300, 
+                  damping: 30 
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative"
+              >
+                {/* Close Button */}
+                <button
+                  onClick={() => setShowConfirmDialog(false)}
+                  className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+
+                {/* Content */}
+                <div className="mt-2">
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">
+                    Adjust Payments
+                  </h3>
+                  <p className="text-gray-600 text-base mb-6">
+                    Are you sure you want to adjust the payment amount? This action will modify your current balance.
+                  </p>
+
+                  {/* Buttons */}
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => setShowConfirmDialog(false)}
+                      variant="outline"
+                      className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        // Handle OK action
+                        console.log("Adjust Payments confirmed")
+                        setShowConfirmDialog(false)
+                        // TODO: Add actual adjustment logic here
+                      }}
+                      className="flex-1 bg-[#ff8100] hover:bg-[#e67300] text-white"
+                    >
+                      OK
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+    </div>
+  )
+}
+

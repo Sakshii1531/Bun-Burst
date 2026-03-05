@@ -88,7 +88,469 @@ export default function Orders() {
       return
     }
 
- fallback to restaurant image, then generic food photo
+    console.log('🔍 Checking for delivered orders to show rating popup...', {
+      totalOrders: orders.length,
+      shownRatingForOrders: Array.from(shownRatingForOrders)
+    })
+
+    // Find delivered orders that haven't been rated and haven't shown popup yet
+    const deliveredOrders = orders.filter(order => {
+      // Check originalStatus first (from backend), then fallback to transformed status
+      const originalStatus = order.originalStatus || order.status || ''
+      const transformedStatus = order.status || ''
+      
+      // Check if order is delivered - check both original and transformed status
+      const isDelivered = 
+        originalStatus === 'delivered' || 
+        originalStatus === 'completed' ||
+        originalStatus.toLowerCase() === 'delivered' ||
+        originalStatus.toLowerCase() === 'completed' ||
+        transformedStatus === 'delivered' ||
+        transformedStatus === 'completed' ||
+        transformedStatus.toLowerCase() === 'delivered' ||
+        transformedStatus.toLowerCase() === 'completed'
+      
+      // Check if order has rating - check multiple places where rating might be stored
+      const hasRating = 
+        (order.rating !== null && order.rating !== undefined && order.rating !== '') ||
+        (order.review?.rating !== null && order.review?.rating !== undefined) ||
+        (order.review !== null && order.review !== undefined)
+      
+      const orderId = order.id || order._id || order.mongoId
+      const hasShownPopup = shownRatingForOrders.has(orderId)
+      
+      // Also check if order has deliveredAt timestamp (indicates it was delivered)
+      const hasDeliveredAt = order.deliveredAt !== null && order.deliveredAt !== undefined
+      
+      const shouldShow = (isDelivered || hasDeliveredAt) && !hasRating && !hasShownPopup
+      
+      console.log(`📦 Order ${orderId}:`, {
+        originalStatus,
+        transformedStatus,
+        isDelivered,
+        hasDeliveredAt,
+        hasRating,
+        rating: order.rating,
+        review: order.review,
+        hasShownPopup,
+        shouldShow
+      })
+      
+      return shouldShow
+    })
+
+    console.log('✅ Found delivered orders needing rating:', deliveredOrders.length)
+
+    // Show popup for the first delivered order that needs rating
+    if (deliveredOrders.length > 0) {
+      const orderToRate = deliveredOrders[0]
+      const orderId = orderToRate.id || orderToRate._id || orderToRate.mongoId
+      
+      console.log('🎯 Showing rating popup for order:', {
+        orderId,
+        restaurant: orderToRate.restaurant,
+        status: orderToRate.status
+      })
+      
+      // Mark as shown to prevent multiple popups (before showing to prevent race conditions)
+      setShownRatingForOrders(prev => new Set([...prev, orderId]))
+      
+      // Small delay to ensure smooth UX
+      setTimeout(() => {
+        console.log('✨ Opening rating modal for order:', {
+          orderId: orderId,
+          restaurant: orderToRate.restaurant,
+          status: orderToRate.status,
+          originalStatus: orderToRate.originalStatus
+        })
+        setRatingModal({ open: true, order: orderToRate })
+        setSelectedRating(null)
+        setFeedbackText("")
+      }, 800) // Show after 0.8 seconds
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, shownRatingForOrders, ratingModal.open])
+
+  // Fetch orders from backend API
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setLoading(true)
+        
+        const response = await orderAPI.getOrders({
+          limit: 100, // Get all orders
+          page: 1
+        })
+        
+        // Check multiple possible response structures
+        let ordersData = []
+        
+        if (response?.data?.success && response?.data?.data?.orders) {
+          ordersData = response.data.data.orders || []
+        } else if (response?.data?.orders) {
+          ordersData = response.data.orders || []
+        } else if (response?.data?.data && Array.isArray(response.data.data)) {
+          ordersData = response.data.data || []
+        } else {
+          setOrders([])
+          return
+        }
+        
+        if (ordersData.length > 0) {
+          console.log('📦 Raw orders from API:', ordersData.slice(0, 3).map(o => ({
+            id: o.orderId || o._id,
+            status: o.status,
+            rating: o.rating || o.review?.rating,
+            deliveredAt: o.deliveredAt,
+            restaurant: o.restaurantId?.name || o.restaurantName
+          })))
+          
+          // Transform API orders to match UI structure
+          const transformedOrders = ordersData.map(order => {
+            const createdAt = order.createdAt ? new Date(order.createdAt) : new Date()
+            
+            // Check if cancelled by restaurant or user
+            const isCancelled = order.status === 'cancelled'
+            const cancellationReason = order.cancellationReason || ''
+            // Check cancelledBy field first, then fallback to cancellation reason pattern
+            const isRestaurantCancelled = isCancelled && (
+              order.cancelledBy === 'restaurant' ||
+              /rejected by restaurant|restaurant rejected|restaurant cancelled|restaurant is too busy|item not available|outside delivery area|kitchen closing|technical issue|order not accepted within time limit|restaurant did not respond/i.test(cancellationReason)
+            )
+            const isUserCancelled = isCancelled && order.cancelledBy === 'user'
+
+            // Get original status from backend before transformation
+            const originalStatus = order.status
+            
+            return {
+              id: order.orderId || order._id?.toString() || `ORD-${order._id}`,
+              mongoId: order._id,
+              orderId: order.orderId || order._id?.toString(), // Keep orderId for display
+              status: isRestaurantCancelled ? 'restaurant_cancelled' : getOrderStatus(order),
+              originalStatus: originalStatus, // Keep original status for reference
+              createdAt: createdAt.toISOString(),
+              address: order.address || {},
+              items: (order.items || []).map(item => ({
+                itemId: item.itemId || item._id || item.id,
+                name: item.name || item.foodName || 'Item',
+                quantity: item.quantity || 1,
+                price: item.price || 0,
+                image: item.image || null,
+                description: item.description || null,
+                isVeg: item.isVeg !== undefined ? item.isVeg : (item.category === 'veg' || item.type === 'veg'),
+                _id: item._id || item.id,
+                id: item.id || item._id
+              })),
+              total: order.pricing?.total || order.total || 0,
+              subtotal: order.pricing?.subtotal || 0,
+              deliveryFee: order.pricing?.deliveryFee || 0,
+              tax: order.pricing?.tax || 0,
+              pricing: order.pricing || {}, // Keep full pricing object for discounts, coupons
+              payment: order.payment || {},
+              paymentMethod: order.payment?.method || order.paymentMethod,
+              restaurant: order.restaurantId?.name || order.restaurantName || 'Restaurant',
+              restaurantId: order.restaurantId?._id || order.restaurantId,
+              restaurantImage: order.restaurantId?.profileImage?.url || order.restaurantId?.profileImage || null,
+              restaurantLocation: order.restaurantId?.location?.area || order.restaurantId?.location?.city || order.address?.city || '',
+              rating: order.rating || order.review?.rating || null, // Check both rating and review.rating
+              review: order.review || null,
+              tracking: order.tracking || {},
+              cancellationReason: cancellationReason,
+              isRestaurantCancelled: isRestaurantCancelled,
+              isUserCancelled: isUserCancelled,
+              cancelledBy: order.cancelledBy,
+              eta: order.eta || { min: order.estimatedDeliveryTime || 30, max: order.estimatedDeliveryTime || 30 },
+              estimatedDeliveryTime: order.estimatedDeliveryTime || 30,
+              preparationTime: order.preparationTime || 0,
+              deliveredAt: order.deliveredAt || null,
+              deliveryPartnerName: order.deliveryPartnerId?.name || order.deliveryPartnerName || null,
+              deliveryPartnerPhone: order.deliveryPartnerId?.phone || order.deliveryPartnerPhone || null,
+              note: order.note || null
+            }
+          })
+          
+          // Sort by date (newest first)
+          transformedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          
+          console.log('✅ Orders fetched and transformed:', {
+            total: transformedOrders.length,
+            delivered: transformedOrders.filter(o => o.status === 'delivered' || o.originalStatus === 'delivered').length,
+            withRating: transformedOrders.filter(o => o.rating).length,
+            sample: transformedOrders.slice(0, 2).map(o => ({
+              id: o.id,
+              status: o.status,
+              originalStatus: o.originalStatus,
+              rating: o.rating,
+              deliveredAt: o.deliveredAt
+            }))
+          })
+          
+          setOrders(transformedOrders)
+        } else {
+          console.log('⚠️ No orders data in response')
+          setOrders([])
+        }
+      } catch (error) {
+        console.error('Error fetching user orders:', error)
+        let errorMessage = 'Failed to load orders'
+        if (error?.response?.status === 401) {
+          errorMessage = 'Please login to view your orders'
+        } else if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message
+        }
+        toast.error(errorMessage)
+        setOrders([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchOrders()
+    
+    // Poll for order updates every 20 seconds to detect delivered orders
+    // This ensures rating popup shows quickly when order is delivered
+    const pollInterval = setInterval(() => {
+      fetchOrders()
+    }, 20000) // Poll every 20 seconds
+
+    return () => clearInterval(pollInterval)
+  }, [])
+
+  // Format date helper
+  const formatDate = (dateString) => {
+    const date = new Date(dateString)
+    const day = date.getDate().toString().padStart(2, '0')
+    const month = date.toLocaleDateString('en-US', { month: 'short' })
+    const hours = date.getHours()
+    const minutes = date.getMinutes().toString().padStart(2, '0')
+    const ampm = hours >= 12 ? 'PM' : 'AM'
+    const displayHours = hours % 12 || 12
+    
+    return `${day} ${month}, ${displayHours}:${minutes}${ampm}`
+  }
+
+  // Filter orders based on search query
+  const filteredOrders = orders.filter(order => {
+    if (!searchQuery.trim()) return true
+    
+    const query = searchQuery.toLowerCase()
+    const restaurantMatch = order.restaurant?.toLowerCase().includes(query)
+    const itemsMatch = order.items.some(item => 
+      (item.name || item.foodName || '').toLowerCase().includes(query)
+    )
+    
+    return restaurantMatch || itemsMatch
+  })
+
+  // Handle reorder
+  const handleReorder = (order) => {
+    // Navigate to restaurant page or cart
+    if (order.restaurantId) {
+      navigate(`/user/restaurants/${order.restaurantId}`)
+    } else {
+      toast.info('Restaurant information not available')
+    }
+  }
+
+  // Three-dots menu handlers
+  const toggleMenuForOrder = (orderId) => {
+    setActiveMenuOrderId((current) => (current === orderId ? null : orderId))
+  }
+
+  const handleShareRestaurant = async (order) => {
+    const companyName = await getCompanyNameAsync()
+    const location =
+      order.restaurantLocation ||
+      `${order.address?.city || ""}, ${order.address?.state || ""}`.trim()
+
+    const shareText = `Check out ${order.restaurant} on ${companyName}.
+Location: ${location || "Location not available"}
+Order again from this restaurant in the ${companyName} app.`
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: order.restaurant,
+          text: shareText,
+        })
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareText)
+        toast.success("Restaurant details copied to clipboard")
+      } else {
+        toast.info("Sharing is not supported on this device")
+      }
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        console.error("Error sharing restaurant:", error)
+        toast.error("Failed to share restaurant")
+      }
+    } finally {
+      setActiveMenuOrderId(null)
+    }
+  }
+
+  const handleViewOrderDetails = (order) => {
+    setActiveMenuOrderId(null)
+    navigate(`/user/orders/${order.id}/details`)
+  }
+
+  // Open rating modal for an order
+  const handleOpenRating = (order) => {
+    setRatingModal({ open: true, order })
+    setSelectedRating(order.rating || null)
+    setFeedbackText("")
+  }
+
+  const handleCloseRating = () => {
+    setRatingModal({ open: false, order: null })
+    setSelectedRating(null)
+    setFeedbackText("")
+  }
+
+  // Submit rating & feedback to backend
+  const handleSubmitRating = async () => {
+    if (!ratingModal.order || selectedRating === null) {
+      toast.error("Please select a rating first")
+      return
+    }
+
+    try {
+      setSubmittingRating(true)
+
+      const order = ratingModal.order
+
+      await api.post(API_ENDPOINTS.ADMIN.FEEDBACK_EXPERIENCE_CREATE, {
+        rating: selectedRating,
+        module: "user",
+        restaurantId: order.restaurantId || null,
+        metadata: {
+          orderId: order.id,
+          orderMongoId: order.mongoId,
+          orderTotal: order.total,
+          restaurantName: order.restaurant,
+          comment: feedbackText || undefined,
+        },
+      })
+
+      // Update local state so UI shows "You rated"
+      setOrders(prev =>
+        prev.map(o =>
+          o.id === order.id ? { 
+            ...o, 
+            rating: selectedRating,
+            review: { rating: selectedRating, comment: feedbackText || undefined }
+          } : o
+        )
+      )
+
+      toast.success("Thanks for rating your order! 🎉")
+      
+      // Mark this order as rated so popup doesn't show again (before closing modal)
+      const orderId = order.id || order._id || order.mongoId
+      setShownRatingForOrders(prev => new Set([...prev, orderId]))
+      
+      handleCloseRating()
+    } catch (error) {
+      console.error("Error submitting order rating:", error)
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to submit rating. Please try again."
+      )
+    } finally {
+      setSubmittingRating(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-10">
+        <div className="bg-white p-4 flex items-center shadow-sm sticky top-0 z-10">
+          <Link to="/user">
+            <ArrowLeft className="w-6 h-6 text-gray-700 cursor-pointer" />
+          </Link>
+          <h1 className="ml-4 text-xl font-semibold text-gray-800">Your Orders</h1>
+        </div>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 text-red-500 animate-spin" />
+        </div>
+      </div>
+    )
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-10">
+        <div className="bg-white p-4 flex items-center shadow-sm sticky top-0 z-10">
+          <Link to="/user">
+            <ArrowLeft className="w-6 h-6 text-gray-700 cursor-pointer" />
+          </Link>
+          <h1 className="ml-4 text-xl font-semibold text-gray-800">Your Orders</h1>
+        </div>
+        <div className="px-4 py-8 text-center">
+          <p className="text-gray-600">You haven't placed any orders yet</p>
+          <Link to="/user">
+            <button className="mt-4 text-red-500 font-medium">Start Ordering</button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-10 font-sans">
+      {/* Header */}
+      <div className="bg-white p-4 shadow-sm sticky top-0 z-10">
+        <div className="w-full lg:max-w-[1100px] mx-auto flex items-center">
+          <Link to="/user">
+            <ArrowLeft className="w-6 h-6 text-gray-700 cursor-pointer" />
+          </Link>
+          <h1 className="ml-4 text-xl font-semibold text-gray-800">Your Orders</h1>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="p-4 bg-white mt-1">
+        <div className="w-full lg:max-w-[1100px] mx-auto">
+          <div className="flex items-center bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm">
+            <Search className="w-5 h-5 text-red-500" />
+            <input 
+              type="text" 
+              placeholder="Search by restaurant or dish" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 ml-3 outline-none text-gray-600 placeholder-gray-400"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Orders List */}
+      <div className="w-full lg:max-w-[1100px] mx-auto px-4 py-2 space-y-4">
+        {filteredOrders.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+            <p className="text-gray-600">No orders found matching your search</p>
+          </div>
+        ) : (
+          filteredOrders.map((order) => {
+            // Check payment method - COD/wallet orders have 'pending' status which is normal
+            const isCodOrWallet = order.payment?.method === 'cash' || 
+                                 order.payment?.method === 'cod' || 
+                                 order.payment?.method === 'wallet' ||
+                                 order.paymentMethod === 'cash' ||
+                                 order.paymentMethod === 'cod' ||
+                                 order.paymentMethod === 'wallet'
+            
+            // Payment failed only for online payments (razorpay) that actually failed
+            // Don't show payment failed for COD/wallet or cancelled orders
+            const isCancelled = order.status === 'cancelled' || order.status === 'restaurant_cancelled'
+            const paymentFailed = !isCodOrWallet && 
+                                 !isCancelled && 
+                                 (order.payment?.status === 'failed')
+            
+            const isDelivered = order.status === 'delivered'
+            const isRestaurantCancelled = order.isRestaurantCancelled || order.status === 'restaurant_cancelled'
+            const isUserCancelled = order.isUserCancelled || (isCancelled && order.cancelledBy === 'user')
+            // Prefer food image from first item; fallback to restaurant image, then generic food photo
             const firstItemImage = order.items?.[0]?.image
             const restaurantImage = firstItemImage 
               || order.restaurantImage 

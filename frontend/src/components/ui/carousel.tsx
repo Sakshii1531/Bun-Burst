@@ -23,6 +23,7 @@ const Slide = ({ slide, index, current, handleSlideClick }: SlideProps) => {
   const frameRef = useRef<number>();
 
   useEffect(() => {
+    const animate = () => {
       if (!slideRef.current) return;
 
       const x = xRef.current;
@@ -30,9 +31,10 @@ const Slide = ({ slide, index, current, handleSlideClick }: SlideProps) => {
 
       slideRef.current.style.setProperty("--x", `${x}px`);
       slideRef.current.style.setProperty("--y", `${y}px`);
-
+      frameRef.current = requestAnimationFrame(animate);
     };
 
+    frameRef.current = requestAnimationFrame(animate);
 
     return () => {
       if (frameRef.current) {
@@ -95,10 +97,14 @@ const Slide = ({ slide, index, current, handleSlideClick }: SlideProps) => {
             decoding="sync"
           />
           {current === index && (
+            <button className="mt-4 rounded-full bg-white/90 px-4 py-2 text-sm font-medium text-neutral-900">
+              {button}
+            </button>
           )}
         </div>
 
         <article
+          className={`absolute bottom-4 left-4 right-4 transition-opacity duration-300 ${
             current === index ? "opacity-100 visible" : "opacity-0 invisible"
           }`}
         >
@@ -106,6 +112,7 @@ const Slide = ({ slide, index, current, handleSlideClick }: SlideProps) => {
             {title}
           </h2>
           <div className="flex justify-center">
+            <button className="rounded-full bg-black px-4 py-2 text-sm text-white">
               {button}
             </button>
           </div>
@@ -128,6 +135,7 @@ const CarouselControl = ({
 }: CarouselControlProps) => {
   return (
     <button
+      className={`flex h-10 w-10 items-center justify-center rounded-full bg-white shadow ${
         type === "previous" ? "rotate-180" : ""
       }`}
       title={title}

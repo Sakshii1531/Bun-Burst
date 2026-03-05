@@ -542,3 +542,22 @@ export default function RestaurantConfigPage() {
             <Button
               onClick={() => {
                 // Handle update logic here
+                console.log("Settings updated")
+              }}
+              className="w-full bg-[#ff8100] hover:bg-[#e67300] text-white font-semibold py-3 md:py-4 rounded-lg text-base md:text-lg"
+            >
+              Update
+            </Button>
+          </motion.div>
+        </motion.div>
+      </div>
+
+      {/* Bottom Navigation Bar - Mobile Only */}
+      <BottomNavbar onMenuClick={() => setShowMenu(true)} />
+      
+      {/* Menu Overlay */}
+      <MenuOverlay showMenu={showMenu} setShowMenu={setShowMenu} />
+    </div>
+  )
+}
+

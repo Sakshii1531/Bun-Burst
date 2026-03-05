@@ -168,10 +168,459 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
         const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`)
         if (!res.ok) return null
         const data = await res.json()
+        console.log('🗺️ Invoice geocode status:', data.status, '| results:', data.results?.length ?? 0)
+        if (data.status === 'OK' && data.results?.length > 0) {
+          return data.results[0].formatted_address || null
+        }
+        return null
+      } catch (e) {
+        console.warn('Invoice reverse geocode error:', e.message)
+        return null
+      }
+    }
+
+    const run = async () => {
+      setFetchedRestaurantAddress('')
+
+      // Step 1 — try text address fields directly from the order prop
+      const directText = [
+        order?.restaurantAddress,
+        order?.restaurantLocation?.formattedAddress,
+        order?.restaurantLocation?.address,
+        order?.deliveryState?.restaurantAddress,
+      ].find(isValidText)
+
+      if (directText) {
+        if (!isCancelled) setFetchedRestaurantAddress(directText)
+        return
+      }
+
+      // Step 2 — extract coordinates from restaurantLocation and reverse geocode
+      const coords = extractCoords(order?.restaurantLocation)
+      console.log('📍 Invoice: restaurantLocation raw =', order?.restaurantLocation, '| extracted =', coords)
+
+      if (coords) {
+        const geocoded = await reverseGeocode(coords.lat, coords.lng)
+        if (!isCancelled && geocoded) {
+          setFetchedRestaurantAddress(geocoded)
+          return
+        }
+      }
+
+      // Step 3 — fetch detailed order from backend for enriched data
+      const orderId = order?.id || order?._id || order?.orderId
+      if (!orderId) return
+
+      try {
+        const resp = await adminAPI.getOrderById(orderId)
+        if (isCancelled) return
+        const detailed = resp?.data?.data?.order || resp?.data?.order
+        console.log('📦 Invoice: detailed order restaurantLocation =', detailed?.restaurantLocation)
+
+        if (detailed) {
+          // Try text fields from detailed order
+          const rest = (detailed.restaurantId && typeof detailed.restaurantId === 'object') ? detailed.restaurantId
+            : (detailed.restaurant && typeof detailed.restaurant === 'object') ? detailed.restaurant : {}
+
+          const detailText = [
+            detailed?.restaurantAddress,
+            rest?.address,
+            rest?.location?.formattedAddress,
+            rest?.location?.address,
+          ].find(isValidText)
+
+          if (detailText) {
+            if (!isCancelled) setFetchedRestaurantAddress(detailText)
+            return
+          }
+
+          // Try coordinates from the detailed order
+          const detailCoords = extractCoords(detailed?.restaurantLocation) || extractCoords(rest?.location)
+          console.log('📍 Invoice: detailed order coords =', detailCoords)
+
+          if (detailCoords) {
+            const geocoded = await reverseGeocode(detailCoords.lat, detailCoords.lng)
+            if (!isCancelled && geocoded) {
+              setFetchedRestaurantAddress(geocoded)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Invoice: failed to fetch detailed order for address:', err)
+      }
+    }
+
+    run()
+    return () => { isCancelled = true }
+  }, [isOpen, order?.orderId, order?.id, order?._id])
+
+
+
+  if (!order) return null
+
+  // Format address for display
+  const formatAddress = (address) => {
+    if (!address) return "N/A"
+
+    const parts = []
+    if (address.label) parts.push(address.label)
+    if (address.street) parts.push(address.street)
+    if (address.additionalDetails) parts.push(address.additionalDetails)
+    if (address.formattedAddress) {
+      parts.push(address.formattedAddress)
+    } else {
+      if (address.city) parts.push(address.city)
+      if (address.state) parts.push(address.state)
+      if (address.zipCode) parts.push(address.zipCode)
+    }
+
+    return parts.length > 0 ? parts.join(", ") : "Address not available"
+  }
+
+  // Get coordinates if available
+  const getCoordinates = (address) => {
+    if (address?.location?.coordinates && Array.isArray(address.location.coordinates) && address.location.coordinates.length === 2) {
+      const [lng, lat] = address.location.coordinates
+      return `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+    }
+    return null
+  }
+
+  const isValidDisplayAddress = (value) => {
+    if (typeof value !== "string") return false
+    const normalized = value.trim().toLowerCase()
+    return Boolean(
+      normalized &&
+      normalized !== "address" &&
+      normalized !== "n/a" &&
+      normalized !== "address not available" &&
+      normalized !== "not available"
+    )
+  }
+
+  const buildAddressFromLocation = (location) => {
+    if (!location || typeof location !== "object") return null
+
+    const parts = [
+      location.addressLine1,
+      location.addressLine2,
+      location.street,
+      location.area,
+      location.city,
+      location.state,
+      location.zipCode || location.pincode || location.postalCode,
+    ].filter(Boolean)
+
+    return parts.length ? parts.join(", ") : null
+  }
+
+  const getRestaurantInvoiceAddress = (orderData) => {
+    const restaurant = (orderData?.restaurantId && typeof orderData.restaurantId === "object")
+      ? orderData.restaurantId
+      : (orderData?.restaurant && typeof orderData.restaurant === "object" ? orderData.restaurant : {})
+
+    const candidates = [
+      orderData?.restaurantAddress,
+      orderData?.restaurantIdAddress,
+      orderData?.restaurantLocation?.formattedAddress,
+      orderData?.restaurantLocation?.address,
+      buildAddressFromLocation(orderData?.restaurantLocation),
+      // Check for explicit lat/lng fields if text isn't available
+      (orderData?.restaurantLocation?.latitude && orderData?.restaurantLocation?.longitude)
+        ? `${orderData.restaurantLocation.latitude}, ${orderData.restaurantLocation.longitude}`
+        : null,
+      orderData?.deliveryState?.restaurantAddress,
+      restaurant?.address,
+      restaurant?.location?.formattedAddress,
+      restaurant?.location?.address,
+      buildAddressFromLocation(restaurant?.location),
+      // Additional paths for populated restaurant objects
+      restaurant?.addressLine1 ? [restaurant.addressLine1, restaurant.addressLine2, restaurant.city, restaurant.state, restaurant.pincode].filter(Boolean).join(', ') : null,
+      restaurant?.street ? [restaurant.street, restaurant.area, restaurant.city, restaurant.state].filter(Boolean).join(', ') : null,
+      orderData?.pickupAddress?.formattedAddress,
+      orderData?.pickupAddress?.address,
+      buildAddressFromLocation(orderData?.pickupAddress),
+    ]
+
+    const resolved = candidates.find(isValidDisplayAddress)
+    // Return null if no valid address found, so parents can handle the fallback logic
+    return resolved || null
+  }
+
+  return (
+    <>
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] bg-white p-0 overflow-y-auto">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-[#F5F5F5] sticky top-0 bg-white z-10">
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5 text-[#e53935]" />
+              Order Details
+            </DialogTitle>
+            <DialogDescription>
+              View complete information about this order
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-6 py-6 space-y-6">
+            {/* Basic Order Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    Order ID
+                  </p>
+                  <p className="text-sm font-medium text-[#1E1E1E]">{order.orderId || order.id || order.subscriptionId}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Order Date
+                  </p>
+                  <p className="text-sm font-medium text-[#1E1E1E]">{order.date}{order.time ? `, ${order.time}` : ""}</p>
+                </div>
+                {order.estimatedDeliveryTime && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      Estimated Delivery Time
+                    </p>
+                    <p className="text-sm font-medium text-[#1E1E1E]">{order.estimatedDeliveryTime} minutes</p>
+                  </div>
+                )}
+                {order.deliveredAt && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      Delivered At
+                    </p>
+                    <p className="text-sm font-medium text-[#1E1E1E]">
+                      {new Date(order.deliveredAt).toLocaleString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }).toUpperCase()}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                {order.orderStatus && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider">Order Status</p>
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.orderStatus)}`}>
+                      {order.orderStatus}
+                    </span>
+                    {order.cancellationReason && (
+                      <p className="text-xs text-red-600 mt-1">
+                        <span className="font-medium">
+                          {order.cancelledBy === 'user' ? 'Cancelled by User - ' :
+                            order.cancelledBy === 'restaurant' ? 'Cancelled by Restaurant - ' :
+                              'Cancellation '}Reason:
+                        </span> {order.cancellationReason}
+                      </p>
+                    )}
+                    {order.cancelledAt && (
+                      <p className="text-xs text-[#1E1E1E] mt-1">
+                        Cancelled: {new Date(order.cancelledAt).toLocaleString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }).toUpperCase()}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {(order.paymentStatus || order.paymentCollectionStatus != null) && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      Payment Status
+                    </p>
+                    <p className={`text-sm font-medium ${getPaymentStatusColor(
+                      order.paymentType === 'Cash on Delivery' || order.payment?.method === 'cash' || order.payment?.method === 'cod'
+                        ? (order.paymentCollectionStatus ?? (order.status === 'delivered' ? 'Collected' : 'Not Collected'))
+                        : order.paymentStatus
+                    )}`}>
+                      {order.paymentType === 'Cash on Delivery' || order.payment?.method === 'cash' || order.payment?.method === 'cod'
+                        ? (order.paymentCollectionStatus ?? (order.status === 'delivered' ? 'Collected' : 'Not Collected'))
+                        : order.paymentStatus}
+                    </p>
+                  </div>
+                )}
+                {order.deliveryType && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
+                      <Truck className="w-4 h-4" />
+                      Delivery Type
+                    </p>
+                    <p className="text-sm font-medium text-[#1E1E1E]">{order.deliveryType}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Customer Information */}
+            <div className="border-t border-[#F5F5F5] pt-4">
+              <h3 className="text-sm font-semibold text-[#1E1E1E] mb-4 flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Customer Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider">Customer Name</p>
+                  <p className="text-sm font-medium text-[#1E1E1E]">{order.customerName || "N/A"}</p>
+                </div>
+                {order.customerPhone && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
+                      <Phone className="w-4 h-4" />
+                      Phone
+                    </p>
+                    <p className="text-sm font-medium text-[#1E1E1E]">{order.customerPhone}</p>
+                  </div>
+                )}
+                {order.customerEmail && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      Email
+                    </p>
+                    <p className="text-sm font-medium text-[#1E1E1E]">{order.customerEmail}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Restaurant Information */}
+            {order.restaurant && (
+              <div className="border-t border-[#F5F5F5] pt-4">
+                <h3 className="text-sm font-semibold text-[#1E1E1E] mb-4">Restaurant Information</h3>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wider">Restaurant Name</p>
+                  <p className="text-sm font-medium text-[#1E1E1E]">{order.restaurant}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Order Items */}
+            {order.items && Array.isArray(order.items) && order.items.length > 0 && (
+              <div className="border-t border-[#F5F5F5] pt-4">
+                <h3 className="text-sm font-semibold text-[#1E1E1E] mb-4 flex items-center gap-2">
+                  <Package className="w-4 h-4" />
+                  Order Items ({order.items.length})
+                </h3>
+                <div className="space-y-3">
+                  {order.items.map((item, index) => (
+                    <div key={index} className="flex items-start justify-between p-3 bg-[#F5F5F5] rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-[#1E1E1E] bg-white px-2 py-1 rounded">
+                            {item.quantity || 1}x
+                          </span>
+                          <p className="text-sm font-medium text-[#1E1E1E]">{item.name || "Unknown Item"}</p>
+                          {item.isVeg !== undefined && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${item.isVeg ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                              {item.isVeg ? 'Veg' : 'Non-Veg'}
+                            </span>
+                          )}
+                        </div>
+                        {item.description && (
+                          <p className="text-xs text-[#1E1E1E] mt-1 ml-8">{item.description}</p>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold text-[#1E1E1E]">
+                        ₹{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Bill Image (Captured by Delivery Boy) */}
+            {(order.billImageUrl || order.billImage || order.deliveryState?.billImageUrl) && (
+              <div className="border-t border-[#F5F5F5] pt-4">
+                <h3 className="text-sm font-semibold text-[#1E1E1E] mb-4 flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-[#e53935]" />
+                  Bill Image (Captured by Delivery Boy)
+                </h3>
+                <div className="space-y-3">
+                  <div className="relative w-full max-w-2xl border-2 border-[#F5F5F5] rounded-xl overflow-hidden bg-white shadow-sm">
+                    <img
+                      src={order.billImageUrl || order.billImage || order.deliveryState?.billImageUrl}
+                      alt="Order Bill"
+                      className="w-full h-auto object-contain max-h-[500px] mx-auto block"
+                      loading="lazy"
+                      onError={(e) => {
+                        console.error('❌ Failed to load bill image:', e.target.src)
+                        e.target.style.display = 'none';
                         const errorDiv = e.target.parentElement.querySelector('.error-message');
                         if (errorDiv) errorDiv.style.display = 'block';
                       }}
                       onLoad={() => {
+                        console.log('✅ Bill image loaded successfully')
+                      }}
+                    />
+                    <div className="error-message hidden p-6 text-center text-[#1E1E1E] text-sm bg-[#F5F5F5]">
+                      <Receipt className="w-8 h-8 mx-auto mb-2 text-[#1E1E1E]" />
+                      Failed to load bill image
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={order.billImageUrl || order.billImage || order.deliveryState?.billImageUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#e53935] hover:bg-[#d32f2f] rounded-lg transition-colors shadow-sm"
+                    >
+                      <Eye className="w-4 h-4" />
+                      View Full Size
+                    </a>
+                    <a
+                      href={order.billImageUrl || order.billImage || order.deliveryState?.billImageUrl}
+                      download
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#1E1E1E] bg-[#F5F5F5] hover:bg-[#ececec] rounded-lg transition-colors"
+                    >
+                      <Package className="w-4 h-4" />
+                      Download
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Digital Bill - Always show */}
+            <div className="border-t border-[#F5F5F5] pt-4">
+              <h3 className="text-sm font-semibold text-[#1E1E1E] mb-2 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#e53935]" />
+                Digital Invoice
+                {order.digitalBillUploaded && (
+                  <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-[#FFF8E1] text-[#1E1E1E] text-xs font-medium rounded-full border border-[#FFC400]">
+                    <CheckCircle className="w-3 h-3" />
+                    Uploaded by Delivery Boy
+                  </span>
+                )}
+              </h3>
+              {order.digitalBillUploadedAt && (
+                <p className="text-xs text-[#1E1E1E] mb-3">
+                  Uploaded on {new Date(order.digitalBillUploadedAt).toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              )}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setShowDigitalBillPopup(true);
                   }}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#e53935] hover:bg-[#d32f2f] rounded-lg transition-colors shadow-sm"
                 >

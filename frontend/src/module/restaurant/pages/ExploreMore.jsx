@@ -1162,3 +1162,408 @@ export default function ExploreMore() {
                     onClick={(e) => {
                       e.preventDefault()
                       // Navigate to terms of service
+                      console.log("Terms of Service clicked")
+                    }}
+                  >
+                    Terms of Service
+                  </a>
+                  <span className="text-gray-400">|</span>
+                  <a
+                    href="#"
+                    className="hover:text-gray-700 transition-colors border-b border-dotted border-gray-400"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      // Navigate to privacy policy
+                      console.log("Privacy Policy clicked")
+                    }}
+                  >
+                    Privacy Policy
+                  </a>
+                  <span className="text-gray-400">|</span>
+                  <a
+                    href="#"
+                    className="hover:text-gray-700 transition-colors border-b border-dotted border-gray-400"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      // Navigate to code of conduct
+                      console.log("Code of Conduct clicked")
+                    }}
+                  >
+                    Code of Conduct
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Schedule Off Reason Selection Popup */}
+      <AnimatePresence>
+        {scheduleOffOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/50 z-50"
+              onClick={() => setScheduleOffOpen(false)}
+            />
+
+            {/* Popup Sheet */}
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{
+                type: "spring",
+                damping: 30,
+                stiffness: 300
+              }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-50 max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+                <h2 className="text-lg font-bold text-gray-900">Select reason</h2>
+                <button
+                  onClick={() => setScheduleOffOpen(false)}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5 text-gray-900" />
+                </button>
+              </div>
+
+              {/* Reason Options */}
+              <div className="px-6 py-4">
+                {scheduleOffReasons.map((reason, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleReasonSelect(reason)}
+                    className="w-full text-left py-4 px-4 rounded-lg hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                  >
+                    <span className="text-base text-gray-900">{reason}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Date and Time Picker Popup */}
+      <AnimatePresence>
+        {dateTimePickerOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/50 z-50"
+              onClick={() => setDateTimePickerOpen(false)}
+            />
+
+            {/* Popup Sheet */}
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{
+                type: "spring",
+                damping: 30,
+                stiffness: 300
+              }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-50 max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+                <h2 className="text-lg font-bold text-gray-900">Schedule off</h2>
+                <button
+                  onClick={() => setDateTimePickerOpen(false)}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5 text-gray-900" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="px-6 py-6 space-y-6">
+                {/* Selected Reason */}
+                {selectedReason && (
+                  <div className="pb-4 border-b border-gray-200">
+                    <p className="text-sm text-gray-500 mb-1">Reason</p>
+                    <p className="text-base font-medium text-gray-900">{selectedReason}</p>
+                  </div>
+                )}
+
+                {/* Date Selection */}
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-3">Select dates</p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm text-gray-600 mb-1 block">Start date</label>
+                      <button
+                        onClick={() => setShowCalendar(true)}
+                        className="w-full flex items-center justify-between px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <span className="text-gray-900">{formatDate(startDate)}</span>
+                        <Calendar className="w-5 h-5 text-gray-500" />
+                      </button>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600 mb-1 block">End date</label>
+                      <button
+                        onClick={() => setShowCalendar(true)}
+                        className="w-full flex items-center justify-between px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <span className="text-gray-900">{formatDate(endDate)}</span>
+                        <Calendar className="w-5 h-5 text-gray-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Time Selection */}
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-3">Select times</p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm text-gray-600 mb-1 block">Start time</label>
+                      <button
+                        onClick={() => setShowStartTimePicker(true)}
+                        className="w-full flex items-center justify-between px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <span className="text-gray-900">{formatTime(startTime)}</span>
+                        <Clock className="w-5 h-5 text-gray-500" />
+                      </button>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600 mb-1 block">End time</label>
+                      <button
+                        onClick={() => setShowEndTimePicker(true)}
+                        className="w-full flex items-center justify-between px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <span className="text-gray-900">{formatTime(endTime)}</span>
+                        <Clock className="w-5 h-5 text-gray-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  onClick={handleSubmitScheduleOff}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors mt-4"
+                >
+                  Submit
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Calendar Popup */}
+      {showCalendar && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={() => setShowCalendar(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-lg shadow-lg">
+            <DateRangeCalendar
+              startDate={startDate}
+              endDate={endDate}
+              onDateRangeChange={handleDateRangeChange}
+              onClose={() => setShowCalendar(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Start Time Picker */}
+      <TimePickerWheel
+        isOpen={showStartTimePicker}
+        onClose={() => setShowStartTimePicker(false)}
+        initialHour={startTime.hour}
+        initialMinute={startTime.minute}
+        initialPeriod={startTime.period}
+        onConfirm={handleStartTimeConfirm}
+      />
+
+      {/* End Time Picker */}
+      <TimePickerWheel
+        isOpen={showEndTimePicker}
+        onClose={() => setShowEndTimePicker(false)}
+        initialHour={endTime.hour}
+        initialMinute={endTime.minute}
+        initialPeriod={endTime.period}
+        onConfirm={handleEndTimeConfirm}
+      />
+
+      {/* Success Popup */}
+      <AnimatePresence>
+        {successPopupOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSuccessPopupOpen(false)}
+              className="fixed inset-0 bg-black/50 z-[10000]"
+            />
+
+            {/* Success Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed inset-0 flex items-center justify-center z-[10000] px-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                    <CheckCircle className="w-10 h-10 text-green-600" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Success!</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  Restaurant is marked offline
+                </p>
+                <button
+                  onClick={() => {
+                    setSuccessPopupOpen(false)
+                    // Reset states
+                    setSelectedReason(null)
+                    setStartDate(null)
+                    setEndDate(null)
+                    setStartTime({ hour: "9", minute: "00", period: "am" })
+                    setEndTime({ hour: "5", minute: "00", period: "pm" })
+                  }}
+                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold text-sm hover:bg-green-700 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Existing Schedule Popup */}
+      <AnimatePresence>
+        {existingScheduleOpen && existingSchedule && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/50 z-50"
+              onClick={() => setExistingScheduleOpen(false)}
+            />
+
+            {/* Popup Sheet */}
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{
+                type: "spring",
+                damping: 30,
+                stiffness: 300
+              }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-50 max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+                <h2 className="text-lg font-bold text-gray-900">Schedule off</h2>
+                <button
+                  onClick={() => setExistingScheduleOpen(false)}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5 text-gray-900" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="px-6 py-6">
+                {/* Status Message */}
+                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-base font-semibold text-gray-900 mb-1">
+                    Restaurant is scheduled off
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Your restaurant is currently marked as offline
+                  </p>
+                </div>
+
+                {/* Schedule Details */}
+                <div className="space-y-4 mb-6">
+                  {/* Reason */}
+                  {existingSchedule.reason && (
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Reason</p>
+                      <p className="text-base font-medium text-gray-900">{existingSchedule.reason}</p>
+                    </div>
+                  )}
+
+                  {/* Dates */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Start date</p>
+                      <p className="text-base font-medium text-gray-900">
+                        {formatDate(existingSchedule.startDate)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">End date</p>
+                      <p className="text-base font-medium text-gray-900">
+                        {formatDate(existingSchedule.endDate)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Times */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Start time</p>
+                      <p className="text-base font-medium text-gray-900">
+                        {formatTime(existingSchedule.startTime)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">End time</p>
+                      <p className="text-base font-medium text-gray-900">
+                        {formatTime(existingSchedule.endTime)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Delete Button */}
+                <button
+                  onClick={() => {
+                    handleDeleteSchedule()
+                  }}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                >
+                  Delete Schedule
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}

@@ -418,3 +418,20 @@ export default function EditAdvertisementPage() {
           </Button>
           <Button
             onClick={() => {
+              console.log("Update ad:", id, formData)
+              // Navigate to advertisements list after update
+              navigate("/restaurant/advertisements")
+            }}
+            className="flex-1 bg-[#ff8100] hover:bg-[#e67300] text-white font-semibold py-3 rounded-lg"
+          >
+            Update Ads
+          </Button>
+        </div>
+      </div>
+
+      {/* Bottom Navigation Bar */}
+      <BottomNavbar />
+    </div>
+  )
+}
+
